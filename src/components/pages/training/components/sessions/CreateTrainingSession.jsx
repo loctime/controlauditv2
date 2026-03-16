@@ -33,10 +33,12 @@ import { getUsers } from '../../../../../core/services/ownerUserService';
 import {
   trainingAttendanceService,
   trainingCatalogService,
+  trainingEvidenceService,
   trainingExecutionService,
   trainingPlanService,
   trainingSessionService
 } from '../../../../../services/training';
+import { uploadFileWithContext } from '../../../../../services/unifiedFileUploadService';
 import { alpha } from '@mui/material/styles';
 import {
   TRAINING_SESSION_STATUSES,
@@ -73,6 +75,13 @@ function formatPeriodLabel(periodYear, periodMonth) {
   }).format(date);
 }
 
+/** Hora local en formato YYYY-MM-DDTHH:mm para input datetime-local (no UTC). */
+function getLocalDateTime() {
+  const now = new Date();
+  const offset = now.getTimezoneOffset() * 60000;
+  return new Date(now - offset).toISOString().slice(0, 16);
+}
+
 const defaultForm = (userProfile) => ({
   trainingTypeId: '',
   companyId: '',
@@ -80,7 +89,7 @@ const defaultForm = (userProfile) => ({
   instructorId: userProfile?.uid || '',
   modality: 'in_person',
   location: '',
-  scheduledDate: ''
+  scheduledDate: getLocalDateTime()
 });
 
 const defaultParticipantRecord = () => ({
@@ -535,6 +544,48 @@ export default function CreateTrainingSession({
 
       await Promise.all(attendancePromises);
 
+      // 3. Subir evidencias (archivos) a almacenamiento y registrar en trainingEvidence
+      const sessionId = sessionRef?.id;
+      const evidenceErrors = [];
+      if (sessionId && uploadedFiles.length > 0) {
+        for (const item of uploadedFiles) {
+          const file = item?.file;
+          if (!file || !(file instanceof File)) continue;
+          try {
+            const uploadResult = await uploadFileWithContext({
+              file,
+              context: {
+                contextType: 'capacitacion',
+                contextEventId: sessionId,
+                companyId: form.companyId,
+                sucursalId: form.branchId || undefined,
+                tipoArchivo: 'evidencia',
+                capacitacionTipoId: form.trainingTypeId || undefined
+              },
+              fecha: new Date(),
+              uploadedBy: userProfile?.uid || null
+            });
+            const evidenceType = file.type.startsWith('image/') ? 'photo' : 'document';
+            await trainingEvidenceService.create(ownerId, {
+              evidenceType,
+              sessionId,
+              companyId: form.companyId,
+              branchId: form.branchId,
+              fileReference: uploadResult.fileId,
+              notes: file.name || 'Evidencia',
+              uploadedAt: new Date().toISOString(),
+              uploadedBy: userProfile?.uid || null
+            });
+          } catch (err) {
+            console.error('[CreateTrainingSession] Error subiendo evidencia:', item.name, err);
+            evidenceErrors.push(item.name || 'archivo');
+          }
+        }
+        if (evidenceErrors.length > 0) {
+          setError(`Capacitación guardada. No se pudieron subir ${evidenceErrors.length} archivo(s): ${evidenceErrors.join(', ')}`);
+        }
+      }
+
       setSuccess(`Capacitación ${mode === 'quick' ? 'registrada' : 'programada'} exitosamente`);
       
       // Resetear formulario
@@ -542,6 +593,8 @@ export default function CreateTrainingSession({
         setForm(defaultForm(userProfile));
         setSelectedIds([]);
         setParticipantRecords({});
+        setUploadedFiles([]);
+        setPreviewFiles([]);
         setSuccess('');
         if (onSaved) onSaved(sessionRef.id);
       }, 2000);

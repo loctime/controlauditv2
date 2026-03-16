@@ -30,6 +30,13 @@ function planStatusLabel(status) {
   return PLAN_STATUS_LABELS[status] || status || 'Sin dato';
 }
 
+/** Hora local en formato YYYY-MM-DDTHH:mm para input datetime-local (no UTC). */
+function getLocalDateTime() {
+  const now = new Date();
+  const offset = now.getTimezoneOffset() * 60000;
+  return new Date(now - offset).toISOString().slice(0, 16);
+}
+
 /**
  * Obtiene los ítems de plan anual planificados para el mes actual.
  * Lista todos los planes (muchos no tienen campo year) y filtra por año en cliente si existe.
@@ -128,11 +135,7 @@ export default function TrainingSessionEntry({ ownerId, onOpenQuickSession, onCl
       return;
     }
     
-    const now = new Date();
-    const year = now.getFullYear();
-    const month = now.getMonth() + 1;
-    const scheduledDate = new Date(year, month - 1, Math.min(15, new Date(year, month, 0).getDate()), 9, 0);
-    const scheduledDateIso = scheduledDate.toISOString().slice(0, 16);
+    const scheduledDateIso = getLocalDateTime();
 
     // Abrir el registro rápido
     setOpenSessionId(sessionId);
