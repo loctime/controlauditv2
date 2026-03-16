@@ -5,6 +5,7 @@ import TrainingModuleTabs from './TrainingModuleTabs';
 import useTrainingTabState from './useTrainingTabState';
 import DashboardScreen from './screens/DashboardScreen';
 import SessionsScreen from './screens/SessionsScreen';
+import SessionHistoryScreen from './screens/SessionHistoryScreen';
 import PeopleScreen from './screens/PeopleScreen';
 import ConfigurationScreen from './screens/ConfigurationScreen';
 import ReportsScreen from './screens/ReportsScreen';
@@ -14,6 +15,7 @@ import CalendarScreen from './screens/CalendarScreen';
 const MODULE_TABS = [
   { id: 'dashboard', label: 'Tablero' },
   { id: 'sessions', label: 'Sesiones' },
+  { id: 'historial', label: 'Historial' },
   { id: 'people', label: 'Personas' },
   { id: 'reports', label: 'Reportes' },
   { id: 'compliance', label: 'Cumplimiento' },
@@ -60,6 +62,8 @@ export default function TrainingModule() {
         );
       case 'sessions':
         return <SessionsScreen />;
+      case 'historial':
+        return <SessionHistoryScreen />;
       case 'people':
         return <PeopleScreen />;
       case 'configuration':

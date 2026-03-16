@@ -49,17 +49,19 @@ function labelEstado(estado) {
 
 export default function SessionsListView({
   sessions,
-  attendanceCountBySession,
+  attendanceCountBySession = {},
   onView,
   onEdit,
   onExecute,
   onMoveToClosure,
-  onCancel
+  onCancel,
+  mode = 'default' // 'default' | 'history' (solo Ver, título historial)
 }) {
+  const isHistory = mode === 'history';
   return (
     <Paper sx={{ p: 1 }}>
       <Typography variant="h6" sx={{ p: 1 }}>
-        Sesiones programadas y en curso
+        {isHistory ? 'Historial de sesiones' : 'Sesiones programadas y en curso'}
       </Typography>
       <Table size="small">
         <TableHead>
@@ -90,50 +92,54 @@ export default function SessionsListView({
                     <VisibilityIcon fontSize="small" />
                   </IconButton>
                 </Tooltip>
-                <Tooltip title="Editar sesion">
-                  <IconButton size="small" onClick={() => onEdit(session)}>
-                    <EditIcon fontSize="small" />
-                  </IconButton>
-                </Tooltip>
-                <Tooltip title="Iniciar sesion">
-                  <span>
-                    <IconButton
-                      size="small"
-                      onClick={() => onExecute(session)}
-                      disabled={!canTransition(session.status, TRAINING_SESSION_STATUSES.IN_PROGRESS)}
-                    >
-                      <PlayArrowIcon fontSize="small" />
-                    </IconButton>
-                  </span>
-                </Tooltip>
-                <Tooltip title="Mover a pendiente de cierre">
-                  <span>
-                    <IconButton
-                      size="small"
-                      onClick={() => onMoveToClosure(session)}
-                      disabled={!canTransition(session.status, TRAINING_SESSION_STATUSES.PENDING_CLOSURE)}
-                    >
-                      <TaskAltIcon fontSize="small" />
-                    </IconButton>
-                  </span>
-                </Tooltip>
-                <Tooltip title="Cancelar sesion">
-                  <span>
-                    <IconButton
-                      size="small"
-                      onClick={() => onCancel(session)}
-                      disabled={!canTransition(session.status, TRAINING_SESSION_STATUSES.CANCELLED)}
-                    >
-                      <CancelIcon fontSize="small" />
-                    </IconButton>
-                  </span>
-                </Tooltip>
+                {!isHistory && (
+                  <>
+                    <Tooltip title="Editar sesion">
+                      <IconButton size="small" onClick={() => onEdit(session)}>
+                        <EditIcon fontSize="small" />
+                      </IconButton>
+                    </Tooltip>
+                    <Tooltip title="Iniciar sesion">
+                      <span>
+                        <IconButton
+                          size="small"
+                          onClick={() => onExecute(session)}
+                          disabled={!canTransition(session.status, TRAINING_SESSION_STATUSES.IN_PROGRESS)}
+                        >
+                          <PlayArrowIcon fontSize="small" />
+                        </IconButton>
+                      </span>
+                    </Tooltip>
+                    <Tooltip title="Mover a pendiente de cierre">
+                      <span>
+                        <IconButton
+                          size="small"
+                          onClick={() => onMoveToClosure(session)}
+                          disabled={!canTransition(session.status, TRAINING_SESSION_STATUSES.PENDING_CLOSURE)}
+                        >
+                          <TaskAltIcon fontSize="small" />
+                        </IconButton>
+                      </span>
+                    </Tooltip>
+                    <Tooltip title="Cancelar sesion">
+                      <span>
+                        <IconButton
+                          size="small"
+                          onClick={() => onCancel(session)}
+                          disabled={!canTransition(session.status, TRAINING_SESSION_STATUSES.CANCELLED)}
+                        >
+                          <CancelIcon fontSize="small" />
+                        </IconButton>
+                      </span>
+                    </Tooltip>
+                  </>
+                )}
               </TableCell>
             </TableRow>
           ))}
           {sessions.length === 0 && (
             <TableRow>
-              <TableCell colSpan={7}>
+              <TableCell colSpan={8}>
                 <Typography color="text.secondary" sx={{ py: 2, textAlign: 'center' }}>No se encontraron sesiones.</Typography>
               </TableCell>
             </TableRow>
