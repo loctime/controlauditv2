@@ -130,19 +130,37 @@ export async function suggestParticipants(ownerId, sessionContext) {
       blockedEmployees.push({
         ...employee,
         periodYear: lock.periodYear,
-        periodMonth: lock.periodMonth
+        periodMonth: lock.periodMonth,
+        sessionId: lock.sessionId || null
       });
     } else {
       eligibleEmployees.push(employee);
     }
   });
 
-  const blockedIdSet = new Set(blockedEmployees.map((e) => e.id));
+  // Enriquecer bloqueados con score y notas de la sesión donde ya registraron
+  const enrichedBlocked = await Promise.all(
+    blockedEmployees.map(async (b) => {
+      if (!b.sessionId || !b.id) return { ...b, score: null, notes: '' };
+      try {
+        const attendance = await trainingAttendanceService.getAttendance(ownerId, b.sessionId, b.id);
+        return {
+          ...b,
+          score: attendance?.score ?? null,
+          notes: attendance?.notes ?? ''
+        };
+      } catch {
+        return { ...b, score: null, notes: '' };
+      }
+    })
+  );
+
+  const blockedIdSet = new Set(enrichedBlocked.map((e) => e.id));
   const suggestedIds = Array.from(suggested).filter((id) => !blockedIdSet.has(id));
 
   return {
     eligibleEmployees,
-    blockedEmployees,
+    blockedEmployees: enrichedBlocked,
     suggestedIds,
     period: period ? { periodYear: period.periodYear, periodMonth: period.periodMonth } : null
   };

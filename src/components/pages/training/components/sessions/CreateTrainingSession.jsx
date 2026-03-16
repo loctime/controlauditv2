@@ -860,32 +860,56 @@ export default function CreateTrainingSession({
                           </TableCell>
                           {requiresEvaluation && (
                             <TableCell>
-                              <Rating
-                                name={`score-${employee.id}`}
-                                value={isSelected ? (record.score || 0) : 0}
-                                max={5}
-                                onChange={(event, newValue) => {
-                                  if (!isSelected) toggleEmployee(employee.id);
-                                  updateParticipantRecord(employee.id, 'score', newValue || 0);
-                                }}
-                                disabled={!isSelected || record.attendanceStatus !== TRAINING_ATTENDANCE_STATUSES.PRESENT}
-                                size="small"
-                                precision={0.5}
-                              />
+                              {isBlocked && blockInfo ? (
+                                <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                                  <Rating
+                                    name={`score-blocked-${employee.id}`}
+                                    value={Number(blockInfo.score) || 0}
+                                    max={5}
+                                    readOnly
+                                    size="small"
+                                    precision={0.5}
+                                  />
+                                  {blockInfo.score != null && blockInfo.score !== '' && (
+                                    <Typography variant="caption" color="text.secondary">
+                                      ({Number(blockInfo.score)})
+                                    </Typography>
+                                  )}
+                                </Box>
+                              ) : (
+                                <Rating
+                                  name={`score-${employee.id}`}
+                                  value={isSelected ? (record.score || 0) : 0}
+                                  max={5}
+                                  onChange={(event, newValue) => {
+                                    if (!isSelected) toggleEmployee(employee.id);
+                                    updateParticipantRecord(employee.id, 'score', newValue || 0);
+                                  }}
+                                  disabled={!isSelected || record.attendanceStatus !== TRAINING_ATTENDANCE_STATUSES.PRESENT}
+                                  size="small"
+                                  precision={0.5}
+                                />
+                              )}
                             </TableCell>
                           )}
                           <TableCell>
-                            <TextField
-                              fullWidth
-                              size="small"
-                              value={isSelected ? (record.notes || '') : ''}
-                              onChange={(e) => {
-                                if (!isSelected) toggleEmployee(employee.id);
-                                updateParticipantRecord(employee.id, 'notes', e.target.value);
-                              }}
-                              disabled={!isSelected}
-                              placeholder="Notas del participante"
-                            />
+                            {isBlocked && blockInfo ? (
+                              <Typography variant="body2" color="text.secondary">
+                                {blockInfo.notes || '—'}
+                              </Typography>
+                            ) : (
+                              <TextField
+                                fullWidth
+                                size="small"
+                                value={isSelected ? (record.notes || '') : ''}
+                                onChange={(e) => {
+                                  if (!isSelected) toggleEmployee(employee.id);
+                                  updateParticipantRecord(employee.id, 'notes', e.target.value);
+                                }}
+                                disabled={!isSelected}
+                                placeholder="Notas del participante"
+                              />
+                            )}
                           </TableCell>
                         </TableRow>
                       );
