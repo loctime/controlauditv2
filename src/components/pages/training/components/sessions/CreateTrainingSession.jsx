@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   Alert,
   Autocomplete,
@@ -37,6 +37,7 @@ import {
   trainingPlanService,
   trainingSessionService
 } from '../../../../../services/training';
+import { alpha } from '@mui/material/styles';
 import {
   TRAINING_SESSION_STATUSES,
   TRAINING_ATTENDANCE_STATUSES,
@@ -128,6 +129,7 @@ export default function CreateTrainingSession({
   const [blockedEmployees, setBlockedEmployees] = useState([]);
   const [scheduledPeriod, setScheduledPeriod] = useState(null);
   const [loadingParticipants, setLoadingParticipants] = useState(false);
+  const ratingCellRefs = useRef({});
 
   // Inicializar con datos precargados si existen
   useEffect(() => {
@@ -786,7 +788,8 @@ export default function CreateTrainingSession({
                 sx={{
                   maxHeight: tableMaxHeight,
                   overflowX: compact ? 'hidden' : 'auto',
-                  overflowY: 'auto'
+                  overflowY: 'auto',
+                  ...(compact && { padding: 0, '& .MuiTableCell-root': { px: 1.25 } })
                 }}
               >
                 <Table
@@ -796,7 +799,14 @@ export default function CreateTrainingSession({
                 >
                   <TableHead>
                     <TableRow>
-                      <TableCell padding="checkbox" sx={{ width: compact ? 40 : undefined, minWidth: compact ? 40 : 60 }}>
+                      <TableCell
+                        padding="checkbox"
+                        sx={{
+                          width: compact ? 40 : undefined,
+                          minWidth: compact ? 40 : 60,
+                          ...(compact && { pl: 1.5, pr: 0.5 })
+                        }}
+                      >
                         <Checkbox
                           indeterminate={someSelectableFilteredSelected && !allSelectableFilteredSelected}
                           checked={allSelectableFilteredSelected}
@@ -811,7 +821,17 @@ export default function CreateTrainingSession({
                         />
                       </TableCell>
                       <TableCell sx={{ minWidth: compact ? 0 : 200 }}>Participante</TableCell>
-                      <TableCell sx={{ width: compact ? 88 : undefined, minWidth: compact ? 88 : 120 }}>Asistencia</TableCell>
+                      <TableCell
+                        sx={{
+                          width: compact ? 88 : undefined,
+                          minWidth: compact ? 88 : 120,
+                          color: 'error.main',
+                          fontWeight: 600,
+                          '&::after': { content: '" *"', fontWeight: 600 }
+                        }}
+                      >
+                        Asistencia
+                      </TableCell>
                       {requiresEvaluation && (
                         <TableCell sx={{ width: compact ? 70 : undefined, minWidth: compact ? 70 : 120 }}>⭐</TableCell>
                       )}
@@ -826,6 +846,7 @@ export default function CreateTrainingSession({
                       const blockInfo = blockedByEmployeeId[employee.id] || null;
                       const isBlocked = Boolean(blockInfo);
                       const name = employee.nombre || employee.nombreCompleto || employee.id;
+                      const attendanceMissing = isSelected && !isBlocked && record.attendanceStatus === TRAINING_ATTENDANCE_STATUSES.INVITED;
 
                       return (
                         <TableRow
@@ -836,7 +857,10 @@ export default function CreateTrainingSession({
                             '&:hover': { backgroundColor: 'action.hover' }
                           }}
                         >
-                          <TableCell padding="checkbox" sx={compact ? { width: 40, py: 1.25 } : undefined}>
+                          <TableCell
+                            padding="checkbox"
+                            sx={compact ? { width: 40, py: 1.25, pl: 1.5, pr: 0.5 } : undefined}
+                          >
                             <Checkbox
                               checked={isSelected}
                               disabled={isBlocked}
@@ -870,7 +894,17 @@ export default function CreateTrainingSession({
                               )}
                             </Box>
                           </TableCell>
-                          <TableCell sx={compact ? { width: 88, py: 1.25 } : { py: 1 }}>
+                          <TableCell
+                            sx={{
+                              ...(compact ? { width: 88, py: 1.25 } : { py: 1 }),
+                              ...(attendanceMissing && {
+                                border: '2px solid',
+                                borderColor: 'error.main',
+                                borderRadius: 1,
+                                bgcolor: 'error.light'
+                              })
+                            }}
+                          >
                             <Box sx={{ display: 'flex', gap: 1 }}>
                               <Tooltip title="Presente">
                                 <span>
@@ -880,6 +914,10 @@ export default function CreateTrainingSession({
                                     onClick={() => {
                                       if (!isSelected) toggleEmployee(employee.id);
                                       updateParticipantRecord(employee.id, 'attendanceStatus', TRAINING_ATTENDANCE_STATUSES.PRESENT);
+                                      if (requiresEvaluation) {
+                                        updateParticipantRecord(employee.id, 'score', 3);
+                                        setTimeout(() => ratingCellRefs.current[employee.id]?.focus(), 100);
+                                      }
                                     }}
                                     disabled={!isSelected}
                                     sx={isSelected && record.attendanceStatus === TRAINING_ATTENDANCE_STATUSES.PRESENT ? { bgcolor: 'primary.main', color: 'primary.contrastText', '&:hover': { bgcolor: 'primary.dark' } } : undefined}
@@ -896,6 +934,7 @@ export default function CreateTrainingSession({
                                     onClick={() => {
                                       if (!isSelected) toggleEmployee(employee.id);
                                       updateParticipantRecord(employee.id, 'attendanceStatus', TRAINING_ATTENDANCE_STATUSES.JUSTIFIED_ABSENCE);
+                                      if (requiresEvaluation) setTimeout(() => ratingCellRefs.current[employee.id]?.focus(), 100);
                                     }}
                                     disabled={!isSelected}
                                     sx={isSelected && record.attendanceStatus === TRAINING_ATTENDANCE_STATUSES.JUSTIFIED_ABSENCE ? { bgcolor: 'error.main', color: 'error.contrastText', '&:hover': { bgcolor: 'error.dark' } } : undefined}
@@ -906,35 +945,57 @@ export default function CreateTrainingSession({
                               </Tooltip>
                             </Box>
                           </TableCell>
-                          {requiresEvaluation && (
-                            <TableCell sx={compact ? { width: 64, py: 1.25 } : { py: 1 }}>
-                              {isBlocked && blockInfo ? (
-                                <Rating
-                                  name={`score-blocked-${employee.id}`}
-                                  value={Math.min(Number(blockInfo.score) || 0, 3)}
-                                  max={3}
-                                  readOnly
-                                  size="small"
-                                  precision={0.5}
-                                  sx={compact ? { fontSize: '1.1rem' } : undefined}
-                                />
-                              ) : (
-                                <Rating
-                                  name={`score-${employee.id}`}
-                                  value={Math.min(isSelected ? (record.score || 0) : 0, 3)}
-                                  max={3}
-                                  onChange={(event, newValue) => {
-                                    if (!isSelected) toggleEmployee(employee.id);
-                                    updateParticipantRecord(employee.id, 'score', newValue ?? 0);
-                                  }}
-                                  disabled={!isSelected || record.attendanceStatus !== TRAINING_ATTENDANCE_STATUSES.PRESENT}
-                                  size="small"
-                                  precision={0.5}
-                                  sx={compact ? { fontSize: '1.1rem' } : undefined}
-                                />
-                              )}
-                            </TableCell>
-                          )}
+                          {requiresEvaluation && (() => {
+                            const starsHighlighted = isSelected && !isBlocked && record.attendanceStatus !== TRAINING_ATTENDANCE_STATUSES.INVITED;
+                            const ratingSx = {
+                              ...(compact && { fontSize: '1.1rem' }),
+                              ...(starsHighlighted && {
+                                fontSize: '1.4rem',
+                                '& .MuiRating-icon': { strokeWidth: 1.2 }
+                              })
+                            };
+                            return (
+                              <TableCell
+                                ref={(el) => { ratingCellRefs.current[employee.id] = el; }}
+                                tabIndex={0}
+                                sx={{
+                                  ...(compact ? { width: 64, py: 1.25 } : { py: 1 }),
+                                  ...(starsHighlighted && {
+                                    border: '1.5px solid',
+                                    borderColor: (theme) => alpha(theme.palette.primary.main, 0.35),
+                                    borderRadius: 1,
+                                    bgcolor: (theme) => alpha(theme.palette.primary.main, 0.06)
+                                  })
+                                }}
+                              >
+                                {isBlocked && blockInfo ? (
+                                  <Rating
+                                    name={`score-blocked-${employee.id}`}
+                                    value={Math.min(Number(blockInfo.score) || 0, 3)}
+                                    max={3}
+                                    readOnly
+                                    size="small"
+                                    precision={0.5}
+                                    sx={ratingSx}
+                                  />
+                                ) : (
+                                  <Rating
+                                    name={`score-${employee.id}`}
+                                    value={Math.min(isSelected ? (record.score || 0) : 0, 3)}
+                                    max={3}
+                                    onChange={(event, newValue) => {
+                                      if (!isSelected) toggleEmployee(employee.id);
+                                      updateParticipantRecord(employee.id, 'score', newValue ?? 0);
+                                    }}
+                                    disabled={!isSelected || record.attendanceStatus !== TRAINING_ATTENDANCE_STATUSES.PRESENT}
+                                    size="small"
+                                    precision={0.5}
+                                    sx={ratingSx}
+                                  />
+                                )}
+                              </TableCell>
+                            );
+                          })()}
                           <TableCell sx={compact ? { minWidth: 0, overflow: 'hidden', py: 1.25 } : undefined}>
                             {isBlocked && blockInfo ? (
                               <Typography variant="body2" color="text.secondary" noWrap={compact} title={blockInfo.notes || undefined}>
