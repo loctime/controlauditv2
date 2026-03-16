@@ -20,11 +20,14 @@ import {
   CircularProgress,
   Divider,
   IconButton,
-  Rating
+  Rating,
+  Tooltip
 } from '@mui/material';
 import SaveIcon from '@mui/icons-material/Save';
 import UploadIcon from '@mui/icons-material/Upload';
 import AttachFileIcon from '@mui/icons-material/AttachFile';
+import CheckIcon from '@mui/icons-material/Check';
+import CloseIcon from '@mui/icons-material/Close';
 import { useAuth } from '@/components/context/AuthContext';
 import { getUsers } from '../../../../../core/services/ownerUserService';
 import {
@@ -575,15 +578,10 @@ export default function CreateTrainingSession({
   const trainingTypeName = catalogItems.find((c) => c.id === form.trainingTypeId)?.name || form.trainingTypeId || '—';
   const modalityLabel = { in_person: 'Presencial', virtual: 'Virtual', hybrid: 'Híbrida' }[form.modality] || form.modality;
 
-  return (
-    <Paper sx={{ p: compact ? 1.5 : 3 }}>
-      <Typography variant={compact ? 'subtitle1' : 'h5'} sx={{ mb: compact ? 1.5 : 3, fontWeight: 600 }}>
-        {initialData ? 'Registrar Capacitación desde Plan' : (mode === 'quick' ? 'Registrar Capacitación Rápida' : 'Programar Capacitación')}
-      </Typography>
-
+  const content = (
+    <>
       {error && <Alert severity="error" sx={{ mb: 1.5 }}>{error}</Alert>}
       {success && <Alert severity="success" sx={{ mb: 1.5 }}>{success}</Alert>}
-
       <Stack spacing={sectionSpacing}>
         {/* Sección 1: Datos de la Capacitación */}
         <Paper variant="outlined" sx={{ p: sectionPadding }}>
@@ -782,11 +780,23 @@ export default function CreateTrainingSession({
           ) : (
             <>
               {/* Tabla Unificada */}
-              <TableContainer component={Paper} variant="outlined" sx={{ maxHeight: tableMaxHeight }}>
-                <Table stickyHeader size="small">
+              <TableContainer
+                component={Paper}
+                variant="outlined"
+                sx={{
+                  maxHeight: tableMaxHeight,
+                  overflowX: compact ? 'hidden' : 'auto',
+                  overflowY: 'auto'
+                }}
+              >
+                <Table
+                  stickyHeader
+                  size="small"
+                  sx={compact ? { tableLayout: 'fixed', width: '100%' } : undefined}
+                >
                   <TableHead>
                     <TableRow>
-                      <TableCell padding="checkbox" sx={{ minWidth: compact ? 44 : 60 }}>
+                      <TableCell padding="checkbox" sx={{ width: compact ? 40 : undefined, minWidth: compact ? 40 : 60 }}>
                         <Checkbox
                           indeterminate={someSelectableFilteredSelected && !allSelectableFilteredSelected}
                           checked={allSelectableFilteredSelected}
@@ -800,12 +810,12 @@ export default function CreateTrainingSession({
                           }}
                         />
                       </TableCell>
-                      <TableCell sx={{ minWidth: compact ? 140 : 200 }}>Participante</TableCell>
-                      <TableCell sx={{ minWidth: compact ? 100 : 120 }}>Asistencia</TableCell>
+                      <TableCell sx={{ minWidth: compact ? 0 : 200 }}>Participante</TableCell>
+                      <TableCell sx={{ width: compact ? 88 : undefined, minWidth: compact ? 88 : 120 }}>Asistencia</TableCell>
                       {requiresEvaluation && (
-                        <TableCell sx={{ minWidth: compact ? 90 : 120 }}>⭐</TableCell>
+                        <TableCell sx={{ width: compact ? 70 : undefined, minWidth: compact ? 70 : 120 }}>⭐</TableCell>
                       )}
-                      <TableCell sx={{ minWidth: compact ? 120 : 200 }}>Notas</TableCell>
+                      <TableCell sx={{ minWidth: compact ? 0 : 200 }}>Notas</TableCell>
                     </TableRow>
                   </TableHead>
                   <TableBody>
@@ -815,6 +825,7 @@ export default function CreateTrainingSession({
                       const isSuggested = suggestedIds.includes(employee.id);
                       const blockInfo = blockedByEmployeeId[employee.id] || null;
                       const isBlocked = Boolean(blockInfo);
+                      const name = employee.nombre || employee.nombreCompleto || employee.id;
 
                       return (
                         <TableRow
@@ -825,93 +836,108 @@ export default function CreateTrainingSession({
                             '&:hover': { backgroundColor: 'action.hover' }
                           }}
                         >
-                          <TableCell padding="checkbox">
+                          <TableCell padding="checkbox" sx={compact ? { width: 40, py: 1.25 } : undefined}>
                             <Checkbox
                               checked={isSelected}
                               disabled={isBlocked}
                               onChange={() => toggleEmployee(employee.id)}
                             />
                           </TableCell>
-                          <TableCell>
-                            <Box>
-                              <Typography variant="body2" fontWeight={isSelected ? 600 : 400}>
-                                {employee.nombre || employee.nombreCompleto || employee.id}
+                          <TableCell sx={compact ? { maxWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', py: 1.25 } : undefined}>
+                            <Box sx={compact ? { minWidth: 0 } : undefined}>
+                              <Typography
+                                variant="body2"
+                                fontWeight={isSelected ? 600 : 400}
+                                noWrap={compact}
+                                title={compact ? name : undefined}
+                              >
+                                {name}
                               </Typography>
-                              {isSuggested && (
+                              {!compact && isSuggested && (
                                 <Typography variant="caption" color="primary">
                                   (Sugerido - capacitación requerida)
                                 </Typography>
                               )}
-                              {isBlocked && (
+                              {!compact && isBlocked && (
                                 <Typography variant="caption" color="warning.main" display="block">
                                   Ya registrado en {formatPeriodLabel(blockInfo.periodYear, blockInfo.periodMonth)} en otra sesión
                                 </Typography>
                               )}
+                              {compact && (isSuggested || isBlocked) && (
+                                <Typography variant="caption" color={isBlocked ? 'warning.main' : 'primary'} noWrap title={isBlocked ? `Ya registrado en ${formatPeriodLabel(blockInfo?.periodYear, blockInfo?.periodMonth)}` : 'Sugerido'}>
+                                  {isBlocked ? 'Ya registrado' : 'Sugerido'}
+                                </Typography>
+                              )}
                             </Box>
                           </TableCell>
-                          <TableCell>
+                          <TableCell sx={compact ? { width: 88, py: 1.25 } : { py: 1 }}>
                             <Box sx={{ display: 'flex', gap: 1 }}>
-                              <Button
-                                size="small"
-                                variant={isSelected && record.attendanceStatus === TRAINING_ATTENDANCE_STATUSES.PRESENT ? "contained" : "outlined"}
-                                onClick={() => {
-                                  if (!isSelected) toggleEmployee(employee.id);
-                                  updateParticipantRecord(employee.id, 'attendanceStatus', TRAINING_ATTENDANCE_STATUSES.PRESENT);
-                                }}
-                                disabled={!isSelected}
-                              >
-                                Presente
-                              </Button>
-                              <Button
-                                size="small"
-                                variant={isSelected && record.attendanceStatus === TRAINING_ATTENDANCE_STATUSES.JUSTIFIED_ABSENCE ? "contained" : "outlined"}
-                                onClick={() => {
-                                  if (!isSelected) toggleEmployee(employee.id);
-                                  updateParticipantRecord(employee.id, 'attendanceStatus', TRAINING_ATTENDANCE_STATUSES.JUSTIFIED_ABSENCE);
-                                }}
-                                disabled={!isSelected}
-                              >
-                                Ausente
-                              </Button>
+                              <Tooltip title="Presente">
+                                <span>
+                                  <IconButton
+                                    size="small"
+                                    color={isSelected && record.attendanceStatus === TRAINING_ATTENDANCE_STATUSES.PRESENT ? 'primary' : 'default'}
+                                    onClick={() => {
+                                      if (!isSelected) toggleEmployee(employee.id);
+                                      updateParticipantRecord(employee.id, 'attendanceStatus', TRAINING_ATTENDANCE_STATUSES.PRESENT);
+                                    }}
+                                    disabled={!isSelected}
+                                    sx={isSelected && record.attendanceStatus === TRAINING_ATTENDANCE_STATUSES.PRESENT ? { bgcolor: 'primary.main', color: 'primary.contrastText', '&:hover': { bgcolor: 'primary.dark' } } : undefined}
+                                  >
+                                    <CheckIcon fontSize="small" />
+                                  </IconButton>
+                                </span>
+                              </Tooltip>
+                              <Tooltip title="Ausente">
+                                <span>
+                                  <IconButton
+                                    size="small"
+                                    color={isSelected && record.attendanceStatus === TRAINING_ATTENDANCE_STATUSES.JUSTIFIED_ABSENCE ? 'error' : 'default'}
+                                    onClick={() => {
+                                      if (!isSelected) toggleEmployee(employee.id);
+                                      updateParticipantRecord(employee.id, 'attendanceStatus', TRAINING_ATTENDANCE_STATUSES.JUSTIFIED_ABSENCE);
+                                    }}
+                                    disabled={!isSelected}
+                                    sx={isSelected && record.attendanceStatus === TRAINING_ATTENDANCE_STATUSES.JUSTIFIED_ABSENCE ? { bgcolor: 'error.main', color: 'error.contrastText', '&:hover': { bgcolor: 'error.dark' } } : undefined}
+                                  >
+                                    <CloseIcon fontSize="small" />
+                                  </IconButton>
+                                </span>
+                              </Tooltip>
                             </Box>
                           </TableCell>
                           {requiresEvaluation && (
-                            <TableCell>
+                            <TableCell sx={compact ? { width: 64, py: 1.25 } : { py: 1 }}>
                               {isBlocked && blockInfo ? (
-                                <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                                  <Rating
-                                    name={`score-blocked-${employee.id}`}
-                                    value={Number(blockInfo.score) || 0}
-                                    max={5}
-                                    readOnly
-                                    size="small"
-                                    precision={0.5}
-                                  />
-                                  {blockInfo.score != null && blockInfo.score !== '' && (
-                                    <Typography variant="caption" color="text.secondary">
-                                      ({Number(blockInfo.score)})
-                                    </Typography>
-                                  )}
-                                </Box>
+                                <Rating
+                                  name={`score-blocked-${employee.id}`}
+                                  value={Math.min(Number(blockInfo.score) || 0, 3)}
+                                  max={3}
+                                  readOnly
+                                  size="small"
+                                  precision={0.5}
+                                  sx={compact ? { fontSize: '1.1rem' } : undefined}
+                                />
                               ) : (
                                 <Rating
                                   name={`score-${employee.id}`}
-                                  value={isSelected ? (record.score || 0) : 0}
-                                  max={5}
+                                  value={Math.min(isSelected ? (record.score || 0) : 0, 3)}
+                                  max={3}
                                   onChange={(event, newValue) => {
                                     if (!isSelected) toggleEmployee(employee.id);
-                                    updateParticipantRecord(employee.id, 'score', newValue || 0);
+                                    updateParticipantRecord(employee.id, 'score', newValue ?? 0);
                                   }}
                                   disabled={!isSelected || record.attendanceStatus !== TRAINING_ATTENDANCE_STATUSES.PRESENT}
                                   size="small"
                                   precision={0.5}
+                                  sx={compact ? { fontSize: '1.1rem' } : undefined}
                                 />
                               )}
                             </TableCell>
                           )}
-                          <TableCell>
+                          <TableCell sx={compact ? { minWidth: 0, overflow: 'hidden', py: 1.25 } : undefined}>
                             {isBlocked && blockInfo ? (
-                              <Typography variant="body2" color="text.secondary">
+                              <Typography variant="body2" color="text.secondary" noWrap={compact} title={blockInfo.notes || undefined}>
                                 {blockInfo.notes || '—'}
                               </Typography>
                             ) : (
@@ -924,7 +950,8 @@ export default function CreateTrainingSession({
                                   updateParticipantRecord(employee.id, 'notes', e.target.value);
                                 }}
                                 disabled={!isSelected}
-                                placeholder="Notas del participante"
+                                placeholder={compact ? 'Notas' : 'Notas del participante'}
+                                sx={compact ? { '& .MuiInputBase-input': { fontSize: '0.8rem' } } : undefined}
                               />
                             )}
                           </TableCell>
@@ -1123,6 +1150,18 @@ export default function CreateTrainingSession({
           </Button>
         </Stack>
       </Stack>
+    </>
+  );
+
+  if (compact) {
+    return content;
+  }
+  return (
+    <Paper sx={{ p: 3 }}>
+      <Typography variant="h5" sx={{ mb: 3, fontWeight: 600 }}>
+        {initialData ? 'Registrar Capacitación desde Plan' : (mode === 'quick' ? 'Registrar Capacitación Rápida' : 'Programar Capacitación')}
+      </Typography>
+      {content}
     </Paper>
   );
 }
