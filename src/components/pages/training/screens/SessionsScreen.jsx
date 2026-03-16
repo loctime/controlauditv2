@@ -76,9 +76,10 @@ export default function SessionsScreen() {
     [sessions, selectedSessionId]
   );
 
-  const load = async () => {
+  const load = async (opts = {}) => {
     if (!ownerId) return;
     setError('');
+    const { forceEvidenceCountForSessionId } = opts;
 
     try {
       const branchIds = userSucursales.map((branch) => branch.id);
@@ -120,7 +121,13 @@ export default function SessionsScreen() {
       setSessions(enrichedSessions);
 
       const sessionsForCount = sessionList.slice(0, 30).filter((session) => attendanceCountBySession[session.id] === undefined);
-      const sessionsForEvidenceCount = sessionList.slice(0, 30).filter((s) => evidenceCountBySession[s.id] === undefined);
+      let sessionsForEvidenceCount = sessionList.slice(0, 30).filter((s) => evidenceCountBySession[s.id] === undefined);
+      // Incluir siempre la sesión recién creada para que el conteo de evidencias aparezca al guardar
+      if (forceEvidenceCountForSessionId && evidenceCountBySession[forceEvidenceCountForSessionId] === undefined) {
+        if (!sessionsForEvidenceCount.some((s) => s.id === forceEvidenceCountForSessionId)) {
+          sessionsForEvidenceCount = [...sessionsForEvidenceCount, { id: forceEvidenceCountForSessionId }];
+        }
+      }
       if (sessionsForCount.length > 0 || sessionsForEvidenceCount.length > 0) {
         const [countEntries, evidenceEntries] = await Promise.all([
           sessionsForCount.length > 0
@@ -276,9 +283,9 @@ export default function SessionsScreen() {
                     mode="quick"
                     initialData={quickSessionData}
                     compact
-                    onSaved={() => {
+                    onSaved={(sessionId) => {
                       setQuickSessionData(null);
-                      load();
+                      load(sessionId ? { forceEvidenceCountForSessionId: sessionId } : {});
                     }}
                     onCancel={() => {
                       setQuickSessionData(null);

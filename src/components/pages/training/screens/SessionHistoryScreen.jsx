@@ -17,6 +17,7 @@ import { getUsers } from '../../../../core/services/ownerUserService';
 import {
   trainingAttendanceService,
   trainingCatalogService,
+  trainingEvidenceService,
   trainingSessionService
 } from '../../../../services/training';
 import EmployeeAutocomplete from '../components/people/EmployeeAutocomplete';
@@ -40,6 +41,7 @@ export default function SessionHistoryScreen() {
   const [selectedEmployee, setSelectedEmployee] = useState(null);
   const [sessions, setSessions] = useState([]);
   const [attendanceCountBySession, setAttendanceCountBySession] = useState({});
+  const [evidenceCountBySession, setEvidenceCountBySession] = useState({});
   const [employees, setEmployees] = useState([]);
   const [loadingEmployees, setLoadingEmployees] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -111,6 +113,10 @@ export default function SessionHistoryScreen() {
         ...Object.fromEntries((usersList || []).map((u) => [u.id, personDisplayName(u) || u.email || 'Sin dato'])),
         ...Object.fromEntries((employeesList || []).map((e) => [e.id, personDisplayName(e) || e.email || 'Sin dato']))
       };
+      // Incluir al usuario actual por si es el instructor y no está en getUsers (ej. owner/admin)
+      if (userProfile?.uid) {
+        instructorMap[userProfile.uid] = personDisplayName(userProfile) || userProfile.email || 'Sin asignar';
+      }
 
       const enriched = sessionList.map((session) => ({
         ...session,
@@ -125,13 +131,22 @@ export default function SessionHistoryScreen() {
 
       setSessions(enriched);
 
-      const countEntries = await Promise.all(
-        enriched.slice(0, 50).map(async (session) => {
-          const att = await trainingAttendanceService.listAttendanceBySession(ownerId, session.id).catch(() => []);
-          return [session.id, att.length];
-        })
-      );
+      const [countEntries, evidenceEntries] = await Promise.all([
+        Promise.all(
+          enriched.slice(0, 50).map(async (session) => {
+            const att = await trainingAttendanceService.listAttendanceBySession(ownerId, session.id).catch(() => []);
+            return [session.id, att.length];
+          })
+        ),
+        Promise.all(
+          enriched.slice(0, 50).map(async (session) => {
+            const evidence = await trainingEvidenceService.listBySession(ownerId, session.id).catch(() => []);
+            return [session.id, evidence.length];
+          })
+        )
+      ]);
       setAttendanceCountBySession(Object.fromEntries(countEntries));
+      setEvidenceCountBySession(Object.fromEntries(evidenceEntries));
     } catch (err) {
       setError(err?.message || 'No se pudo cargar el historial.');
       setSessions([]);
@@ -211,6 +226,7 @@ export default function SessionHistoryScreen() {
           <SessionsListView
             sessions={sessions}
             attendanceCountBySession={attendanceCountBySession}
+            evidenceCountBySession={evidenceCountBySession}
             mode="history"
             onView={(session) => setSelectedSessionId(session.id)}
             onEdit={() => {}}
