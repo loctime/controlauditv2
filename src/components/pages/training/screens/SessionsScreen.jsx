@@ -25,6 +25,7 @@ import { getUsers } from '../../../../core/services/ownerUserService';
 import {
   trainingAttendanceService,
   trainingCatalogService,
+  trainingEvidenceService,
   trainingSessionService
 } from '../../../../services/training';
 import { TRAINING_SESSION_STATUSES } from '../../../../types/trainingDomain';
@@ -62,6 +63,7 @@ export default function SessionsScreen() {
   const [error, setError] = useState('');
   const [sessions, setSessions] = useState([]);
   const [attendanceCountBySession, setAttendanceCountBySession] = useState({});
+  const [evidenceCountBySession, setEvidenceCountBySession] = useState({});
   const [selectedSessionId, setSelectedSessionId] = useState(null);
   const [editingSession, setEditingSession] = useState(null);
   const [editingForm, setEditingForm] = useState({ location: '', instructorId: '', scheduledDate: '' });
@@ -94,6 +96,10 @@ export default function SessionsScreen() {
         ...Object.fromEntries((usersList || []).map((user) => [user.id, personDisplayName(user) || user.email || 'Sin dato'])),
         ...Object.fromEntries((employeesList || []).map((employee) => [employee.id, personDisplayName(employee) || employee.email || 'Sin dato']))
       };
+      // Incluir al usuario actual por si es el instructor y no está en getUsers (ej. owner/admin)
+      if (userProfile?.uid) {
+        instructorMap[userProfile.uid] = personDisplayName(userProfile) || userProfile.email || 'Sin asignar';
+      }
 
       const options = Object.entries(instructorMap)
         .map(([id, label]) => ({ id, label }))
@@ -114,18 +120,39 @@ export default function SessionsScreen() {
       setSessions(enrichedSessions);
 
       const sessionsForCount = sessionList.slice(0, 30).filter((session) => attendanceCountBySession[session.id] === undefined);
-      if (sessionsForCount.length > 0) {
-        const countEntries = await Promise.all(
-          sessionsForCount.map(async (session) => {
-            const attendance = await trainingAttendanceService.listAttendanceBySession(ownerId, session.id).catch(() => []);
-            return [session.id, attendance.length];
-          })
-        );
+      const sessionsForEvidenceCount = sessionList.slice(0, 30).filter((s) => evidenceCountBySession[s.id] === undefined);
+      if (sessionsForCount.length > 0 || sessionsForEvidenceCount.length > 0) {
+        const [countEntries, evidenceEntries] = await Promise.all([
+          sessionsForCount.length > 0
+            ? Promise.all(
+                sessionsForCount.map(async (session) => {
+                  const attendance = await trainingAttendanceService.listAttendanceBySession(ownerId, session.id).catch(() => []);
+                  return [session.id, attendance.length];
+                })
+              )
+            : [],
+          sessionsForEvidenceCount.length > 0
+            ? Promise.all(
+                sessionsForEvidenceCount.map(async (session) => {
+                  const evidence = await trainingEvidenceService.listBySession(ownerId, session.id).catch(() => []);
+                  return [session.id, evidence.length];
+                })
+              )
+            : []
+        ]);
 
-        setAttendanceCountBySession((prev) => ({
-          ...prev,
-          ...Object.fromEntries(countEntries)
-        }));
+        if (countEntries.length > 0) {
+          setAttendanceCountBySession((prev) => ({
+            ...prev,
+            ...Object.fromEntries(countEntries)
+          }));
+        }
+        if (evidenceEntries.length > 0) {
+          setEvidenceCountBySession((prev) => ({
+            ...prev,
+            ...Object.fromEntries(evidenceEntries)
+          }));
+        }
       }
     } catch (err) {
       logger.error('[SessionsScreen] load error', err);
@@ -137,16 +164,24 @@ export default function SessionsScreen() {
     load();
   }, [ownerId, userSucursales, userEmpresas]);
 
+  /** Convierte Date o Timestamp a YYYY-MM-DDTHH:mm en hora local para input datetime-local. */
+  const toLocalDateTimeInput = (value) => {
+    const date = value?.toDate ? value.toDate() : new Date(value);
+    if (Number.isNaN(date.getTime())) return '';
+    const y = date.getFullYear();
+    const m = String(date.getMonth() + 1).padStart(2, '0');
+    const d = String(date.getDate()).padStart(2, '0');
+    const h = String(date.getHours()).padStart(2, '0');
+    const min = String(date.getMinutes()).padStart(2, '0');
+    return `${y}-${m}-${d}T${h}:${min}`;
+  };
+
   const openEdit = (session) => {
     setEditingSession(session);
-    const dateValue = session.scheduledDate?.toDate
-      ? session.scheduledDate.toDate().toISOString().slice(0, 16)
-      : new Date(session.scheduledDate).toISOString().slice(0, 16);
-
     setEditingForm({
       location: session.location || '',
       instructorId: session.instructorId || '',
-      scheduledDate: Number.isNaN(new Date(dateValue).getTime()) ? '' : dateValue
+      scheduledDate: toLocalDateTimeInput(session.scheduledDate)
     });
   };
 
@@ -264,6 +299,7 @@ export default function SessionsScreen() {
               <SessionsListView
                 sessions={sessions}
                 attendanceCountBySession={attendanceCountBySession}
+                evidenceCountBySession={evidenceCountBySession}
                 onView={(session) => setSelectedSessionId(session.id)}
                 onEdit={openEdit}
                 onExecute={(session) => {

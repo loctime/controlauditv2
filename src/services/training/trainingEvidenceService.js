@@ -1,4 +1,4 @@
-﻿import {
+import {
   buildOrderBy,
   buildWhere,
   createDocument,
@@ -26,10 +26,14 @@ export const trainingEvidenceService = {
   },
 
   async listBySession(ownerId, sessionId) {
-    return queryDocuments(ownerId, 'trainingEvidence', [
+    const list = await queryDocuments(ownerId, 'trainingEvidence', [
       buildWhere('sessionId', '==', sessionId),
       buildOrderBy('uploadedAt', 'desc')
     ]);
+    if (typeof console !== 'undefined' && console.debug) {
+      console.debug('[trainingEvidenceService.listBySession]', { ownerId, sessionId, count: list?.length ?? 0 });
+    }
+    return list;
   },
 
   async listByEmployee(ownerId, employeeId) {

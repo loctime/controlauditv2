@@ -17,10 +17,17 @@ import TaskAltIcon from '@mui/icons-material/TaskAlt';
 import PlayArrowIcon from '@mui/icons-material/PlayArrow';
 import { TRAINING_SESSION_STATUSES } from '../../../../../types/trainingDomain';
 
+/** Formatea fecha/hora en hora local (YYYY-MM-DD HH:mm) para no mostrar UTC. */
 function dateText(value) {
   if (!value) return '-';
   const date = value?.toDate ? value.toDate() : new Date(value);
-  return Number.isNaN(date.getTime()) ? '-' : date.toISOString().slice(0, 16).replace('T', ' ');
+  if (Number.isNaN(date.getTime())) return '-';
+  const y = date.getFullYear();
+  const m = String(date.getMonth() + 1).padStart(2, '0');
+  const d = String(date.getDate()).padStart(2, '0');
+  const h = String(date.getHours()).padStart(2, '0');
+  const min = String(date.getMinutes()).padStart(2, '0');
+  return `${y}-${m}-${d} ${h}:${min}`;
 }
 
 function canTransition(status, nextStatus) {
@@ -35,21 +42,10 @@ function canTransition(status, nextStatus) {
   return (map[status] || []).includes(nextStatus);
 }
 
-function labelEstado(estado) {
-  const map = {
-    draft: 'Borrador',
-    scheduled: 'Programada',
-    in_progress: 'En progreso',
-    pending_closure: 'Pendiente de cierre',
-    closed: 'Cerrada',
-    cancelled: 'Cancelada'
-  };
-  return map[estado] || estado;
-}
-
 export default function SessionsListView({
   sessions,
   attendanceCountBySession = {},
+  evidenceCountBySession = {},
   onView,
   onEdit,
   onExecute,
@@ -71,7 +67,7 @@ export default function SessionsListView({
             <TableCell>Empresa</TableCell>
             <TableCell>Sucursal</TableCell>
             <TableCell>Instructor</TableCell>
-            <TableCell>Estado</TableCell>
+            <TableCell>Evidencias</TableCell>
             <TableCell>Participantes</TableCell>
             <TableCell align="right">Acciones</TableCell>
           </TableRow>
@@ -84,7 +80,7 @@ export default function SessionsListView({
               <TableCell>{session.companyName || '-'}</TableCell>
               <TableCell>{session.branchName || 'Sin dato'}</TableCell>
               <TableCell>{session.instructorName || 'Sin asignar'}</TableCell>
-              <TableCell>{labelEstado(session.status)}</TableCell>
+              <TableCell>{evidenceCountBySession[session.id] ?? 0}</TableCell>
               <TableCell>{attendanceCountBySession[session.id] || 0}</TableCell>
               <TableCell align="right">
                 <Tooltip title="Ver detalle">

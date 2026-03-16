@@ -129,6 +129,11 @@ export default function CreateTrainingSession({
   // Estados para documentos
   const [uploadedFiles, setUploadedFiles] = useState([]);
   const [previewFiles, setPreviewFiles] = useState([]);
+  /** Ref con la lista actual de archivos para evitar closure obsoleto al guardar */
+  const uploadedFilesRef = useRef([]);
+  useEffect(() => {
+    uploadedFilesRef.current = uploadedFiles;
+  }, [uploadedFiles]);
 
   // Planificación (solo modo planned)
   const [planCandidates, setPlanCandidates] = useState([]);
@@ -431,7 +436,7 @@ export default function CreateTrainingSession({
 
   // Funciones para manejar documentos
   const handleFileUpload = (event, fileType) => {
-    const files = Array.from(event.target.files);
+    const files = Array.from(event.target.files || []);
     const newFiles = files.map(file => ({
       file,
       type: fileType,
@@ -441,11 +446,10 @@ export default function CreateTrainingSession({
       mimeType: file.type, // Guardar el MIME type original
       url: URL.createObjectURL(file)
     }));
-    
     setUploadedFiles(prev => [...prev, ...newFiles]);
     setPreviewFiles(prev => [...prev, ...newFiles]);
-    
-    console.log('Archivos seleccionados:', newFiles);
+    console.info('[CreateTrainingSession] Subir Documentos: archivos añadidos', { count: newFiles.length, names: newFiles.map(f => f.name) });
+    event.target.value = ''; // Permitir volver a seleccionar los mismos archivos
   };
 
   const removeFile = (fileId) => {
@@ -476,6 +480,8 @@ export default function CreateTrainingSession({
 
   // Validar y guardar todo
   const saveTrainingSession = async () => {
+    const filesToUpload = uploadedFilesRef.current;
+    console.info('[CreateTrainingSession] saveTrainingSession: inicio', { uploadedFilesLength: filesToUpload.length, stateLength: uploadedFiles.length });
     if (!ownerId) return;
 
     // Validaciones básicas
@@ -544,14 +550,22 @@ export default function CreateTrainingSession({
 
       await Promise.all(attendancePromises);
 
-      // 3. Subir evidencias (archivos) a almacenamiento y registrar en trainingEvidence
+      // 3. Subir evidencias (archivos) a almacenamiento y registrar en trainingEvidence (usar ref para tener lista actual)
       const sessionId = sessionRef?.id;
       const evidenceErrors = [];
-      if (sessionId && uploadedFiles.length > 0) {
-        for (const item of uploadedFiles) {
+      const filesForEvidence = uploadedFilesRef.current;
+      console.info('[CreateTrainingSession] Evidencias: sessionId=', sessionId, 'filesForEvidence.length=', filesForEvidence.length, 'ownerId=', ownerId);
+      if (sessionId && filesForEvidence.length > 0) {
+        for (let i = 0; i < filesForEvidence.length; i++) {
+          const item = filesForEvidence[i];
           const file = item?.file;
-          if (!file || !(file instanceof File)) continue;
+          console.info('[CreateTrainingSession] Evidencia', i + 1, '/', filesForEvidence.length, ':', file?.name, 'size=', file?.size, 'type=', file?.type, 'isFile=', file instanceof File);
+          if (!file || !(file instanceof File)) {
+            console.warn('[CreateTrainingSession] Evidencia omitida (no es File):', item);
+            continue;
+          }
           try {
+            console.info('[CreateTrainingSession] Subiendo archivo a almacenamiento:', file.name);
             const uploadResult = await uploadFileWithContext({
               file,
               context: {
@@ -565,8 +579,9 @@ export default function CreateTrainingSession({
               fecha: new Date(),
               uploadedBy: userProfile?.uid || null
             });
+            console.info('[CreateTrainingSession] Archivo subido. fileId=', uploadResult?.fileId, 'sessionId=', sessionId);
             const evidenceType = file.type.startsWith('image/') ? 'photo' : 'document';
-            await trainingEvidenceService.create(ownerId, {
+            const evidencePayload = {
               evidenceType,
               sessionId,
               companyId: form.companyId,
@@ -575,15 +590,20 @@ export default function CreateTrainingSession({
               notes: file.name || 'Evidencia',
               uploadedAt: new Date().toISOString(),
               uploadedBy: userProfile?.uid || null
-            });
+            };
+            console.info('[CreateTrainingSession] Creando registro de evidencia en Firestore:', evidencePayload);
+            const evidenceRef = await trainingEvidenceService.create(ownerId, evidencePayload);
+            console.info('[CreateTrainingSession] Evidencia creada. id=', evidenceRef?.id ?? evidenceRef);
           } catch (err) {
-            console.error('[CreateTrainingSession] Error subiendo evidencia:', item.name, err);
-            evidenceErrors.push(item.name || 'archivo');
+            console.error('[CreateTrainingSession] Error subiendo evidencia:', item.name ?? file?.name, err);
+            evidenceErrors.push(item.name || file?.name || 'archivo');
           }
         }
         if (evidenceErrors.length > 0) {
           setError(`Capacitación guardada. No se pudieron subir ${evidenceErrors.length} archivo(s): ${evidenceErrors.join(', ')}`);
         }
+      } else if (filesForEvidence.length > 0 && !sessionId) {
+        console.warn('[CreateTrainingSession] Hay archivos pero no sessionId; no se subieron evidencias.');
       }
 
       setSuccess(`Capacitación ${mode === 'quick' ? 'registrada' : 'programada'} exitosamente`);
@@ -662,6 +682,7 @@ export default function CreateTrainingSession({
                     value={instructorOptions.find((option) => option.id === form.instructorId) || null}
                     onChange={(_, value) => setForm({ ...form, instructorId: value?.id || '' })}
                     getOptionLabel={(option) => option?.label || ''}
+                    isOptionEqualToValue={(option, value) => option?.id === value?.id}
                     renderInput={(params) => (
                       <TextField {...params} fullWidth size="small" label="Instructor" placeholder="Seleccionar" />
                     )}
@@ -740,6 +761,7 @@ export default function CreateTrainingSession({
                     value={instructorOptions.find((option) => option.id === form.instructorId) || null}
                     onChange={(_, value) => setForm({ ...form, instructorId: value?.id || '' })}
                     getOptionLabel={(option) => option?.label || ''}
+                    isOptionEqualToValue={(option, value) => option?.id === value?.id}
                     renderInput={(params) => (
                       <TextField {...params} fullWidth size="small" label="Instructor" placeholder="Seleccionar" />
                     )}
@@ -1263,7 +1285,7 @@ export default function CreateTrainingSession({
             disabled={saving || selectedIds.length === 0}
             startIcon={saving ? <CircularProgress size={20} /> : <SaveIcon />}
           >
-            {saving ? 'Guardando...' : mode === 'quick' ? 'Registrar Capacitación' : 'Programar Capacitación'}
+
           </Button>
         </Stack>
       </Stack>
