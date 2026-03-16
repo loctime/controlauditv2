@@ -44,6 +44,16 @@ function personDisplayName(person) {
   return person.nombre || person.email || '';
 }
 
+/** Nombre o email para mostrar en columna instructor (nunca vacío). */
+function instructorLabel(person, fallback = 'Sin asignar') {
+  if (!person) return fallback;
+  const name = (personDisplayName(person) || '').trim();
+  if (name) return name;
+  const email = (person.email || '').trim();
+  if (email) return email;
+  return fallback;
+}
+
 function labelSessionStatus(status) {
   const map = {
     draft: 'Borrador',
@@ -94,12 +104,12 @@ export default function SessionsScreen() {
       const branchMap = Object.fromEntries(userSucursales.map((branch) => [branch.id, branch]));
       const companyMap = Object.fromEntries(userEmpresas.map((company) => [company.id, company]));
       const instructorMap = {
-        ...Object.fromEntries((usersList || []).map((user) => [user.id, personDisplayName(user) || user.email || 'Sin dato'])),
-        ...Object.fromEntries((employeesList || []).map((employee) => [employee.id, personDisplayName(employee) || employee.email || 'Sin dato']))
+        ...Object.fromEntries((usersList || []).map((user) => [user.id, instructorLabel(user, 'Sin dato')])),
+        ...Object.fromEntries((employeesList || []).map((employee) => [employee.id, instructorLabel(employee, 'Sin dato')]))
       };
       // Incluir al usuario actual por si es el instructor y no está en getUsers (ej. owner/admin)
       if (userProfile?.uid) {
-        instructorMap[userProfile.uid] = personDisplayName(userProfile) || userProfile.email || 'Sin asignar';
+        instructorMap[userProfile.uid] = instructorLabel(userProfile, 'Sin asignar');
       }
 
       const options = Object.entries(instructorMap)

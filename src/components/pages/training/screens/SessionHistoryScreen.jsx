@@ -4,11 +4,12 @@ import {
   Box,
   CircularProgress,
   FormControl,
-  Grid,
   InputLabel,
   MenuItem,
   Paper,
   Select,
+  Stack,
+  TextField,
   Typography
 } from '@mui/material';
 import { useAuth } from '@/components/context/AuthContext';
@@ -32,12 +33,28 @@ function personDisplayName(person) {
   return person.nombre || person.email || '';
 }
 
+/** Nombre o email para mostrar en columna instructor (nunca vacío). */
+function instructorLabel(person, fallback = 'Sin asignar') {
+  if (!person) return fallback;
+  const name = (personDisplayName(person) || '').trim();
+  if (name) return name;
+  const email = (person.email || '').trim();
+  if (email) return email;
+  return fallback;
+}
+
 export default function SessionHistoryScreen() {
   const { userProfile, userSucursales = [], userEmpresas = [] } = useAuth();
   const ownerId = userProfile?.ownerId;
 
   const [companyId, setCompanyId] = useState('');
   const [branchId, setBranchId] = useState('');
+  const [filterTrainingTypeId, setFilterTrainingTypeId] = useState('');
+  const [filterDateFrom, setFilterDateFrom] = useState('');
+  const [filterDateTo, setFilterDateTo] = useState('');
+  const [filterInstructorId, setFilterInstructorId] = useState('');
+  const [catalogItems, setCatalogItems] = useState([]);
+  const [instructorOptions, setInstructorOptions] = useState([]);
   const [selectedEmployee, setSelectedEmployee] = useState(null);
   const [sessions, setSessions] = useState([]);
   const [attendanceCountBySession, setAttendanceCountBySession] = useState({});
@@ -89,7 +106,10 @@ export default function SessionHistoryScreen() {
       const filters = {
         companyId: companyId || undefined,
         branchId: branchId || undefined,
-        status: 'closed'
+        status: 'closed',
+        trainingTypeId: filterTrainingTypeId || undefined,
+        dateFrom: filterDateFrom ? new Date(filterDateFrom) : undefined,
+        dateTo: filterDateTo ? new Date(filterDateTo + 'T23:59:59.999') : undefined
       };
       let sessionList = await trainingSessionService.listSessions(ownerId, filters);
 
@@ -110,15 +130,19 @@ export default function SessionHistoryScreen() {
       const branchMap = Object.fromEntries(userSucursales.map((b) => [b.id, b]));
       const companyMap = Object.fromEntries(userEmpresas.map((c) => [c.id, c]));
       const instructorMap = {
-        ...Object.fromEntries((usersList || []).map((u) => [u.id, personDisplayName(u) || u.email || 'Sin dato'])),
-        ...Object.fromEntries((employeesList || []).map((e) => [e.id, personDisplayName(e) || e.email || 'Sin dato']))
+        ...Object.fromEntries((usersList || []).map((u) => [u.id, instructorLabel(u, 'Sin dato')])),
+        ...Object.fromEntries((employeesList || []).map((e) => [e.id, instructorLabel(e, 'Sin dato')]))
       };
       // Incluir al usuario actual por si es el instructor y no está en getUsers (ej. owner/admin)
       if (userProfile?.uid) {
-        instructorMap[userProfile.uid] = personDisplayName(userProfile) || userProfile.email || 'Sin asignar';
+        instructorMap[userProfile.uid] = instructorLabel(userProfile, 'Sin asignar');
       }
+      setCatalogItems(catalogList || []);
+      setInstructorOptions(
+        Object.entries(instructorMap).map(([id, label]) => ({ id, label })).sort((a, b) => a.label.localeCompare(b.label, 'es'))
+      );
 
-      const enriched = sessionList.map((session) => ({
+      let enriched = sessionList.map((session) => ({
         ...session,
         trainingTypeName: catalogMap[session.trainingTypeId]?.name || 'Sin dato',
         branchName: branchMap[session.branchId]?.nombre || 'Sin dato',
@@ -128,7 +152,9 @@ export default function SessionHistoryScreen() {
           'Sin dato',
         instructorName: instructorMap[session.instructorId] || 'Sin asignar'
       }));
-
+      if (filterInstructorId) {
+        enriched = enriched.filter((s) => s.instructorId === filterInstructorId);
+      }
       setSessions(enriched);
 
       const [countEntries, evidenceEntries] = await Promise.all([
@@ -153,7 +179,7 @@ export default function SessionHistoryScreen() {
     } finally {
       setLoading(false);
     }
-  }, [ownerId, companyId, branchId, selectedEmployee?.id, userSucursales, userEmpresas]);
+  }, [ownerId, companyId, branchId, selectedEmployee?.id, filterTrainingTypeId, filterDateFrom, filterDateTo, filterInstructorId, userSucursales, userEmpresas]);
 
   useEffect(() => {
     load();
@@ -172,49 +198,79 @@ export default function SessionHistoryScreen() {
       {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
 
       <Paper sx={{ p: 2, mb: 2 }}>
-        <Typography variant="h6" sx={{ mb: 2 }}>
-          Filtros
-        </Typography>
-        <Grid container spacing={2} alignItems="center">
-          <Grid item xs={12} sm={4} md={2}>
-            <FormControl fullWidth size="small">
-              <InputLabel>Empresa</InputLabel>
-              <Select
-                label="Empresa"
-                value={companyId}
-                onChange={(e) => setCompanyId(e.target.value)}
-              >
-                <MenuItem value="">Todas</MenuItem>
-                {userEmpresas.map((c) => (
-                  <MenuItem key={c.id} value={c.id}>{c.nombre || c.id}</MenuItem>
-                ))}
-              </Select>
-            </FormControl>
-          </Grid>
-          <Grid item xs={12} sm={4} md={2}>
-            <FormControl fullWidth size="small">
-              <InputLabel>Sucursal</InputLabel>
-              <Select
-                label="Sucursal"
-                value={branchId}
-                onChange={(e) => setBranchId(e.target.value)}
-              >
-                <MenuItem value="">Todas</MenuItem>
-                {branchesByCompany.map((b) => (
-                  <MenuItem key={b.id} value={b.id}>{b.nombre || b.id}</MenuItem>
-                ))}
-              </Select>
-            </FormControl>
-          </Grid>
-          <Grid item xs={12} sm={4} md={4}>
+        <Stack direction="row" flexWrap="wrap" alignItems="center" gap={2}>
+          <Typography variant="h6" sx={{ mr: 1 }}>Filtros</Typography>
+          <FormControl size="small" sx={{ minWidth: 140 }}>
+            <InputLabel>Empresa</InputLabel>
+            <Select label="Empresa" value={companyId} onChange={(e) => setCompanyId(e.target.value)}>
+              <MenuItem value="">Todas</MenuItem>
+              {userEmpresas.map((c) => (
+                <MenuItem key={c.id} value={c.id}>{c.nombre || c.id}</MenuItem>
+              ))}
+            </Select>
+          </FormControl>
+          <FormControl size="small" sx={{ minWidth: 140 }}>
+            <InputLabel>Sucursal</InputLabel>
+            <Select label="Sucursal" value={branchId} onChange={(e) => setBranchId(e.target.value)}>
+              <MenuItem value="">Todas</MenuItem>
+              {branchesByCompany.map((b) => (
+                <MenuItem key={b.id} value={b.id}>{b.nombre || b.id}</MenuItem>
+              ))}
+            </Select>
+          </FormControl>
+          <FormControl size="small" sx={{ minWidth: 180 }}>
+            <InputLabel>Capacitación</InputLabel>
+            <Select
+              label="Capacitación"
+              value={filterTrainingTypeId}
+              onChange={(e) => setFilterTrainingTypeId(e.target.value)}
+            >
+              <MenuItem value="">Todas</MenuItem>
+              {catalogItems.map((c) => (
+                <MenuItem key={c.id} value={c.id}>{c.name || c.id}</MenuItem>
+              ))}
+            </Select>
+          </FormControl>
+          <TextField
+            size="small"
+            type="date"
+            label="Fecha desde"
+            InputLabelProps={{ shrink: true }}
+            value={filterDateFrom}
+            onChange={(e) => setFilterDateFrom(e.target.value)}
+            sx={{ width: 150 }}
+          />
+          <TextField
+            size="small"
+            type="date"
+            label="Fecha hasta"
+            InputLabelProps={{ shrink: true }}
+            value={filterDateTo}
+            onChange={(e) => setFilterDateTo(e.target.value)}
+            sx={{ width: 150 }}
+          />
+          <FormControl size="small" sx={{ minWidth: 180 }}>
+            <InputLabel>Instructor</InputLabel>
+            <Select
+              label="Instructor"
+              value={filterInstructorId}
+              onChange={(e) => setFilterInstructorId(e.target.value)}
+            >
+              <MenuItem value="">Todos</MenuItem>
+              {instructorOptions.map((opt) => (
+                <MenuItem key={opt.id} value={opt.id}>{opt.label}</MenuItem>
+              ))}
+            </Select>
+          </FormControl>
+          <Box sx={{ minWidth: 220 }}>
             <EmployeeAutocomplete
               options={employees}
               value={selectedEmployee}
               onChange={setSelectedEmployee}
               loading={loadingEmployees}
             />
-          </Grid>
-        </Grid>
+          </Box>
+        </Stack>
       </Paper>
 
       {loading ? (
