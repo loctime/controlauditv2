@@ -46,6 +46,22 @@ export default function PeopleScreen() {
     [userSucursales]
   );
 
+  const enrichedEmployee = useMemo(() => {
+    if (!selectedEmployee) return null;
+    const branch = branchMap[selectedEmployee.sucursalId];
+    const empresaNombre =
+      selectedEmployee.empresaNombre ||
+      (branch ? companyMap[branch.empresaId]?.nombre : null) ||
+      companyMap[selectedEmployee.empresaId]?.nombre;
+    const sucursalNombre =
+      selectedEmployee.sucursalNombre || branch?.nombre;
+    return {
+      ...selectedEmployee,
+      empresaNombre: empresaNombre || selectedEmployee.empresaNombre,
+      sucursalNombre: sucursalNombre || selectedEmployee.sucursalNombre
+    };
+  }, [selectedEmployee, companyMap, branchMap]);
+
   useEffect(() => {
     const loadEmployees = async () => {
       if (!ownerId) return;
@@ -160,16 +176,16 @@ export default function PeopleScreen() {
           <Box sx={{ mt: 1 }}>
             {peopleSubTab === 'summary' && (
               <PeopleSummaryTab
-                selectedEmployee={selectedEmployee}
+                selectedEmployee={enrichedEmployee}
                 records={records}
                 complianceSummary={complianceSummary}
               />
             )}
             {peopleSubTab === 'history' && (
-              <PeopleHistoryTab ownerId={ownerId} selectedEmployee={selectedEmployee} />
+              <PeopleHistoryTab ownerId={ownerId} selectedEmployee={enrichedEmployee} />
             )}
             {peopleSubTab === 'certificates' && (
-              <PeopleCertificatesTab ownerId={ownerId} selectedEmployee={selectedEmployee} />
+              <PeopleCertificatesTab ownerId={ownerId} selectedEmployee={enrichedEmployee} />
             )}
           </Box>
         </>
