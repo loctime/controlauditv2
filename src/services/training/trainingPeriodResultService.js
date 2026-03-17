@@ -84,7 +84,13 @@ export function consolidatePeriodAttendances(records = [], now = Timestamp.now()
   const finalStatus = sortedByStrength[0].attendanceStatus;
   const presentRows = normalized
     .filter((record) => record.attendanceStatus === TRAINING_ATTENDANCE_STATUSES.PRESENT)
-    .sort(compareConsumerCandidate);
+    .sort((a, b) => {
+      // Preferir como consumer al que tiene vigencia (validUntil), ej. APPROVED cuando requiere evaluación
+      const aHasVigencia = a.validUntil != null ? 1 : 0;
+      const bHasVigencia = b.validUntil != null ? 1 : 0;
+      if (aHasVigencia !== bHasVigencia) return bHasVigencia - aHasVigencia;
+      return compareConsumerCandidate(a, b);
+    });
   const consumer = presentRows[0] || sortedByStrength[0];
 
   const absenceSessionIds = normalized

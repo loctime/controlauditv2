@@ -1,16 +1,21 @@
-﻿import { buildOrderBy, buildWhere, createDocument, deleteDocument, getDocument, queryDocuments, updateDocument } from './trainingBaseService';
+import { buildOrderBy, buildWhere, createDocument, deleteDocument, getDocument, queryDocuments, updateDocument } from './trainingBaseService';
 
 export const trainingCatalogService = {
   async create(ownerId, payload) {
     return createDocument(ownerId, 'trainingCatalog', {
       ...payload,
       status: payload.status || 'active',
-      version: payload.version || 1
+      version: payload.version || 1,
+      requiresEvaluation: payload.requiresEvaluation === true,
+      requiresScore: payload.requiresScore === true
     });
   },
 
   async update(ownerId, trainingTypeId, payload) {
-    return updateDocument(ownerId, 'trainingCatalogItem', trainingTypeId, payload);
+    const updatePayload = { ...payload };
+    if ('requiresEvaluation' in payload) updatePayload.requiresEvaluation = payload.requiresEvaluation === true;
+    if ('requiresScore' in payload) updatePayload.requiresScore = payload.requiresScore === true;
+    return updateDocument(ownerId, 'trainingCatalogItem', trainingTypeId, updatePayload);
   },
 
   async remove(ownerId, trainingTypeId) {

@@ -5,12 +5,14 @@ import {
   Autocomplete,
   Box,
   Button,
+  Checkbox,
   Chip,
   CircularProgress,
   Dialog,
   DialogActions,
   DialogContent,
   DialogTitle,
+  FormControlLabel,
   Grid,
   IconButton,
   MenuItem,
@@ -91,9 +93,8 @@ export default function CatalogScreen({ onNavigateToPlans }) {
     modality: 'in_person',
     recommendedDurationMinutes: 60,
     validityMonths: 12,
-    requiresEvaluation: true,
-    requiresSignature: true,
-    requiresCertificate: true,
+    requiresEvaluation: false,
+    requiresScore: false,
     status: 'active'
   });
 
@@ -224,6 +225,8 @@ export default function CatalogScreen({ onNavigateToPlans }) {
       validityMonths: item.validityMonths ?? 12,
       description: item.description || '',
       status: item.status || 'active',
+      requiresEvaluation: item.requiresEvaluation === true,
+      requiresScore: item.requiresScore === true,
     });
     setEditSelectedCategories(cats);
   };
@@ -246,6 +249,8 @@ export default function CatalogScreen({ onNavigateToPlans }) {
         validityMonths: Number(editForm.validityMonths || 0),
         description: (editForm.description || '').trim() || undefined,
         status: editForm.status,
+        requiresEvaluation: editForm.requiresEvaluation === true,
+        requiresScore: editForm.requiresScore === true,
       });
       setEditItem(null);
       await load();
@@ -389,6 +394,16 @@ export default function CatalogScreen({ onNavigateToPlans }) {
               </TextField>
               <TextField type="number" label="Duración recomendada (minutos)" value={form.recommendedDurationMinutes} onChange={(e) => setForm({ ...form, recommendedDurationMinutes: e.target.value })} />
               <TextField type="number" label="Vigencia (meses)" value={form.validityMonths} onChange={(e) => setForm({ ...form, validityMonths: e.target.value })} />
+              <Stack direction="row" flexWrap="wrap" spacing={2}>
+                <FormControlLabel
+                  control={<Checkbox checked={form.requiresEvaluation === true} onChange={(e) => setForm({ ...form, requiresEvaluation: e.target.checked })} />}
+                  label="Requiere evaluación (solo genera vigencia si aprueba)"
+                />
+                <FormControlLabel
+                  control={<Checkbox checked={form.requiresScore === true} onChange={(e) => setForm({ ...form, requiresScore: e.target.checked })} disabled={!form.requiresEvaluation} />}
+                  label="Requiere calificación (puntaje)"
+                />
+              </Stack>
               <TextField select label="Estado" value={form.status} onChange={(e) => setForm({ ...form, status: e.target.value })}>
                 <MenuItem value="active">Activo</MenuItem>
                 <MenuItem value="inactive">Inactivo</MenuItem>
@@ -525,6 +540,16 @@ export default function CatalogScreen({ onNavigateToPlans }) {
             </TextField>
             <TextField type="number" label="Duración (min)" value={editForm.recommendedDurationMinutes} onChange={(e) => setEditForm((f) => ({ ...f, recommendedDurationMinutes: e.target.value }))} fullWidth />
             <TextField type="number" label="Vigencia (meses)" value={editForm.validityMonths} onChange={(e) => setEditForm((f) => ({ ...f, validityMonths: e.target.value }))} fullWidth />
+            <Stack direction="row" flexWrap="wrap" spacing={2}>
+              <FormControlLabel
+                control={<Checkbox checked={editForm.requiresEvaluation === true} onChange={(e) => setEditForm((f) => ({ ...f, requiresEvaluation: e.target.checked }))} />}
+                label="Requiere evaluación"
+              />
+              <FormControlLabel
+                control={<Checkbox checked={editForm.requiresScore === true} onChange={(e) => setEditForm((f) => ({ ...f, requiresScore: e.target.checked }))} disabled={!editForm.requiresEvaluation} />}
+                label="Requiere calificación (puntaje)"
+              />
+            </Stack>
             <TextField select label="Estado" value={editForm.status} onChange={(e) => setEditForm((f) => ({ ...f, status: e.target.value }))} fullWidth>
               <MenuItem value="active">Activo</MenuItem>
               <MenuItem value="inactive">Inactivo</MenuItem>

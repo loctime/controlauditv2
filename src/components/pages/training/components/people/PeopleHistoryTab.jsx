@@ -24,7 +24,19 @@ import {
   trainingReportingService,
   trainingSessionService,
 } from '../../../../../services/training';
+import { TRAINING_ATTENDANCE_STATUSES, TRAINING_EVALUATION_STATUSES } from '../../../../../types/trainingDomain';
 import SessionDetailModal from '../sessions/SessionDetailModal';
+
+const evaluationDisplayLabels = {
+  [TRAINING_EVALUATION_STATUSES.APPROVED]: 'Aprobado',
+  [TRAINING_EVALUATION_STATUSES.FAILED]: 'Desaprobado',
+  [TRAINING_EVALUATION_STATUSES.PENDING]: 'Pendiente'
+};
+
+function evaluationDisplay(row) {
+  if (row.attendanceStatus !== TRAINING_ATTENDANCE_STATUSES.PRESENT) return '—';
+  return evaluationDisplayLabels[row.evaluationStatus] || row.evaluationStatus || '—';
+}
 
 const EXPIRING_THRESHOLD_DAYS = 5;
 
@@ -210,6 +222,7 @@ export default function PeopleHistoryTab({ ownerId, selectedEmployee }) {
                 <TableCell>Fecha vigencia desde</TableCell>
                 <TableCell>Vence</TableCell>
                 <TableCell>Estado</TableCell>
+                <TableCell>Evaluación</TableCell>
                 <TableCell>Ver</TableCell>
               </TableRow>
             </TableHead>
@@ -225,6 +238,7 @@ export default function PeopleHistoryTab({ ownerId, selectedEmployee }) {
                     <TableCell>
                       <Chip label={statusLabel} color={statusColor} size="small" />
                     </TableCell>
+                    <TableCell>{evaluationDisplay(row)}</TableCell>
                     <TableCell>
                       {row.sessionId ? (
                         loadingSessionId === row.sessionId ? (

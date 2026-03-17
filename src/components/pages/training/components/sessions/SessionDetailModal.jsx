@@ -17,7 +17,10 @@ import {
   Paper,
   CircularProgress,
   Alert,
-  Button
+  Button,
+  Select,
+  MenuItem,
+  TextField
 } from '@mui/material';
 import DownloadIcon from '@mui/icons-material/Download';
 import CloseIcon from '@mui/icons-material/Close';
@@ -25,6 +28,7 @@ import { empleadoService } from '../../../../../services/empleadoService';
 import { resolveFileAccess } from '../../../../../services/fileResolverService';
 import {
   trainingAttendanceService,
+  trainingCatalogService,
   trainingCertificateService,
   trainingEvidenceService
 } from '../../../../../services/training';
@@ -156,8 +160,10 @@ export default function SessionDetailModal({ open, onClose, ownerId, session }) 
   const [attendance, setAttendance] = useState([]);
   const [evidence, setEvidence] = useState([]);
   const [employeeNameMap, setEmployeeNameMap] = useState({});
+  const [catalogItem, setCatalogItem] = useState(null);
   const [generatingCertificateEmployeeId, setGeneratingCertificateEmployeeId] = useState(null);
   const [certificateError, setCertificateError] = useState('');
+  const [updatingAttendanceId, setUpdatingAttendanceId] = useState(null);
 
   const loadData = useCallback(async () => {
     if (!ownerId || !session?.id) return;
@@ -173,29 +179,32 @@ export default function SessionDetailModal({ open, onClose, ownerId, session }) 
       }
       return Array.from(byId.values());
     };
-    const [att, ev, employees] = await Promise.all([
+    const [att, ev, employees, catalog] = await Promise.all([
       trainingAttendanceService.listAttendanceBySession(ownerId, session.id).catch((err) => {
         setError(err.message || 'Error al cargar participantes.');
         return [];
       }),
       trainingEvidenceService.listBySession(ownerId, session.id).catch(() => []),
-      loadEmployees()
+      loadEmployees(),
+      session.trainingTypeId ? trainingCatalogService.getById(ownerId, session.trainingTypeId).catch(() => null) : Promise.resolve(null)
     ]);
     setAttendance(att || []);
     setEvidence(ev || []);
+    setCatalogItem(catalog || null);
     const nameMap = {};
     (employees || []).forEach((emp) => {
       const name = employeeDisplayName(emp);
       if (emp.id && name) nameMap[emp.id] = name;
     });
     setEmployeeNameMap(nameMap);
-  }, [ownerId, session?.id, session?.branchId, session?.companyId]);
+  }, [ownerId, session?.id, session?.branchId, session?.companyId, session?.trainingTypeId]);
 
   useEffect(() => {
     if (!open || !ownerId || !session?.id) {
       setAttendance([]);
       setEvidence([]);
       setEmployeeNameMap({});
+      setCatalogItem(null);
       setLoading(false);
       return;
     }
@@ -207,6 +216,32 @@ export default function SessionDetailModal({ open, onClose, ownerId, session }) 
     });
     return () => { alive = false; };
   }, [open, ownerId, session?.id, loadData]);
+
+  const requiresEvaluation = catalogItem?.requiresEvaluation === true;
+  const requiresScore = catalogItem?.requiresScore === true;
+
+  const handleUpdateEvaluation = useCallback(async (record, field, value) => {
+    if (!ownerId || !session?.id || !record?.employeeId) return;
+    setUpdatingAttendanceId(record.employeeId);
+    try {
+      await trainingAttendanceService.upsertAttendance(ownerId, session.id, record.employeeId, {
+        ...record,
+        [field]: value,
+        sessionData: session
+      });
+      await loadData();
+    } catch (err) {
+      setCertificateError(err?.message || 'Error al actualizar.');
+    } finally {
+      setUpdatingAttendanceId(null);
+    }
+  }, [ownerId, session?.id, session, loadData]);
+
+  const canGenerateCertificate = (record) => {
+    if (record.attendanceStatus !== TRAINING_ATTENDANCE_STATUSES.PRESENT) return false;
+    if (!requiresEvaluation) return true;
+    return record.evaluationStatus === TRAINING_EVALUATION_STATUSES.APPROVED;
+  };
 
   const handleGenerateCertificate = async (record) => {
     if (!ownerId || !session?.id) return;
@@ -338,7 +373,7 @@ export default function SessionDetailModal({ open, onClose, ownerId, session }) 
                   <TableRow>
                     <TableCell>Participante</TableCell>
                     <TableCell>Asistencia</TableCell>
-                    <TableCell>Evaluación</TableCell>
+                    {requiresEvaluation && <TableCell>Evaluación</TableCell>}
                     <TableCell>Calificación</TableCell>
                     <TableCell>Notas</TableCell>
                     <TableCell>Certificado</TableCell>
@@ -364,29 +399,76 @@ export default function SessionDetailModal({ open, onClose, ownerId, session }) 
                       <TableCell>
                         {attendanceDisplayStatus(record.attendanceStatus)}
                       </TableCell>
+                      {requiresEvaluation && (
+                        <TableCell>
+                          {record.attendanceStatus === TRAINING_ATTENDANCE_STATUSES.PRESENT ? (
+                            updatingAttendanceId === record.employeeId ? (
+                              <CircularProgress size={20} />
+                            ) : (
+                              <Select
+                                size="small"
+                                value={record.evaluationStatus || TRAINING_EVALUATION_STATUSES.PENDING}
+                                onChange={(e) => handleUpdateEvaluation(record, 'evaluationStatus', e.target.value)}
+                                sx={{ minWidth: 120 }}
+                              >
+                                <MenuItem value={TRAINING_EVALUATION_STATUSES.APPROVED}>{evaluationLabels[TRAINING_EVALUATION_STATUSES.APPROVED]}</MenuItem>
+                                <MenuItem value={TRAINING_EVALUATION_STATUSES.FAILED}>{evaluationLabels[TRAINING_EVALUATION_STATUSES.FAILED]}</MenuItem>
+                                <MenuItem value={TRAINING_EVALUATION_STATUSES.PENDING}>{evaluationLabels[TRAINING_EVALUATION_STATUSES.PENDING]}</MenuItem>
+                              </Select>
+                            )
+                          ) : (
+                            '—'
+                          )}
+                        </TableCell>
+                      )}
                       <TableCell>
-                        {record.attendanceStatus === TRAINING_ATTENDANCE_STATUSES.PRESENT
-                          ? (evaluationLabels[record.evaluationStatus] || record.evaluationStatus || '-')
-                          : '—'}
-                      </TableCell>
-                      <TableCell>
-                        {record.attendanceStatus === TRAINING_ATTENDANCE_STATUSES.PRESENT && record.score != null
-                          ? `${Number(record.score)}/${SCORE_MAX}`
-                          : '—'}
+                        {record.attendanceStatus === TRAINING_ATTENDANCE_STATUSES.PRESENT ? (
+                          requiresScore && updatingAttendanceId !== record.employeeId ? (
+                            <TextField
+                              type="number"
+                              size="small"
+                              inputProps={{ min: 0, max: SCORE_MAX, step: 1 }}
+                              value={record.score ?? ''}
+                              onBlur={(e) => {
+                                const v = e.target.value === '' ? null : Number(e.target.value);
+                                if (v !== record.score && v !== (record.score ?? null)) {
+                                  handleUpdateEvaluation(record, 'score', v);
+                                }
+                              }}
+                              sx={{ width: 64 }}
+                            />
+                          ) : requiresScore && updatingAttendanceId === record.employeeId ? (
+                            <CircularProgress size={20} />
+                          ) : record.score != null ? (
+                            `${Number(record.score)}/${SCORE_MAX}`
+                          ) : (
+                            '—'
+                          )
+                        ) : (
+                          '—'
+                        )}
                       </TableCell>
                       <TableCell>{record.notes || '-'}</TableCell>
                       <TableCell>
                         {record.attendanceStatus === TRAINING_ATTENDANCE_STATUSES.PRESENT ? (
-                          generatingCertificateEmployeeId === record.employeeId ? (
-                            <CircularProgress size={20} />
+                          canGenerateCertificate(record) ? (
+                            generatingCertificateEmployeeId === record.employeeId ? (
+                              <CircularProgress size={20} />
+                            ) : (
+                              <Button
+                                size="small"
+                                variant="outlined"
+                                onClick={() => handleGenerateCertificate(record)}
+                              >
+                                {record.certificateId ? 'Descargar certificado PDF' : 'Generar certificado PDF'}
+                              </Button>
+                            )
                           ) : (
-                            <Button
-                              size="small"
-                              variant="outlined"
-                              onClick={() => handleGenerateCertificate(record)}
-                            >
-                              {record.certificateId ? 'Descargar certificado PDF' : 'Generar certificado PDF'}
-                            </Button>
+                            requiresEvaluation ? (
+                              <Typography variant="caption" color="text.secondary">
+                                Aprobar para generar certificado
+                              </Typography>
+                            ) : '—'
                           )
                         ) : (
                           '—'

@@ -230,17 +230,39 @@ export const trainingAttendanceService = {
       throw new Error('trainingTypeId es requerido');
     }
 
-    // Vigencia desde catálogo cuando asiste: validFrom = executedDate, validUntil = executedDate + validityMonths
+    const catalogItem = await trainingCatalogService.getById(ownerId, trainingTypeId);
+    const requiresEvaluation = catalogItem?.requiresEvaluation === true;
+
+    const isPresent = payload.attendanceStatus === TRAINING_ATTENDANCE_STATUSES.PRESENT;
+    const evaluationStatusPayload = payload.evaluationStatus ?? null;
+
+    // evaluationStatus: si requiere evaluación y está presente sin valor → PENDING
+    let resolvedEvaluationStatus = evaluationStatusPayload || TRAINING_EVALUATION_STATUSES.NOT_APPLICABLE;
+    if (requiresEvaluation && isPresent && evaluationStatusPayload == null) {
+      resolvedEvaluationStatus = TRAINING_EVALUATION_STATUSES.PENDING;
+    }
+
+    // Vigencia: solo si está presente y (no requiere evaluación O aprobado)
     let computedValidFrom = payload.validFrom || null;
     let computedValidUntil = payload.validUntil || null;
-    const isPresent = payload.attendanceStatus === TRAINING_ATTENDANCE_STATUSES.PRESENT;
     if (isPresent && !computedValidFrom && !computedValidUntil) {
-      const executedDate = getSessionTimestamp(sessionData);
-      if (executedDate) {
-        const catalogItem = await trainingCatalogService.getById(ownerId, trainingTypeId);
-        const validityMonths = catalogItem?.validityMonths ?? 12;
-        computedValidFrom = toTimestamp(executedDate);
-        computedValidUntil = addMonthsToTimestamp(executedDate, validityMonths);
+      if (requiresEvaluation) {
+        if (resolvedEvaluationStatus === TRAINING_EVALUATION_STATUSES.APPROVED) {
+          const executedDate = getSessionTimestamp(sessionData);
+          if (executedDate) {
+            const validityMonths = catalogItem?.validityMonths ?? 12;
+            computedValidFrom = toTimestamp(executedDate);
+            computedValidUntil = addMonthsToTimestamp(executedDate, validityMonths);
+          }
+        }
+        // FAILED o PENDING → no generar vigencia (quedan null)
+      } else {
+        const executedDate = getSessionTimestamp(sessionData);
+        if (executedDate) {
+          const validityMonths = catalogItem?.validityMonths ?? 12;
+          computedValidFrom = toTimestamp(executedDate);
+          computedValidUntil = addMonthsToTimestamp(executedDate, validityMonths);
+        }
       }
     }
 
@@ -251,7 +273,7 @@ export const trainingAttendanceService = {
       companyId,
       branchId,
       attendanceStatus: payload.attendanceStatus || TRAINING_ATTENDANCE_STATUSES.INVITED,
-      evaluationStatus: payload.evaluationStatus || TRAINING_EVALUATION_STATUSES.NOT_APPLICABLE,
+      evaluationStatus: resolvedEvaluationStatus,
       score: payload.score ?? null,
       employeeSignature: payload.employeeSignature || null,
       instructorSignature: payload.instructorSignature || null,
@@ -317,11 +339,15 @@ export const trainingAttendanceService = {
       createdAt: payload.createdAt || now
     }, sessionData));
 
+    // Conflicto: otro registro en el mismo período que "consuma" el período (PRESENT + vigencia).
+    // Si la capacitación requiere evaluación, solo APPROVED consume; FAILED no bloquea otra sesión aprobada.
+    const isPeriodConsumer = (item) => {
+      if (!item || item.isDeleted || item.attendanceStatus !== TRAINING_ATTENDANCE_STATUSES.PRESENT) return false;
+      if (!requiresEvaluation) return true;
+      return item.evaluationStatus === TRAINING_EVALUATION_STATUSES.APPROVED;
+    };
     const existingPresentElsewhere = recomputeSet.find(
-      (item) =>
-        !item.isDeleted &&
-        item.attendanceStatus === TRAINING_ATTENDANCE_STATUSES.PRESENT &&
-        item.sessionId !== sessionId
+      (item) => item.sessionId !== sessionId && isPeriodConsumer(item)
     );
 
     if (existingPresentElsewhere) {
