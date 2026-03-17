@@ -171,7 +171,15 @@ export default function EmployeeProfileCard({
             />
           </Box>
         )}
-        <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
+        <Stack
+          direction="row"
+          spacing={1}
+          useFlexGap
+          sx={{
+            flexWrap: 'nowrap',
+            justifyContent: 'space-between'
+          }}
+        >
           <Tooltip title={COMPLIANCE_TOOLTIPS.missing} arrow placement="top">
             <Chip
               label={`Faltantes: ${missing}`}
