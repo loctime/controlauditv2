@@ -209,7 +209,7 @@ export default function SessionDetailModal({ open, onClose, ownerId, session }) 
   }, [open, ownerId, session?.id, loadData]);
 
   const handleGenerateCertificate = async (record) => {
-    if (!ownerId || !session?.id || record.certificateId) return;
+    if (!ownerId || !session?.id) return;
     setCertificateError('');
     setGeneratingCertificateEmployeeId(record.employeeId);
     try {
@@ -220,26 +220,46 @@ export default function SessionDetailModal({ open, onClose, ownerId, session }) 
         record.employeeId ||
         'Sin dato';
       const realizationDate = session.executedDate || session.scheduledDate || session.updatedAt || session.createdAt;
+      const now = new Date();
+      const issuedAt = record.validFrom || now;
+      const certificateDisplayId = `CERT-${session.id || 'S'}-${record.employeeId || 'E'}`;
+      const evaluationLabel =
+        record.attendanceStatus === TRAINING_ATTENDANCE_STATUSES.PRESENT
+          ? (evaluationLabels[record.evaluationStatus] || record.evaluationStatus || '')
+          : '';
       const blob = await generateCertificatePDFBlob({
         employeeName,
         trainingName: session.trainingTypeName || 'Sin dato',
         realizationDate,
         expiryDate: record.validUntil ?? null,
-        companyName: session.companyName || ''
+        companyName: session.companyName || '',
+        branchName: session.branchName || '',
+        instructorName: session.instructorName || '',
+        score:
+          record.attendanceStatus === TRAINING_ATTENDANCE_STATUSES.PRESENT && record.score != null
+            ? `${Number(record.score)}/${SCORE_MAX}`
+            : '',
+        evaluationStatus: evaluationLabel,
+        issuedAt,
+        certificateId: certificateDisplayId
       });
       const safeName = (employeeName || record.employeeId || 'certificado').replace(/[^a-zA-Z0-9\u00C0-\u024F\s-]/g, '').trim().slice(0, 60) || 'certificado';
       downloadCertificatePDF(blob, `certificado-${safeName}.pdf`);
-      const now = new Date();
-      await trainingCertificateService.create(ownerId, {
-        sessionId: session.id,
-        employeeId: record.employeeId,
-        trainingTypeId: session.trainingTypeId,
-        validFrom: record.validFrom || null,
-        expiresAt: record.validUntil || null,
-        fileReference: null,
-        issuedAt: record.validFrom || now,
-        status: 'active'
-      });
+
+      // Crear certificado solo si aún no existe (primera emisión).
+      if (!record.certificateId) {
+        await trainingCertificateService.create(ownerId, {
+          sessionId: session.id,
+          employeeId: record.employeeId,
+          trainingTypeId: session.trainingTypeId,
+          validFrom: record.validFrom || null,
+          expiresAt: record.validUntil || null,
+          fileReference: null,
+          issuedAt,
+          displayId: certificateDisplayId,
+          status: 'active'
+        });
+      }
       await loadData();
     } catch (err) {
       setCertificateError(err?.message || 'No se pudo generar el certificado.');
@@ -357,9 +377,7 @@ export default function SessionDetailModal({ open, onClose, ownerId, session }) 
                       <TableCell>{record.notes || '-'}</TableCell>
                       <TableCell>
                         {record.attendanceStatus === TRAINING_ATTENDANCE_STATUSES.PRESENT ? (
-                          record.certificateId ? (
-                            <Typography variant="caption" color="text.secondary">Emitido</Typography>
-                          ) : generatingCertificateEmployeeId === record.employeeId ? (
+                          generatingCertificateEmployeeId === record.employeeId ? (
                             <CircularProgress size={20} />
                           ) : (
                             <Button
@@ -367,7 +385,7 @@ export default function SessionDetailModal({ open, onClose, ownerId, session }) 
                               variant="outlined"
                               onClick={() => handleGenerateCertificate(record)}
                             >
-                              Generar certificado PDF
+                              {record.certificateId ? 'Descargar certificado PDF' : 'Generar certificado PDF'}
                             </Button>
                           )
                         ) : (
