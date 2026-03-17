@@ -1,5 +1,6 @@
 import React from 'react';
 import { Alert, Button, Chip, Paper, Table, TableBody, TableCell, TableHead, TableRow, Typography } from '@mui/material';
+import { formatDateAR } from '@/utils/dateUtils';
 
 function statusConfig(complianceStatus) {
   switch (complianceStatus) {
@@ -9,16 +10,11 @@ function statusConfig(complianceStatus) {
       return { label: 'Por vencer', color: 'warning' };
     case 'expired':
       return { label: 'Vencida', color: 'error' };
+    case 'missing':
+      return { label: 'Sin vigencia', color: 'default' };
     default:
-      return { label: 'Incompleta', color: 'default' };
+      return { label: 'Sin vigencia', color: 'default' };
   }
-}
-
-function dateText(value) {
-  if (!value) return '-';
-  const date = value?.toDate ? value.toDate() : new Date(value);
-  if (Number.isNaN(date.getTime())) return '-';
-  return date.toISOString().slice(0, 10);
 }
 
 export default function EmployeeTrainingTimeline({ records = [] }) {
@@ -57,11 +53,11 @@ export default function EmployeeTrainingTimeline({ records = [] }) {
           {records.map((record) => (
             <TableRow key={record.id}>
               <TableCell>{record.trainingName || 'Sin dato'}</TableCell>
-              <TableCell>{dateText(record.validFrom)}</TableCell>
+              <TableCell>{formatDateAR(record.validFrom)}</TableCell>
               <TableCell>
-                {dateText(record.validFrom)} — {dateText(record.validUntil)}
+                {formatDateAR(record.validFrom)} — {formatDateAR(record.validUntil)}
               </TableCell>
-              <TableCell>{dateText(record.validUntil)}</TableCell>
+              <TableCell>{formatDateAR(record.validUntil)}</TableCell>
               <TableCell><Chip label={statusConfig(record.complianceStatus).label} color={statusConfig(record.complianceStatus).color} size="small" /></TableCell>
               <TableCell>
                 {record.certificate ? (

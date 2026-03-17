@@ -19,24 +19,20 @@ import {
   trainingCatalogService,
   trainingReportingService,
 } from '../../../../services/training';
+import { formatDateAR } from '@/utils/dateUtils';
 import { empleadoService } from '../../../../services/empleadoService';
 import EmployeeAutocomplete from '../components/people/EmployeeAutocomplete';
 
+const EXPIRING_THRESHOLD_DAYS = 5;
+
 function complianceFromValidUntil(validUntil) {
-  if (!validUntil) return { label: 'Sin vigencia', status: 'missing', color: 'default' };
-  const toDate = validUntil?.toDate ? validUntil.toDate() : new Date(validUntil);
+  if (validUntil == null) return { label: 'Sin vigencia', status: 'missing', color: 'default' };
+  const toDate = typeof validUntil.toDate === 'function' ? validUntil.toDate() : new Date(validUntil);
+  if (Number.isNaN(toDate.getTime())) return { label: 'Sin vigencia', status: 'missing', color: 'default' };
   const days = Math.ceil((toDate.getTime() - Date.now()) / (1000 * 60 * 60 * 24));
   if (days < 0) return { label: 'Vencida', status: 'expired', color: 'error' };
-  if (days < 30) return { label: 'Por vencer (<30d)', status: 'critical', color: 'error' };
-  if (days <= 60) return { label: 'Por vencer (30-60d)', status: 'expiring_soon', color: 'warning' };
+  if (days <= EXPIRING_THRESHOLD_DAYS) return { label: 'Por vencer', status: 'expiring_soon', color: 'warning' };
   return { label: 'Vigente', status: 'compliant', color: 'success' };
-}
-
-function dateText(value) {
-  if (!value) return '—';
-  const date = value?.toDate ? value.toDate() : new Date(value);
-  if (Number.isNaN(date.getTime())) return '—';
-  return date.toLocaleDateString();
 }
 
 export default function EmployeeTrainingHistoryScreen() {
@@ -193,8 +189,8 @@ export default function EmployeeTrainingHistoryScreen() {
                   return (
                     <TableRow key={row.id}>
                       <TableCell>{trainingName}</TableCell>
-                      <TableCell>{dateText(row.validFrom)}</TableCell>
-                      <TableCell>{dateText(row.validUntil)}</TableCell>
+                      <TableCell>{formatDateAR(row.validFrom)}</TableCell>
+                      <TableCell>{formatDateAR(row.validUntil)}</TableCell>
                       <TableCell>
                         <Chip label={statusLabel} color={statusColor} size="small" />
                       </TableCell>

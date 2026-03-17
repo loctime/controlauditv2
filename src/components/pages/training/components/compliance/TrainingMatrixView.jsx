@@ -1,12 +1,6 @@
 import React from 'react';
 import { Alert, Button, Paper, Stack, Table, TableBody, TableCell, TableHead, TableRow, Typography } from '@mui/material';
-
-function dateText(value) {
-  if (!value) return '-';
-  const date = value?.toDate ? value.toDate() : new Date(value);
-  if (Number.isNaN(date.getTime())) return '-';
-  return date.toISOString().slice(0, 10);
-}
+import { formatDateAR } from '@/utils/dateUtils';
 
 function statusLabel(status) {
   const map = {
@@ -27,7 +21,7 @@ function buildCsv(rows = []) {
     row.trainingTypeId,
     row.trainingTypeName,
     row.complianceStatus,
-    dateText(row.validUntil),
+    formatDateAR(row.validUntil),
     row.daysToExpire ?? ''
   ].map((value) => `"${String(value ?? '').replaceAll('"', '""')}"`).join(','));
 
@@ -76,7 +70,7 @@ export default function TrainingMatrixView({ rows = [], onExportCsv }) {
                 <TableCell>{row.roleId || '-'}</TableCell>
                 <TableCell>{row.trainingTypeName || row.trainingTypeId}</TableCell>
                 <TableCell>{statusLabel(row.complianceStatus)}</TableCell>
-                <TableCell>{dateText(row.validUntil)}</TableCell>
+                <TableCell>{formatDateAR(row.validUntil)}</TableCell>
                 <TableCell>{row.daysToExpire ?? '-'}</TableCell>
               </TableRow>
             ))}

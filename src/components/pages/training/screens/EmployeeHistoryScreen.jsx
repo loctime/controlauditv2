@@ -1,6 +1,7 @@
 import logger from '@/utils/logger';
 import { useCallback, useEffect, useState } from 'react';
 import { Alert, Box, Button, CircularProgress, Grid, Paper, Stack, TextField, Typography } from '@mui/material';
+import { formatDateAR } from '@/utils/dateUtils';
 import { useAuth } from '@/components/context/AuthContext';
 import { employeeTrainingRecordService } from '../../../../services/training';
 export default function EmployeeHistoryScreen() {
@@ -73,7 +74,7 @@ export default function EmployeeHistoryScreen() {
               <Paper key={record.id} variant="outlined" sx={{ p: 1.5 }}>
                 <Typography sx={{ fontWeight: 700 }}>{record.trainingTypeId}</Typography>
                 <Typography variant="body2" color="text.secondary">Estado: {record.complianceStatus} | Ultimo resultado: {record.lastAttendanceStatus || record.lastResult}</Typography>
-                <Typography variant="body2" color="text.secondary">Vigencia: {String(record.validFrom || '-')} a {String(record.validUntil || '-')}</Typography>
+                <Typography variant="body2" color="text.secondary">Vigencia: {formatDateAR(record.validFrom)} a {formatDateAR(record.validUntil)}</Typography>
                 <Typography variant="body2">Cantidad historica: {record.historyCount || 0}</Typography>
               </Paper>
             ))}

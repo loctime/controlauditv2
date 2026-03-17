@@ -20,15 +20,34 @@ import {
 } from '../../types/trainingDomain';
 import { trainingPeriodResultService } from './trainingPeriodResultService';
 
+/** Días restantes por debajo de los cuales se considera "Por vencer". */
+const EXPIRING_THRESHOLD_DAYS = 5;
+
+/**
+ * Interpreta validUntil como Date (Timestamp → .toDate(), string → new Date()).
+ * @returns {Date|null}
+ */
+function parseValidUntil(validUntil) {
+  if (validUntil == null) return null;
+  if (typeof validUntil.toDate === 'function') return validUntil.toDate();
+  const d = typeof validUntil === 'string' ? new Date(validUntil) : new Date(validUntil);
+  return Number.isNaN(d.getTime()) ? null : d;
+}
+
+/**
+ * Calcula estado de cumplimiento a partir de la fecha de vencimiento.
+ * Reglas: Vencida (days < 0), Por vencer (0 ≤ days ≤ 5), Vigente (days > 5), Faltante (sin validUntil).
+ * Única fuente de verdad para compliance; no duplicar lógica en frontend.
+ */
 function computeCompliance(validUntil) {
-  if (!validUntil) {
+  const expiryDate = parseValidUntil(validUntil);
+  if (!expiryDate) {
     return {
       complianceStatus: TRAINING_COMPLIANCE_STATUSES.MISSING,
       daysToExpire: null
     };
   }
 
-  const expiryDate = validUntil.toDate ? validUntil.toDate() : new Date(validUntil);
   const now = new Date();
   const days = Math.ceil((expiryDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
 
@@ -39,7 +58,7 @@ function computeCompliance(validUntil) {
     };
   }
 
-  if (days <= 60) {
+  if (days <= EXPIRING_THRESHOLD_DAYS) {
     return {
       complianceStatus: TRAINING_COMPLIANCE_STATUSES.EXPIRING_SOON,
       daysToExpire: days
@@ -155,6 +174,7 @@ export const employeeTrainingRecordService = {
       return recordId;
     }
 
+    // Única fuente de verdad: finalValidUntil del period result (nunca current.validUntil)
     const compliance = computeCompliance(latest.finalValidUntil);
     const payload = {
       employeeId,

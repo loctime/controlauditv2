@@ -38,15 +38,18 @@ import {
   trainingSessionService,
   trainingAttendanceService,
 } from '../../../../services/training';
+import { formatDateAR } from '@/utils/dateUtils';
 import { empleadoService } from '../../../../services/empleadoService';
 
+const EXPIRING_THRESHOLD_DAYS = 5;
+
 function complianceLabelFromValidUntil(validUntil) {
-  if (!validUntil) return { label: 'Sin vigencia', status: 'missing' };
-  const toDate = validUntil?.toDate ? validUntil.toDate() : new Date(validUntil);
+  if (validUntil == null) return { label: 'Sin vigencia', status: 'missing' };
+  const toDate = typeof validUntil.toDate === 'function' ? validUntil.toDate() : new Date(validUntil);
+  if (Number.isNaN(toDate.getTime())) return { label: 'Sin vigencia', status: 'missing' };
   const days = Math.ceil((toDate.getTime() - Date.now()) / (1000 * 60 * 60 * 24));
   if (days < 0) return { label: 'Vencida', status: 'expired' };
-  if (days < 30) return { label: 'Por vencer (<30d)', status: 'critical' };
-  if (days <= 60) return { label: 'Por vencer (30-60d)', status: 'expiring_soon' };
+  if (days <= EXPIRING_THRESHOLD_DAYS) return { label: 'Por vencer', status: 'expiring_soon' };
   return { label: 'Vigente', status: 'compliant' };
 }
 
@@ -710,13 +713,11 @@ export default function CatalogScreen({ onNavigateToPlans }) {
                     const name = emp ? `${emp.apellido || ''}, ${emp.nombre || ''}`.trim() || emp.nombre : row.employeeId;
                     const { label: statusLabel, status } = complianceLabelFromValidUntil(row.validUntil);
                     const chipColor = status === 'compliant' ? 'success' : status === 'expiring_soon' ? 'warning' : status === 'expired' ? 'error' : 'default';
-                    const validFromStr = row.validFrom?.toDate ? row.validFrom.toDate().toLocaleDateString() : (row.validFrom ? String(row.validFrom) : '—');
-                    const validUntilStr = row.validUntil?.toDate ? row.validUntil.toDate().toLocaleDateString() : (row.validUntil ? String(row.validUntil) : '—');
                     return (
                       <TableRow key={row.id}>
                         <TableCell>{name}</TableCell>
-                        <TableCell>{validFromStr}</TableCell>
-                        <TableCell>{validUntilStr}</TableCell>
+                        <TableCell>{formatDateAR(row.validFrom)}</TableCell>
+                        <TableCell>{formatDateAR(row.validUntil)}</TableCell>
                         <TableCell><Chip label={statusLabel} color={chipColor} size="small" /></TableCell>
                         <TableCell>{row.certificateId ? 'Sí' : '—'}</TableCell>
                       </TableRow>

@@ -15,20 +15,8 @@ import EditIcon from '@mui/icons-material/Edit';
 import CancelIcon from '@mui/icons-material/Cancel';
 import TaskAltIcon from '@mui/icons-material/TaskAlt';
 import PlayArrowIcon from '@mui/icons-material/PlayArrow';
+import { formatDateAR } from '@/utils/dateUtils';
 import { TRAINING_SESSION_STATUSES } from '../../../../../types/trainingDomain';
-
-/** Formatea fecha/hora en hora local (YYYY-MM-DD HH:mm) para no mostrar UTC. */
-function dateText(value) {
-  if (!value) return '-';
-  const date = value?.toDate ? value.toDate() : new Date(value);
-  if (Number.isNaN(date.getTime())) return '-';
-  const y = date.getFullYear();
-  const m = String(date.getMonth() + 1).padStart(2, '0');
-  const d = String(date.getDate()).padStart(2, '0');
-  const h = String(date.getHours()).padStart(2, '0');
-  const min = String(date.getMinutes()).padStart(2, '0');
-  return `${y}-${m}-${d} ${h}:${min}`;
-}
 
 function canTransition(status, nextStatus) {
   const map = {
@@ -78,7 +66,7 @@ export default function SessionsListView({
           {sessions.map((session) => (
             <TableRow key={session.id} hover>
               <TableCell>{session.trainingTypeName || 'Sin dato'}</TableCell>
-              <TableCell>{dateText(session.scheduledDate)}</TableCell>
+              <TableCell>{formatDateAR(session.scheduledDate)}</TableCell>
               <TableCell>{session.companyName || '-'}</TableCell>
               <TableCell>{session.branchName || 'Sin dato'}</TableCell>
               <TableCell>{session.instructorName || 'Sin asignar'}</TableCell>

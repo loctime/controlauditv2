@@ -59,7 +59,7 @@ function getInitials(employee) {
 const COMPLIANCE_TOOLTIPS = {
   missing: 'Capacitaciones requeridas que el empleado no ha realizado',
   expired: 'Capacitaciones realizadas pero vencidas',
-  expiringSoon: 'Capacitaciones que vencen en los próximos 60 días',
+  expiringSoon: 'Capacitaciones que vencen en los próximos 5 días',
   compliant: 'Capacitaciones realizadas y vigentes'
 };
 

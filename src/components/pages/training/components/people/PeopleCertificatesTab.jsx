@@ -9,14 +9,8 @@ import {
   Paper,
   Typography,
 } from '@mui/material';
+import { formatDateAR } from '@/utils/dateUtils';
 import { trainingCertificateService } from '../../../../../services/training';
-
-function dateText(value) {
-  if (!value) return '—';
-  const date = value?.toDate ? value.toDate() : new Date(value);
-  if (Number.isNaN(date.getTime())) return '—';
-  return date.toLocaleDateString();
-}
 
 export default function PeopleCertificatesTab({ ownerId, selectedEmployee }) {
   const [loading, setLoading] = useState(false);
@@ -90,12 +84,12 @@ export default function PeopleCertificatesTab({ ownerId, selectedEmployee }) {
               </Typography>
               {cert.issuedAt != null && (
                 <Typography variant="caption" color="text.secondary" display="block">
-                  Emitido: {dateText(cert.issuedAt)}
+                  Emitido: {formatDateAR(cert.issuedAt)}
                 </Typography>
               )}
               {cert.expiresAt != null && (
                 <Typography variant="caption" color="text.secondary" display="block">
-                  Vence: {dateText(cert.expiresAt)}
+                  Vence: {formatDateAR(cert.expiresAt)}
                 </Typography>
               )}
               {cert.fileReference && (
