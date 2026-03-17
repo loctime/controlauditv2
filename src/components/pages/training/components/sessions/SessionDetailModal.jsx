@@ -404,32 +404,42 @@ export default function SessionDetailModal({ open, onClose, ownerId, session }) 
                             updatingAttendanceId === record.employeeId ? (
                               <CircularProgress size={20} />
                             ) : (
-                              <Box sx={{ display: 'flex', gap: 0.5, alignItems: 'center' }}>
+                              <Box sx={{ display: 'flex', gap: 0.5, width: '100%', minHeight: 36, alignItems: 'stretch' }}>
                                 <Tooltip title="Aprobado">
-                                  <IconButton
+                                  <Button
                                     size="small"
+                                    fullWidth
                                     onClick={() => handleUpdateEvaluation(record, 'evaluationStatus', TRAINING_EVALUATION_STATUSES.APPROVED)}
-                                    sx={
-                                      record.evaluationStatus === TRAINING_EVALUATION_STATUSES.APPROVED
+                                    sx={{
+                                      flex: 1,
+                                      minWidth: 0,
+                                      fontWeight: 700,
+                                      fontSize: '1rem',
+                                      ...(record.evaluationStatus === TRAINING_EVALUATION_STATUSES.APPROVED
                                         ? { bgcolor: 'success.main', color: 'success.contrastText', '&:hover': { bgcolor: 'success.dark' } }
-                                        : { border: '1px solid', borderColor: 'divider' }
-                                    }
+                                        : { border: '1px solid', borderColor: 'success.main', color: 'success.main' })
+                                    }}
                                   >
-                                    <Typography component="span" fontWeight={700} sx={{ fontSize: '0.75rem' }}>A</Typography>
-                                  </IconButton>
+                                    A
+                                  </Button>
                                 </Tooltip>
                                 <Tooltip title="Reprobado">
-                                  <IconButton
+                                  <Button
                                     size="small"
+                                    fullWidth
                                     onClick={() => handleUpdateEvaluation(record, 'evaluationStatus', TRAINING_EVALUATION_STATUSES.FAILED)}
-                                    sx={
-                                      record.evaluationStatus === TRAINING_EVALUATION_STATUSES.FAILED
+                                    sx={{
+                                      flex: 1,
+                                      minWidth: 0,
+                                      fontWeight: 700,
+                                      fontSize: '1rem',
+                                      ...(record.evaluationStatus === TRAINING_EVALUATION_STATUSES.FAILED
                                         ? { bgcolor: 'error.main', color: 'error.contrastText', '&:hover': { bgcolor: 'error.dark' } }
-                                        : { border: '1px solid', borderColor: 'divider' }
-                                    }
+                                        : { border: '1px solid', borderColor: 'error.main', color: 'error.main' })
+                                    }}
                                   >
-                                    <Typography component="span" fontWeight={700} sx={{ fontSize: '0.75rem' }}>R</Typography>
-                                  </IconButton>
+                                    R
+                                  </Button>
                                 </Tooltip>
                               </Box>
                             )

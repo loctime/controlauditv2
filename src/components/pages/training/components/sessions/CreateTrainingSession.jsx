@@ -1050,45 +1050,51 @@ export default function CreateTrainingSession({
                             </Box>
                           </TableCell>
                           {requiresEvaluation && (
-                            <TableCell sx={compact ? { width: 80, py: 1.25 } : { py: 1 }}>
-                              <Box sx={{ display: 'flex', gap: 0.5, alignItems: 'center' }}>
+                            <TableCell sx={{ py: 0.5, verticalAlign: 'middle', ...(compact ? { width: 100 } : { minWidth: 120 }) }}>
+                              <Box sx={{ display: 'flex', gap: 0.5, width: '100%', minHeight: 36, alignItems: 'stretch' }}>
                                 <Tooltip title="Aprobado">
-                                  <span>
-                                    <IconButton
-                                      size="small"
-                                      onClick={() => {
-                                        if (!isSelected) toggleEmployee(employee.id);
-                                        updateParticipantRecord(employee.id, 'evaluationStatus', TRAINING_EVALUATION_STATUSES.APPROVED);
-                                      }}
-                                      disabled={!isSelected || record.attendanceStatus !== TRAINING_ATTENDANCE_STATUSES.PRESENT}
-                                      sx={
-                                        record.evaluationStatus === TRAINING_EVALUATION_STATUSES.APPROVED
-                                          ? { bgcolor: 'success.main', color: 'success.contrastText', '&:hover': { bgcolor: 'success.dark' } }
-                                          : { border: '1px solid', borderColor: 'divider' }
-                                      }
-                                    >
-                                      <Typography component="span" fontWeight={700} sx={{ fontSize: '0.75rem' }}>A</Typography>
-                                    </IconButton>
-                                  </span>
+                                  <Button
+                                    size="small"
+                                    fullWidth
+                                    onClick={() => {
+                                      if (!isSelected) toggleEmployee(employee.id);
+                                      updateParticipantRecord(employee.id, 'evaluationStatus', TRAINING_EVALUATION_STATUSES.APPROVED);
+                                    }}
+                                    disabled={!isSelected || record.attendanceStatus !== TRAINING_ATTENDANCE_STATUSES.PRESENT}
+                                    sx={{
+                                      flex: 1,
+                                      minWidth: 0,
+                                      fontWeight: 700,
+                                      fontSize: '1rem',
+                                      ...(record.evaluationStatus === TRAINING_EVALUATION_STATUSES.APPROVED
+                                        ? { bgcolor: 'success.main', color: 'success.contrastText', '&:hover': { bgcolor: 'success.dark' } }
+                                        : { border: '1px solid', borderColor: 'success.main', color: 'success.main' })
+                                    }}
+                                  >
+                                    A
+                                  </Button>
                                 </Tooltip>
                                 <Tooltip title="Reprobado">
-                                  <span>
-                                    <IconButton
-                                      size="small"
-                                      onClick={() => {
-                                        if (!isSelected) toggleEmployee(employee.id);
-                                        updateParticipantRecord(employee.id, 'evaluationStatus', TRAINING_EVALUATION_STATUSES.FAILED);
-                                      }}
-                                      disabled={!isSelected || record.attendanceStatus !== TRAINING_ATTENDANCE_STATUSES.PRESENT}
-                                      sx={
-                                        record.evaluationStatus === TRAINING_EVALUATION_STATUSES.FAILED
-                                          ? { bgcolor: 'error.main', color: 'error.contrastText', '&:hover': { bgcolor: 'error.dark' } }
-                                          : { border: '1px solid', borderColor: 'divider' }
-                                      }
-                                    >
-                                      <Typography component="span" fontWeight={700} sx={{ fontSize: '0.75rem' }}>R</Typography>
-                                    </IconButton>
-                                  </span>
+                                  <Button
+                                    size="small"
+                                    fullWidth
+                                    onClick={() => {
+                                      if (!isSelected) toggleEmployee(employee.id);
+                                      updateParticipantRecord(employee.id, 'evaluationStatus', TRAINING_EVALUATION_STATUSES.FAILED);
+                                    }}
+                                    disabled={!isSelected || record.attendanceStatus !== TRAINING_ATTENDANCE_STATUSES.PRESENT}
+                                    sx={{
+                                      flex: 1,
+                                      minWidth: 0,
+                                      fontWeight: 700,
+                                      fontSize: '1rem',
+                                      ...(record.evaluationStatus === TRAINING_EVALUATION_STATUSES.FAILED
+                                        ? { bgcolor: 'error.main', color: 'error.contrastText', '&:hover': { bgcolor: 'error.dark' } }
+                                        : { border: '1px solid', borderColor: 'error.main', color: 'error.main' })
+                                    }}
+                                  >
+                                    R
+                                  </Button>
                                 </Tooltip>
                               </Box>
                             </TableCell>
