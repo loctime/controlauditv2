@@ -110,58 +110,57 @@ export default function EmployeeProfileCard({
 
   return (
     <Paper elevation={elevation} sx={{ p: 2 }}>
-      {showTitle && (
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 2 }}>
-          <Avatar
-            sx={{
-              width: 40,
-              height: 40,
-              bgcolor: 'primary.main',
-              color: 'primary.contrastText',
-              fontSize: '0.875rem'
-            }}
-          >
-            {getInitials(employee)}
-          </Avatar>
-          <Typography variant="h6">Ficha del empleado</Typography>
+      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 2 }}>
+        <Avatar
+          sx={{
+            width: 40,
+            height: 40,
+            bgcolor: 'primary.main',
+            color: 'primary.contrastText',
+            fontSize: '0.875rem'
+          }}
+        >
+          {getInitials(employee)}
+        </Avatar>
+        <Box>
+          <Typography variant="subtitle2" color="text.secondary">
+            Empleado
+          </Typography>
+          <Typography variant="h6">{fullName}</Typography>
+          <Typography variant="body2" color="text.secondary">
+            {puesto !== FALLBACK ? puesto : 'Sin puesto registrado'}
+          </Typography>
         </Box>
-      )}
+      </Box>
 
-      <Grid container spacing={2}>
-        {/* ROW 1 */}
-        <Grid item xs={12} md={4}>
-          <Label>Nombre</Label>
-          <Value>{fullName}</Value>
-        </Grid>
-        <Grid item xs={12} md={2}>
+      <Grid container spacing={1.5}>
+        {/* Datos principales */}
+        <Grid item xs={6}>
           <Label>DNI</Label>
           <Value>{dni}</Value>
         </Grid>
-        <Grid item xs={12} md={2}>
+        <Grid item xs={6}>
           <Label>Legajo</Label>
           <Value>{legajo}</Value>
         </Grid>
-        <Grid item xs={12} md={2}>
+        <Grid item xs={12}>
           <Label>Empresa</Label>
           <Value>{empresaNombre}</Value>
         </Grid>
-        <Grid item xs={12} md={2}>
+        <Grid item xs={12}>
           <Label>Sucursal</Label>
           <Value>{sucursalNombre}</Value>
         </Grid>
 
-        {/* ROW 2 */}
-        <Grid item xs={12} md={4}>
-          <Label>Puesto</Label>
-          <Value>{puesto}</Value>
-        </Grid>
-        <Grid item xs={12} md={8}>
+        {/* Estado de capacitaciones */}
+        <Grid item xs={12}>
           <Box
             sx={{
               bgcolor: 'action.hover',
               borderRadius: 1,
               px: 1.5,
-              py: 1.25
+              py: 1.25,
+              mt: 0.5
             }}
           >
             <Typography variant="body2" color="text.secondary" sx={{ mb: 0.75 }}>

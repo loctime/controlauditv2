@@ -17,6 +17,23 @@ function statusConfig(complianceStatus) {
   }
 }
 
+function diffInMonths(from, until) {
+  if (!from || !until) return null;
+
+  const start = from && typeof from.toDate === 'function' ? from.toDate() : new Date(from);
+  const end = until && typeof until.toDate === 'function' ? until.toDate() : new Date(until);
+
+  if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime())) return null;
+
+  const yearsDiff = end.getFullYear() - start.getFullYear();
+  const monthsDiff = end.getMonth() - start.getMonth();
+  const totalMonths = yearsDiff * 12 + monthsDiff;
+
+  if (totalMonths <= 0) return null;
+
+  return totalMonths;
+}
+
 export default function EmployeeTrainingTimeline({ records = [], onViewSession }) {
   if (records.length === 0) {
     return (
@@ -41,7 +58,7 @@ export default function EmployeeTrainingTimeline({ records = [], onViewSession }
           <TableRow>
             <TableCell>Capacitación</TableCell>
             <TableCell>Fecha</TableCell>
-            <TableCell>Vigencia</TableCell>
+            <TableCell>Tiempo</TableCell>
             <TableCell>Vencimiento</TableCell>
             <TableCell>Estado</TableCell>
             <TableCell>Ver</TableCell>
@@ -53,7 +70,12 @@ export default function EmployeeTrainingTimeline({ records = [], onViewSession }
               <TableCell>{record.trainingName || 'Sin dato'}</TableCell>
               <TableCell>{formatDateAR(record.validFrom)}</TableCell>
               <TableCell>
-                {formatDateAR(record.validFrom)} — {formatDateAR(record.validUntil)}
+                {(() => {
+                  const months = diffInMonths(record.validFrom, record.validUntil);
+                  if (!months) return '—';
+                  if (months === 1) return '1 mes';
+                  return `${months} meses`;
+                })()}
               </TableCell>
               <TableCell>{formatDateAR(record.validUntil)}</TableCell>
               <TableCell>
