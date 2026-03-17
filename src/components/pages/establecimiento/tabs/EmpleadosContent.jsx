@@ -34,7 +34,7 @@ import { useAuth } from '@/components/context/AuthContext';
 import Swal from 'sweetalert2';
 import { empleadoService } from '../../../../services/empleadoService';
 
-const EmpleadosContent = ({ sucursalId, sucursalNombre, selectedEmpresa, navigateToPage: _navigateToPage, reloadSucursalesStats, loadEmpresasStats, userEmpresas }) => {
+const EmpleadosContent = ({ sucursalId, sucursalNombre, selectedEmpresa, reloadSucursalesStats, loadEmpresasStats, userEmpresas }) => {
   const { userProfile, role } = useAuth();
   const [empleados, setEmpleados] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -130,7 +130,6 @@ const EmpleadosContent = ({ sucursalId, sucursalNombre, selectedEmpresa, navigat
     }
 
     try {
-      const ownerId = userProfile.ownerId;
       await empleadoService.crearEmpleado({
         ...empleadoForm,
         sucursalId,

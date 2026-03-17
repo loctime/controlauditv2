@@ -1,5 +1,5 @@
 import logger from '@/utils/logger';
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import {
   Box,
   Button,
@@ -10,12 +10,9 @@ import {
   Typography
 } from '@mui/material';
 import PeopleIcon from '@mui/icons-material/People';
-import { getDocs, query, where, collection } from 'firebase/firestore';
-import { dbAudit } from '../../../../firebaseControlFile';
-import { firestoreRoutesCore } from '../../../../core/firestore/firestoreRoutes.core';
 import { useAuth } from '@/components/context/AuthContext';
 import { useNavigate } from 'react-router-dom';
-import { normalizeEmpleado } from '../../../../utils/firestoreUtils';
+import { establecimientoOverviewService } from '../../../../services/establecimientoOverviewService';
 
 const EmpleadosTab = ({ empresaId, empresaNombre }) => {
   const navigate = useNavigate();
@@ -38,18 +35,7 @@ const EmpleadosTab = ({ empresaId, empresaNombre }) => {
     setLoading(true);
     try {
       const ownerId = userProfile.ownerId;
-      const sucursalesRef = collection(dbAudit, ...firestoreRoutesCore.sucursales(ownerId));
-      const sucursalesSnapshot = await getDocs(query(sucursalesRef, where('empresaId', '==', empresaId)));
-      const sucursalesIds = sucursalesSnapshot.docs.map(doc => doc.id);
-      
-      if (sucursalesIds.length === 0) {
-        setEmpleados([]);
-        return;
-      }
-
-      const empleadosRef = collection(dbAudit, ...firestoreRoutesCore.empleados(ownerId));
-      const empleadosSnapshot = await getDocs(query(empleadosRef, where('sucursalId', 'in', sucursalesIds)));
-      const empleadosData = empleadosSnapshot.docs.map(doc => normalizeEmpleado(doc));
+      const empleadosData = await establecimientoOverviewService.listEmpleadosByEmpresa(ownerId, empresaId);
       setEmpleados(empleadosData);
     } catch (error) {
       logger.error('Error cargando empleados:', error);

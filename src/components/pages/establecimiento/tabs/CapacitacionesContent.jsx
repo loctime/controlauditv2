@@ -1,5 +1,5 @@
 import logger from '@/utils/logger';
-import React, { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import {
   Box,
   Button,
@@ -14,10 +14,8 @@ import {
   TableRow
 } from '@mui/material';
 import SchoolIcon from '@mui/icons-material/School';
-import { getDocs, query, where, collection } from 'firebase/firestore';
-import { dbAudit } from '../../../../firebaseControlFile';
-import { firestoreRoutesCore } from '../../../../core/firestore/firestoreRoutes.core';
 import { useAuth } from '@/components/context/AuthContext';
+import { establecimientoOverviewService } from '../../../../services/establecimientoOverviewService';
 
 const CapacitacionesContent = ({ sucursalId, sucursalNombre, navigateToPage }) => {
   const { userProfile } = useAuth();
@@ -37,14 +35,7 @@ const CapacitacionesContent = ({ sucursalId, sucursalNombre, navigateToPage }) =
       const ownerId = userProfile.ownerId;
       let capacitacionesData = [];
       try {
-        const capacitacionesRef = collection(dbAudit, ...firestoreRoutesCore.capacitaciones(ownerId));
-        const capacitacionesQuery = query(capacitacionesRef, where('sucursalId', '==', sucursalId));
-        const capacitacionesSnapshot = await getDocs(capacitacionesQuery);
-        capacitacionesData = capacitacionesSnapshot.docs.map(doc => ({
-          id: doc.id,
-          ...doc.data(),
-          tipo: 'individual'
-        }));
+        capacitacionesData = await establecimientoOverviewService.listCapacitacionesBySucursal(ownerId, sucursalId);
         logger.debug('Capacitaciones encontradas con sucursalId:', capacitacionesData.length, capacitacionesData);
         
         // Si no encuentra capacitaciones específicas de la sucursal, buscar por empresa
@@ -59,14 +50,7 @@ const CapacitacionesContent = ({ sucursalId, sucursalNombre, navigateToPage }) =
       // Cargar planes anuales - owner-centric
       let planesData = [];
       try {
-        const planesRef = collection(dbAudit, ...firestoreRoutesCore.planesCapacitacionesAnuales(ownerId));
-        const planesQuery = query(planesRef, where('sucursalId', '==', sucursalId));
-        const planesSnapshot = await getDocs(planesQuery);
-        planesData = planesSnapshot.docs.map(doc => ({
-          id: doc.id,
-          ...doc.data(),
-          tipo: 'plan_anual'
-        }));
+        planesData = await establecimientoOverviewService.listPlanesAnualesBySucursal(ownerId, sucursalId);
         logger.debug('Planes anuales encontrados:', planesData.length, planesData);
       } catch (planesError) {
         logger.debug('Error con planes_capacitaciones_anuales:', planesError);

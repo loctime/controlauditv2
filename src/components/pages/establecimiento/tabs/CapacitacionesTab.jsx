@@ -1,5 +1,5 @@
 import logger from '@/utils/logger';
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import {
   Box,
   Button,
@@ -11,11 +11,9 @@ import {
   Typography
 } from '@mui/material';
 import SchoolIcon from '@mui/icons-material/School';
-import { getDocs, query, where, collection } from 'firebase/firestore';
-import { dbAudit } from '../../../../firebaseControlFile';
-import { firestoreRoutesCore } from '../../../../core/firestore/firestoreRoutes.core';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/components/context/AuthContext';
+import { establecimientoOverviewService } from '../../../../services/establecimientoOverviewService';
 
 const CapacitacionesTab = ({ empresaId, empresaNombre }) => {
   const navigate = useNavigate();
@@ -38,21 +36,7 @@ const CapacitacionesTab = ({ empresaId, empresaNombre }) => {
     setLoading(true);
     try {
       const ownerId = userProfile.ownerId;
-      const sucursalesRef = collection(dbAudit, ...firestoreRoutesCore.sucursales(ownerId));
-      const sucursalesSnapshot = await getDocs(query(sucursalesRef, where('empresaId', '==', empresaId)));
-      const sucursalesIds = sucursalesSnapshot.docs.map(doc => doc.id);
-      
-      if (sucursalesIds.length === 0) {
-        setCapacitaciones([]);
-        return;
-      }
-
-      const capacitacionesRef = collection(dbAudit, ...firestoreRoutesCore.capacitaciones(ownerId));
-      const capacitacionesSnapshot = await getDocs(query(capacitacionesRef, where('sucursalId', 'in', sucursalesIds)));
-      const capacitacionesData = capacitacionesSnapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data()
-      }));
+      const capacitacionesData = await establecimientoOverviewService.listCapacitacionesByEmpresa(ownerId, empresaId);
       setCapacitaciones(capacitacionesData);
     } catch (error) {
       logger.error('Error cargando capacitaciones:', error);
