@@ -28,6 +28,7 @@ import { useSucursalesStats } from '../hooks/useSucursalesStats';
 import SucursalTableHeader from '../components/SucursalTableHeader';
 import SucursalRow from '../components/SucursalRow';
 import SucursalFormModal from '../components/SucursalFormModal';
+import { trainingCatalogService, trainingRequirementService } from '../../../../services/training';
 
 const SucursalesTab = ({ empresaId, empresaNombre, userEmpresas, loadEmpresasStats }) => {
   const { userProfile, getEffectiveOwnerId } = useAuth();
@@ -175,6 +176,47 @@ const SucursalesTab = ({ empresaId, empresaNombre, userEmpresas, loadEmpresasSta
     setOpenModal(true);
   };
 
+  // Crea reglas base en training_requirement_matrix para la sucursal recién creada.
+  // - Idempotente: si ya hay reglas activas para companyId+branchId, no crea nada.
+  // - Alcance: reglas "globales" (sin jobRoleId) para todos los trainings activos del catálogo.
+  const autoSeedTrainingRulesForBranch = async ({ ownerId, companyId, branchId }) => {
+    if (!ownerId || !companyId || !branchId) return { created: 0, skipped: 0, total: 0, reason: 'missing_params' };
+
+    const existing = await trainingRequirementService.listRules(ownerId, {
+      companyId,
+      branchId,
+      status: 'active'
+    });
+    if (Array.isArray(existing) && existing.length > 0) {
+      return { created: 0, skipped: existing.length, total: 0, reason: 'already_has_rules' };
+    }
+
+    const catalog = await trainingCatalogService.listActive(ownerId);
+    const activeTrainings = Array.isArray(catalog) ? catalog : [];
+    const effectiveFrom = new Date().toISOString().slice(0, 10);
+
+    let created = 0;
+    // Crear reglas en paralelo (catálogo suele ser chico/mediano).
+    await Promise.all(activeTrainings.map(async (t) => {
+      if (!t?.id) return;
+      await trainingRequirementService.createRule(ownerId, {
+        companyId,
+        branchId,
+        trainingTypeId: t.id,
+        // Defaults alineados con RequirementMatrixScreen:
+        frequencyMonths: 12,
+        mandatory: true,
+        expirationRule: 'valid_until_plus_frequency',
+        effectiveFrom,
+        status: 'active',
+        source: 'auto_seed_on_branch_create'
+      });
+      created += 1;
+    }));
+
+    return { created, skipped: 0, total: activeTrainings.length, reason: 'seeded' };
+  };
+
   const handleSubmit = async () => {
     if (!sucursalForm.nombre.trim()) {
       Swal.fire({
@@ -196,9 +238,11 @@ const SucursalesTab = ({ empresaId, empresaNombre, userEmpresas, loadEmpresasSta
         return;
       }
       const sucursalesRef = collection(dbAudit, ...firestoreRoutesCore.sucursales(ownerId));
+      const actorUid = userProfile?.uid || null;
 
       if (modalMode === 'create') {
         const docRef = await addDoc(sucursalesRef, {
+          appId: 'auditoria',
           nombre: sucursalForm.nombre,
           direccion: sucursalForm.direccion || '',
           telefono: sucursalForm.telefono || '',
@@ -208,6 +252,10 @@ const SucursalesTab = ({ empresaId, empresaNombre, userEmpresas, loadEmpresasSta
           targetMensualCapacitaciones: parseInt(sucursalForm.targetMensualCapacitaciones) || 1,
           targetAnualCapacitaciones: parseInt(sucursalForm.targetAnualCapacitaciones) || 12,
           empresaId: empresaId,
+          createdBy: actorUid,
+          createdByRole: userProfile?.role || null,
+          createdAt: Timestamp.now(),
+          updatedAt: Timestamp.now(),
           fechaCreacion: Timestamp.now()
         });
 
@@ -224,6 +272,19 @@ const SucursalesTab = ({ empresaId, empresaNombre, userEmpresas, loadEmpresasSta
           'sucursal',
           docRef.id
         );
+
+        // Auto-crear reglas base de capacitación para la nueva sucursal
+        try {
+          const seedResult = await autoSeedTrainingRulesForBranch({
+            ownerId,
+            companyId: empresaId,
+            branchId: docRef.id
+          });
+          logger.debug('[SucursalesTab] autoSeedTrainingRulesForBranch', seedResult);
+        } catch (seedErr) {
+          logger.warn('[SucursalesTab] No se pudieron auto-crear reglas base de capacitación', seedErr);
+          // No bloquear la creación de la sucursal si falla el seed.
+        }
 
         Swal.fire({
           icon: 'success',
@@ -242,6 +303,8 @@ const SucursalesTab = ({ empresaId, empresaNombre, userEmpresas, loadEmpresasSta
           targetAnualAuditorias: parseInt(sucursalForm.targetAnualAuditorias) || 12,
           targetMensualCapacitaciones: parseInt(sucursalForm.targetMensualCapacitaciones) || 1,
           targetAnualCapacitaciones: parseInt(sucursalForm.targetAnualCapacitaciones) || 12,
+          updatedBy: actorUid,
+          updatedAt: Timestamp.now(),
           fechaModificacion: Timestamp.now()
         });
 

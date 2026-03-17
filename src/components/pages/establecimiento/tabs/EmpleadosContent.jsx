@@ -138,15 +138,26 @@ const EmpleadosContent = ({ sucursalId, sucursalNombre, selectedEmpresa, navigat
     try {
       const ownerId = userProfile.ownerId;
       const empleadosRef = collection(dbAudit, ...firestoreRoutesCore.empleados(ownerId));
+      const cargoTrimmed = typeof empleadoForm.cargo === 'string' ? empleadoForm.cargo.trim() : '';
+      const rolePatch = cargoTrimmed ? { rol: cargoTrimmed, puesto: cargoTrimmed } : {};
       await addDoc(empleadosRef, {
         ...empleadoForm,
+        ...rolePatch,
         sucursalId: sucursalId,
         sucursalNombre: sucursalNombre,
         empresaId: empresaId,
         estado: 'activo',
         fechaCreacion: Timestamp.now(),
         createdBy: userProfile?.uid,
-        createdByRole: role
+        createdByRole: role,
+        updatedAt: Timestamp.now(),
+        appId: 'auditoria'
+      });
+
+      logger.debug('[EmpleadosContent] rol/puesto final', {
+        cargo: empleadoForm.cargo || null,
+        rol: rolePatch.rol || null,
+        puesto: rolePatch.puesto || null
       });
 
       setEmpleadoForm({
@@ -244,6 +255,8 @@ const EmpleadosContent = ({ sucursalId, sucursalNombre, selectedEmpresa, navigat
     try {
       const ownerId = userProfile.ownerId;
       const empleadoRef = doc(dbAudit, ...firestoreRoutesCore.empleado(ownerId, empleadoEdit.id));
+      const cargoTrimmed = typeof empleadoEdit.cargo === 'string' ? empleadoEdit.cargo.trim() : '';
+      const rolePatch = cargoTrimmed ? { rol: cargoTrimmed, puesto: cargoTrimmed } : {};
       await updateDoc(empleadoRef, {
         nombre: empleadoEdit.nombre,
         apellido: empleadoEdit.apellido,
@@ -251,9 +264,19 @@ const EmpleadosContent = ({ sucursalId, sucursalNombre, selectedEmpresa, navigat
         telefono: empleadoEdit.telefono,
         email: empleadoEdit.email,
         cargo: empleadoEdit.cargo,
+        ...rolePatch,
         area: empleadoEdit.area,
         fechaIngreso: empleadoEdit.fechaIngreso,
+        updatedAt: Timestamp.now(),
+        updatedBy: userProfile?.uid || null,
         fechaActualizacion: Timestamp.now()
+      });
+
+      logger.debug('[EmpleadosContent] update rol/puesto final', {
+        empleadoId: empleadoEdit.id,
+        cargo: empleadoEdit.cargo || null,
+        rol: rolePatch.rol || null,
+        puesto: rolePatch.puesto || null
       });
 
       setOpenEditEmpleadoForm(false);
