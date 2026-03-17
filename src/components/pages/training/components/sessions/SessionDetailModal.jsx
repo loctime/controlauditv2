@@ -18,9 +18,8 @@ import {
   CircularProgress,
   Alert,
   Button,
-  Select,
-  MenuItem,
-  TextField
+  TextField,
+  Tooltip
 } from '@mui/material';
 import DownloadIcon from '@mui/icons-material/Download';
 import CloseIcon from '@mui/icons-material/Close';
@@ -405,16 +404,34 @@ export default function SessionDetailModal({ open, onClose, ownerId, session }) 
                             updatingAttendanceId === record.employeeId ? (
                               <CircularProgress size={20} />
                             ) : (
-                              <Select
-                                size="small"
-                                value={record.evaluationStatus || TRAINING_EVALUATION_STATUSES.PENDING}
-                                onChange={(e) => handleUpdateEvaluation(record, 'evaluationStatus', e.target.value)}
-                                sx={{ minWidth: 120 }}
-                              >
-                                <MenuItem value={TRAINING_EVALUATION_STATUSES.APPROVED}>{evaluationLabels[TRAINING_EVALUATION_STATUSES.APPROVED]}</MenuItem>
-                                <MenuItem value={TRAINING_EVALUATION_STATUSES.FAILED}>{evaluationLabels[TRAINING_EVALUATION_STATUSES.FAILED]}</MenuItem>
-                                <MenuItem value={TRAINING_EVALUATION_STATUSES.PENDING}>{evaluationLabels[TRAINING_EVALUATION_STATUSES.PENDING]}</MenuItem>
-                              </Select>
+                              <Box sx={{ display: 'flex', gap: 0.5, alignItems: 'center' }}>
+                                <Tooltip title="Aprobado">
+                                  <IconButton
+                                    size="small"
+                                    onClick={() => handleUpdateEvaluation(record, 'evaluationStatus', TRAINING_EVALUATION_STATUSES.APPROVED)}
+                                    sx={
+                                      record.evaluationStatus === TRAINING_EVALUATION_STATUSES.APPROVED
+                                        ? { bgcolor: 'success.main', color: 'success.contrastText', '&:hover': { bgcolor: 'success.dark' } }
+                                        : { border: '1px solid', borderColor: 'divider' }
+                                    }
+                                  >
+                                    <Typography component="span" fontWeight={700} sx={{ fontSize: '0.75rem' }}>A</Typography>
+                                  </IconButton>
+                                </Tooltip>
+                                <Tooltip title="Reprobado">
+                                  <IconButton
+                                    size="small"
+                                    onClick={() => handleUpdateEvaluation(record, 'evaluationStatus', TRAINING_EVALUATION_STATUSES.FAILED)}
+                                    sx={
+                                      record.evaluationStatus === TRAINING_EVALUATION_STATUSES.FAILED
+                                        ? { bgcolor: 'error.main', color: 'error.contrastText', '&:hover': { bgcolor: 'error.dark' } }
+                                        : { border: '1px solid', borderColor: 'divider' }
+                                    }
+                                  >
+                                    <Typography component="span" fontWeight={700} sx={{ fontSize: '0.75rem' }}>R</Typography>
+                                  </IconButton>
+                                </Tooltip>
+                              </Box>
                             )
                           ) : (
                             '—'

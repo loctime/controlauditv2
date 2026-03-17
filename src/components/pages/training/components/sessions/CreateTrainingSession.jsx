@@ -104,8 +104,7 @@ const defaultParticipantRecord = () => ({
 
 const EVALUATION_LABELS = {
   [TRAINING_EVALUATION_STATUSES.APPROVED]: 'Aprobado',
-  [TRAINING_EVALUATION_STATUSES.FAILED]: 'Desaprobado',
-  [TRAINING_EVALUATION_STATUSES.PENDING]: 'Pendiente'
+  [TRAINING_EVALUATION_STATUSES.FAILED]: 'Desaprobado'
 };
 
 export default function CreateTrainingSession({
@@ -880,18 +879,22 @@ export default function CreateTrainingSession({
                   size="small"
                   sx={compact ? { tableLayout: 'fixed', width: '100%' } : undefined}
                 >
+                  <colgroup>
+                    <col style={{ width: 40 }} />
+                  </colgroup>
                   <TableHead>
                     <TableRow>
                       <TableCell
                         padding="checkbox"
                         sx={{
-                          width: 48,
-                          minWidth: 48,
-                          maxWidth: 48,
+                          width: 40,
+                          minWidth: 40,
+                          maxWidth: 40,
                           padding: 0,
                           display: 'flex',
                           alignItems: 'center',
-                          justifyContent: 'center'
+                          justifyContent: 'center',
+                          boxSizing: 'border-box'
                         }}
                       >
                         <Checkbox
@@ -952,13 +955,14 @@ export default function CreateTrainingSession({
                           <TableCell
                             padding="checkbox"
                             sx={{
-                              width: 48,
-                              minWidth: 48,
-                              maxWidth: 48,
+                              width: 40,
+                              minWidth: 40,
+                              maxWidth: 40,
                               padding: 0,
                               display: 'flex',
                               alignItems: 'center',
                               justifyContent: 'center',
+                              boxSizing: 'border-box',
                               ...(compact && { py: 1.25 })
                             }}
                           >
@@ -1017,7 +1021,6 @@ export default function CreateTrainingSession({
                                       updateParticipantRecord(employee.id, 'attendanceStatus', TRAINING_ATTENDANCE_STATUSES.PRESENT);
                                       if (requiresEvaluation) {
                                         updateParticipantRecord(employee.id, 'score', 3);
-                                        setTimeout(() => ratingCellRefs.current[employee.id]?.focus(), 100);
                                       }
                                     }}
                                     disabled={!isSelected}
@@ -1035,7 +1038,7 @@ export default function CreateTrainingSession({
                                     onClick={() => {
                                       if (!isSelected) toggleEmployee(employee.id);
                                       updateParticipantRecord(employee.id, 'attendanceStatus', TRAINING_ATTENDANCE_STATUSES.JUSTIFIED_ABSENCE);
-                                      if (requiresEvaluation) setTimeout(() => ratingCellRefs.current[employee.id]?.focus(), 100);
+                                      if (requiresEvaluation) updateParticipantRecord(employee.id, 'evaluationStatus', TRAINING_EVALUATION_STATUSES.PENDING);
                                     }}
                                     disabled={!isSelected}
                                     sx={isSelected && record.attendanceStatus === TRAINING_ATTENDANCE_STATUSES.JUSTIFIED_ABSENCE ? { bgcolor: 'error.main', color: 'error.contrastText', '&:hover': { bgcolor: 'error.dark' } } : undefined}
@@ -1047,23 +1050,47 @@ export default function CreateTrainingSession({
                             </Box>
                           </TableCell>
                           {requiresEvaluation && (
-                            <TableCell sx={compact ? { width: 100, py: 1.25 } : { py: 1 }}>
-                              <Select
-                                size="small"
-                                fullWidth
-                                value={record.evaluationStatus || TRAINING_EVALUATION_STATUSES.PENDING}
-                                onChange={(e) => {
-                                  if (!isSelected) toggleEmployee(employee.id);
-                                  updateParticipantRecord(employee.id, 'evaluationStatus', e.target.value);
-                                }}
-                                disabled={!isSelected || record.attendanceStatus !== TRAINING_ATTENDANCE_STATUSES.PRESENT}
-                                sx={compact ? { fontSize: '0.8rem', minWidth: 0 } : undefined}
-                                displayEmpty
-                              >
-                                <MenuItem value={TRAINING_EVALUATION_STATUSES.APPROVED}>{EVALUATION_LABELS[TRAINING_EVALUATION_STATUSES.APPROVED]}</MenuItem>
-                                <MenuItem value={TRAINING_EVALUATION_STATUSES.FAILED}>{EVALUATION_LABELS[TRAINING_EVALUATION_STATUSES.FAILED]}</MenuItem>
-                                <MenuItem value={TRAINING_EVALUATION_STATUSES.PENDING}>{EVALUATION_LABELS[TRAINING_EVALUATION_STATUSES.PENDING]}</MenuItem>
-                              </Select>
+                            <TableCell sx={compact ? { width: 80, py: 1.25 } : { py: 1 }}>
+                              <Box sx={{ display: 'flex', gap: 0.5, alignItems: 'center' }}>
+                                <Tooltip title="Aprobado">
+                                  <span>
+                                    <IconButton
+                                      size="small"
+                                      onClick={() => {
+                                        if (!isSelected) toggleEmployee(employee.id);
+                                        updateParticipantRecord(employee.id, 'evaluationStatus', TRAINING_EVALUATION_STATUSES.APPROVED);
+                                      }}
+                                      disabled={!isSelected || record.attendanceStatus !== TRAINING_ATTENDANCE_STATUSES.PRESENT}
+                                      sx={
+                                        record.evaluationStatus === TRAINING_EVALUATION_STATUSES.APPROVED
+                                          ? { bgcolor: 'success.main', color: 'success.contrastText', '&:hover': { bgcolor: 'success.dark' } }
+                                          : { border: '1px solid', borderColor: 'divider' }
+                                      }
+                                    >
+                                      <Typography component="span" fontWeight={700} sx={{ fontSize: '0.75rem' }}>A</Typography>
+                                    </IconButton>
+                                  </span>
+                                </Tooltip>
+                                <Tooltip title="Reprobado">
+                                  <span>
+                                    <IconButton
+                                      size="small"
+                                      onClick={() => {
+                                        if (!isSelected) toggleEmployee(employee.id);
+                                        updateParticipantRecord(employee.id, 'evaluationStatus', TRAINING_EVALUATION_STATUSES.FAILED);
+                                      }}
+                                      disabled={!isSelected || record.attendanceStatus !== TRAINING_ATTENDANCE_STATUSES.PRESENT}
+                                      sx={
+                                        record.evaluationStatus === TRAINING_EVALUATION_STATUSES.FAILED
+                                          ? { bgcolor: 'error.main', color: 'error.contrastText', '&:hover': { bgcolor: 'error.dark' } }
+                                          : { border: '1px solid', borderColor: 'divider' }
+                                      }
+                                    >
+                                      <Typography component="span" fontWeight={700} sx={{ fontSize: '0.75rem' }}>R</Typography>
+                                    </IconButton>
+                                  </span>
+                                </Tooltip>
+                              </Box>
                             </TableCell>
                           )}
                           {requiresEvaluation && (() => {
