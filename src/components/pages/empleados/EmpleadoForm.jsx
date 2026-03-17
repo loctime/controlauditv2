@@ -1,5 +1,5 @@
 import logger from '@/utils/logger';
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import {
   Dialog,
   DialogTitle,
@@ -11,58 +11,38 @@ import {
   MenuItem,
   CircularProgress
 } from '@mui/material';
-import { addDoc, updateDoc, doc, Timestamp, collection } from 'firebase/firestore';
-import { dbAudit } from '../../../firebaseControlFile';
-import { firestoreRoutesCore } from '../../../core/firestore/firestoreRoutes.core';
-import { useAuth } from '@/components/context/AuthContext';
 import { getUserDisplayName } from '../../../utils/userDisplayNames';
 
-export default function EmpleadoForm({ open, onClose, onSave, empleado, sucursalId, empresaId }) {
-  const { userProfile, role } = useAuth();
+const DEFAULT_FORM = {
+  nombre: '',
+  apellido: '',
+  dni: '',
+  email: '',
+  telefono: '',
+  cargo: '',
+  area: '',
+  tipo: 'operativo',
+  fechaIngreso: new Date().toISOString().split('T')[0],
+  estado: 'activo'
+};
+
+export default function EmpleadoFormModal({ open, onClose, onSubmit, initialData }) {
   const [loading, setLoading] = useState(false);
-  const [formData, setFormData] = useState({
-    nombre: '',
-    apellido: '',
-    dni: '',
-    email: '',
-    telefono: '',
-    cargo: '',
-    area: '',
-    tipo: 'operativo',
-    fechaIngreso: new Date().toISOString().split('T')[0],
-    estado: 'activo'
-  });
+  const [formData, setFormData] = useState(DEFAULT_FORM);
 
   useEffect(() => {
-    if (empleado) {
+    if (initialData) {
       setFormData({
-        nombre: empleado.nombre || '',
-        apellido: empleado.apellido || '',
-        dni: empleado.dni || '',
-        email: empleado.email || '',
-        telefono: empleado.telefono || '',
-        cargo: empleado.cargo || '',
-        area: empleado.area || '',
-        tipo: empleado.tipo || 'operativo',
-        fechaIngreso: empleado.fechaIngreso?.toDate?.()?.toISOString().split('T')[0] || 
-                      empleado.fechaIngreso || new Date().toISOString().split('T')[0],
-        estado: empleado.estado || 'activo'
+        ...DEFAULT_FORM,
+        ...initialData,
+        fechaIngreso: initialData.fechaIngreso?.toDate?.()?.toISOString().split('T')[0] ||
+          initialData.fechaIngreso ||
+          DEFAULT_FORM.fechaIngreso
       });
     } else {
-      setFormData({
-        nombre: '',
-        apellido: '',
-        dni: '',
-        email: '',
-        telefono: '',
-        cargo: '',
-        area: '',
-        tipo: 'operativo',
-        fechaIngreso: new Date().toISOString().split('T')[0],
-        estado: 'activo'
-      });
+      setFormData(DEFAULT_FORM);
     }
-  }, [empleado, open]);
+  }, [initialData, open]);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -74,57 +54,15 @@ export default function EmpleadoForm({ open, onClose, onSave, empleado, sucursal
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    
-    if (!userProfile?.ownerId) {
-      alert('Error: ownerId no disponible');
-      return;
-    }
-
-    // empresaId es siempre string válido (viene de selectedEmpresa)
-    // Validar acceso a empresa para operarios
-    // Admin tiene acceso total, operario solo a empresas en empresasAsignadas
-  
 
     setLoading(true);
 
     try {
-      const ownerId = userProfile.ownerId;
-      const cargoTrimmed = typeof formData.cargo === 'string' ? formData.cargo.trim() : '';
-      const empleadoData = {
-        ...formData,
-        ...(cargoTrimmed
-          ? {
-            rol: cargoTrimmed,
-            puesto: cargoTrimmed
-          }
-          : {}),
-        empresaId,
-        sucursalId,
-        fechaIngreso: Timestamp.fromDate(new Date(formData.fechaIngreso)),
-        updatedAt: Timestamp.now()
-      };
-
-      logger.debug('[EmpleadoForm] Rol final empleado', {
-        empleadoId: empleado?.id || null,
-        cargo: formData.cargo || null,
-        rol: empleadoData.rol || null,
-        puesto: empleadoData.puesto || null
-      });
-
-      if (empleado) {
-        // Actualizar
-        const empleadoRef = doc(dbAudit, ...firestoreRoutesCore.empleado(ownerId, empleado.id));
-        await updateDoc(empleadoRef, empleadoData);
-      } else {
-        // Crear
-        empleadoData.createdAt = Timestamp.now();
-        empleadoData.createdBy = userProfile?.uid;
-        empleadoData.createdByRole = role;
-        const empleadosRef = collection(dbAudit, ...firestoreRoutesCore.empleados(ownerId));
-        await addDoc(empleadosRef, empleadoData);
+      if (!formData.nombre?.trim() || !formData.apellido?.trim()) {
+        throw new Error('El nombre y apellido son requeridos');
       }
 
-      onSave();
+      await onSubmit?.({ ...formData });
     } catch (error) {
       logger.error('Error al guardar empleado:', error);
       alert('Error al guardar el empleado');
@@ -137,7 +75,7 @@ export default function EmpleadoForm({ open, onClose, onSave, empleado, sucursal
     <Dialog open={open} onClose={onClose} maxWidth="md" fullWidth>
       <form onSubmit={handleSubmit}>
         <DialogTitle>
-          {empleado ? 'Editar Empleado' : 'Nuevo Empleado'}
+          {initialData?.id ? 'Editar Empleado' : 'Nuevo Empleado'}
         </DialogTitle>
         
         <DialogContent>

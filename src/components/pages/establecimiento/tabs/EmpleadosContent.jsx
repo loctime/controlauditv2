@@ -1,5 +1,5 @@
 import logger from '@/utils/logger';
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import {
   Box,
   Button,
@@ -29,13 +29,12 @@ import {
 import PeopleIcon from '@mui/icons-material/People';
 import VisibilityIcon from '@mui/icons-material/Visibility';
 import EditIcon from '@mui/icons-material/Edit';
-import { getDocs, query, where, addDoc, updateDoc, deleteDoc, doc, Timestamp, collection, getDoc } from 'firebase/firestore';
-import { dbAudit } from '../../../../firebaseControlFile';
-import { firestoreRoutesCore } from '../../../../core/firestore/firestoreRoutes.core';
+import { Timestamp } from 'firebase/firestore';
 import { useAuth } from '@/components/context/AuthContext';
 import Swal from 'sweetalert2';
+import { empleadoService } from '../../../../services/empleadoService';
 
-const EmpleadosContent = ({ sucursalId, sucursalNombre, selectedEmpresa, navigateToPage, reloadSucursalesStats, loadEmpresasStats, userEmpresas }) => {
+const EmpleadosContent = ({ sucursalId, sucursalNombre, selectedEmpresa, navigateToPage: _navigateToPage, reloadSucursalesStats, loadEmpresasStats, userEmpresas }) => {
   const { userProfile, role } = useAuth();
   const [empleados, setEmpleados] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -57,6 +56,7 @@ const EmpleadosContent = ({ sucursalId, sucursalNombre, selectedEmpresa, navigat
     if (sucursalId) {
       loadEmpleados();
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [sucursalId]);
 
   const loadEmpleados = async () => {
@@ -67,13 +67,7 @@ const EmpleadosContent = ({ sucursalId, sucursalNombre, selectedEmpresa, navigat
     setLoading(true);
     try {
       const ownerId = userProfile.ownerId;
-      const empleadosRef = collection(dbAudit, ...firestoreRoutesCore.empleados(ownerId));
-      const q = query(empleadosRef, where('sucursalId', '==', sucursalId));
-      const snapshot = await getDocs(q);
-      const empleadosData = snapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data()
-      }));
+      const empleadosData = await empleadoService.getEmpleadosBySucursal(ownerId, sucursalId);
       setEmpleados(empleadosData);
     } catch (error) {
       logger.error('Error cargando empleados:', error);
@@ -137,28 +131,15 @@ const EmpleadosContent = ({ sucursalId, sucursalNombre, selectedEmpresa, navigat
 
     try {
       const ownerId = userProfile.ownerId;
-      const empleadosRef = collection(dbAudit, ...firestoreRoutesCore.empleados(ownerId));
-      const cargoTrimmed = typeof empleadoForm.cargo === 'string' ? empleadoForm.cargo.trim() : '';
-      const rolePatch = cargoTrimmed ? { rol: cargoTrimmed, puesto: cargoTrimmed } : {};
-      await addDoc(empleadosRef, {
+      await empleadoService.crearEmpleado({
         ...empleadoForm,
-        ...rolePatch,
-        sucursalId: sucursalId,
-        sucursalNombre: sucursalNombre,
-        empresaId: empresaId,
+        sucursalId,
+        sucursalNombre,
+        empresaId,
         estado: 'activo',
+        // legacy (se mantiene para compatibilidad con vistas viejas)
         fechaCreacion: Timestamp.now(),
-        createdBy: userProfile?.uid,
-        createdByRole: role,
-        updatedAt: Timestamp.now(),
-        appId: 'auditoria'
-      });
-
-      logger.debug('[EmpleadosContent] rol/puesto final', {
-        cargo: empleadoForm.cargo || null,
-        rol: rolePatch.rol || null,
-        puesto: rolePatch.puesto || null
-      });
+      }, { uid: userProfile?.uid, role });
 
       setEmpleadoForm({
         nombre: '',
@@ -253,31 +234,18 @@ const EmpleadosContent = ({ sucursalId, sucursalNombre, selectedEmpresa, navigat
     }
 
     try {
-      const ownerId = userProfile.ownerId;
-      const empleadoRef = doc(dbAudit, ...firestoreRoutesCore.empleado(ownerId, empleadoEdit.id));
-      const cargoTrimmed = typeof empleadoEdit.cargo === 'string' ? empleadoEdit.cargo.trim() : '';
-      const rolePatch = cargoTrimmed ? { rol: cargoTrimmed, puesto: cargoTrimmed } : {};
-      await updateDoc(empleadoRef, {
+      await empleadoService.updateEmpleado(userProfile.ownerId, empleadoEdit.id, {
         nombre: empleadoEdit.nombre,
         apellido: empleadoEdit.apellido,
         dni: empleadoEdit.dni,
         telefono: empleadoEdit.telefono,
         email: empleadoEdit.email,
         cargo: empleadoEdit.cargo,
-        ...rolePatch,
         area: empleadoEdit.area,
         fechaIngreso: empleadoEdit.fechaIngreso,
-        updatedAt: Timestamp.now(),
-        updatedBy: userProfile?.uid || null,
+        // legacy
         fechaActualizacion: Timestamp.now()
-      });
-
-      logger.debug('[EmpleadosContent] update rol/puesto final', {
-        empleadoId: empleadoEdit.id,
-        cargo: empleadoEdit.cargo || null,
-        rol: rolePatch.rol || null,
-        puesto: rolePatch.puesto || null
-      });
+      }, { uid: userProfile?.uid, role });
 
       setOpenEditEmpleadoForm(false);
       setEmpleadoEdit(null);
@@ -332,11 +300,10 @@ const EmpleadosContent = ({ sucursalId, sucursalNombre, selectedEmpresa, navigat
       }
       try {
         const ownerId = userProfile.ownerId;
-        const empleadoRef = doc(dbAudit, ...firestoreRoutesCore.empleado(ownerId, empleado.id));
-        await updateDoc(empleadoRef, {
+        await empleadoService.updateEmpleado(ownerId, empleado.id, {
           estado: 'inactivo',
           fechaActualizacion: Timestamp.now()
-        });
+        }, { uid: userProfile?.uid, role });
 
         // Recargar datos
         await loadEmpleados();
@@ -386,8 +353,7 @@ const EmpleadosContent = ({ sucursalId, sucursalNombre, selectedEmpresa, navigat
       }
       try {
         const ownerId = userProfile.ownerId;
-        const empleadoRef = doc(dbAudit, ...firestoreRoutesCore.empleado(ownerId, empleado.id));
-        await deleteDoc(empleadoRef);
+        await empleadoService.deleteEmpleado(ownerId, empleado.id, { uid: userProfile?.uid, role });
 
         // Recargar datos
         await loadEmpleados();

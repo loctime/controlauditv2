@@ -1,5 +1,5 @@
 import logger from '@/utils/logger';
-import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import {
   Container,
   Paper,
@@ -29,14 +29,11 @@ import {
   Search as SearchIcon,
   CloudUpload as CloudUploadIcon
 } from '@mui/icons-material';
-import { query, where, getDocs, deleteDoc, doc, collection } from 'firebase/firestore';
-import { dbAudit } from '../../../firebaseControlFile';
-import { firestoreRoutesCore } from '../../../core/firestore/firestoreRoutes.core';
 import { useAuth } from '@/components/context/AuthContext';
 import { useGlobalSelection } from '../../../hooks/useGlobalSelection';
-import { normalizeEmpleado } from '../../../utils/firestoreUtils';
-import EmpleadoForm from './EmpleadoForm';
+import EmpleadoFormModal from './EmpleadoForm';
 import ImportEmpleadosDialog from './import/ImportEmpleadosDialog';
+import { empleadoService } from '../../../services/empleadoService';
 
 export default function Empleados() {
   const { userProfile, loadingSucursales, role } = useAuth();
@@ -57,7 +54,7 @@ export default function Empleados() {
     setSelectedSucursal,
     sucursalesFiltradas: filteredSucursales,
     userEmpresas,
-    userSucursales
+    userSucursales: _userSucursales
   } = useGlobalSelection();
   
   const [empleados, setEmpleados] = useState([]);
@@ -88,14 +85,7 @@ export default function Empleados() {
     setLoading(true);
     try {
       const ownerId = userProfile.ownerId;
-      const empleadosRef = collection(dbAudit, ...firestoreRoutesCore.empleados(ownerId));
-      const q = query(
-        empleadosRef,
-        where('sucursalId', '==', selectedSucursal)
-      );
-      
-      const snapshot = await getDocs(q);
-      const empleadosData = snapshot.docs.map(doc => normalizeEmpleado(doc));
+      const empleadosData = await empleadoService.getEmpleadosBySucursal(ownerId, selectedSucursal);
       
       setEmpleados(empleadosData);
     } catch (error) {
@@ -141,8 +131,7 @@ export default function Empleados() {
     if (window.confirm(`¿Está seguro de eliminar a ${nombreEmpleado}?`)) {
       try {
         const ownerId = userProfile.ownerId;
-        const empleadoRef = doc(dbAudit, ...firestoreRoutesCore.empleado(ownerId, empleadoId));
-        await deleteDoc(empleadoRef);
+        await empleadoService.deleteEmpleado(ownerId, empleadoId, { uid: userProfile?.uid, role });
         loadEmpleados();
       } catch (error) {
         logger.error('Error al eliminar empleado:', error);
@@ -465,13 +454,34 @@ export default function Empleados() {
       </TableContainer>
 
       {/* Formulario de Empleado */}
-      <EmpleadoForm
+      <EmpleadoFormModal
         open={openForm}
         onClose={handleCloseForm}
-        onSave={handleSaveEmpleado}
-        empleado={selectedEmpleado}
-        sucursalId={selectedSucursal}
-        empresaId={selectedEmpresa}
+        initialData={selectedEmpleado || null}
+        onSubmit={async (data) => {
+          if (!userProfile?.ownerId) throw new Error('ownerId no disponible');
+          if (!selectedEmpresa) throw new Error('Empresa no seleccionada');
+          if (!selectedSucursal) throw new Error('Sucursal no seleccionada');
+
+          const ownerId = userProfile.ownerId;
+          const actor = { uid: userProfile?.uid, role };
+
+          if (selectedEmpleado?.id) {
+            await empleadoService.updateEmpleado(ownerId, selectedEmpleado.id, {
+              ...data,
+              empresaId: selectedEmpresa,
+              sucursalId: selectedSucursal
+            }, actor);
+          } else {
+            await empleadoService.crearEmpleado({
+              ...data,
+              empresaId: selectedEmpresa,
+              sucursalId: selectedSucursal
+            }, actor);
+          }
+
+          handleSaveEmpleado();
+        }}
       />
 
       {/* Dialog de Importación Masiva */}

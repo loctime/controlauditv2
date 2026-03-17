@@ -1,5 +1,5 @@
 import logger from '@/utils/logger';
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import {
   Box,
   Button,
@@ -12,9 +12,6 @@ import {
   useTheme
 } from '@mui/material';
 import StorefrontIcon from '@mui/icons-material/Storefront';
-import { getDocs, query, where, addDoc, updateDoc, deleteDoc, doc, Timestamp, collection } from 'firebase/firestore';
-import { dbAudit } from '../../../../firebaseControlFile';
-import { firestoreRoutesCore } from '../../../../core/firestore/firestoreRoutes.core';
 import { useAuth } from '@/components/context/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import Swal from 'sweetalert2';
@@ -22,13 +19,13 @@ import EmpleadosContent from './EmpleadosContent';
 import CapacitacionesContent from './CapacitacionesContent';
 import AccidentesContent from './AccidentesContent';
 import AccionesRequeridas from '../components/AccionesRequeridas';
-import { registrarAccionSistema, normalizeSucursal } from '../../../../utils/firestoreUtils';
+import { registrarAccionSistema } from '../../../../utils/firestoreUtils';
 import { calcularProgresoTargets } from '../../../../utils/sucursalTargetUtils';
 import { useSucursalesStats } from '../hooks/useSucursalesStats';
 import SucursalTableHeader from '../components/SucursalTableHeader';
 import SucursalRow from '../components/SucursalRow';
 import SucursalFormModal from '../components/SucursalFormModal';
-import { trainingCatalogService, trainingRequirementService } from '../../../../services/training';
+import { sucursalService } from '../../../../services/sucursalService';
 
 const SucursalesTab = ({ empresaId, empresaNombre, userEmpresas, loadEmpresasStats }) => {
   const { userProfile, getEffectiveOwnerId } = useAuth();
@@ -77,10 +74,7 @@ const SucursalesTab = ({ empresaId, empresaNombre, userEmpresas, loadEmpresasSta
         logger.error('Error: ownerId efectivo es requerido');
         return;
       }
-      const sucursalesRef = collection(dbAudit, ...firestoreRoutesCore.sucursales(ownerId));
-      const q = query(sucursalesRef, where('empresaId', '==', empresaId));
-      const snapshot = await getDocs(q);
-      const sucursalesData = snapshot.docs.map(doc => normalizeSucursal(doc));
+      const sucursalesData = await sucursalService.listByEmpresa(ownerId, empresaId);
       setSucursales(sucursalesData);
       
       // Cargar estadísticas de cada sucursal
@@ -176,47 +170,6 @@ const SucursalesTab = ({ empresaId, empresaNombre, userEmpresas, loadEmpresasSta
     setOpenModal(true);
   };
 
-  // Crea reglas base en training_requirement_matrix para la sucursal recién creada.
-  // - Idempotente: si ya hay reglas activas para companyId+branchId, no crea nada.
-  // - Alcance: reglas "globales" (sin jobRoleId) para todos los trainings activos del catálogo.
-  const autoSeedTrainingRulesForBranch = async ({ ownerId, companyId, branchId }) => {
-    if (!ownerId || !companyId || !branchId) return { created: 0, skipped: 0, total: 0, reason: 'missing_params' };
-
-    const existing = await trainingRequirementService.listRules(ownerId, {
-      companyId,
-      branchId,
-      status: 'active'
-    });
-    if (Array.isArray(existing) && existing.length > 0) {
-      return { created: 0, skipped: existing.length, total: 0, reason: 'already_has_rules' };
-    }
-
-    const catalog = await trainingCatalogService.listActive(ownerId);
-    const activeTrainings = Array.isArray(catalog) ? catalog : [];
-    const effectiveFrom = new Date().toISOString().slice(0, 10);
-
-    let created = 0;
-    // Crear reglas en paralelo (catálogo suele ser chico/mediano).
-    await Promise.all(activeTrainings.map(async (t) => {
-      if (!t?.id) return;
-      await trainingRequirementService.createRule(ownerId, {
-        companyId,
-        branchId,
-        trainingTypeId: t.id,
-        // Defaults alineados con RequirementMatrixScreen:
-        frequencyMonths: 12,
-        mandatory: true,
-        expirationRule: 'valid_until_plus_frequency',
-        effectiveFrom,
-        status: 'active',
-        source: 'auto_seed_on_branch_create'
-      });
-      created += 1;
-    }));
-
-    return { created, skipped: 0, total: activeTrainings.length, reason: 'seeded' };
-  };
-
   const handleSubmit = async () => {
     if (!sucursalForm.nombre.trim()) {
       Swal.fire({
@@ -237,54 +190,10 @@ const SucursalesTab = ({ empresaId, empresaNombre, userEmpresas, loadEmpresasSta
         });
         return;
       }
-      const sucursalesRef = collection(dbAudit, ...firestoreRoutesCore.sucursales(ownerId));
-      const actorUid = userProfile?.uid || null;
+      const actor = { uid: userProfile?.uid || null, role: userProfile?.role || null };
 
       if (modalMode === 'create') {
-        const docRef = await addDoc(sucursalesRef, {
-          appId: 'auditoria',
-          nombre: sucursalForm.nombre,
-          direccion: sucursalForm.direccion || '',
-          telefono: sucursalForm.telefono || '',
-          horasSemanales: parseInt(sucursalForm.horasSemanales) || 40,
-          targetMensual: parseInt(sucursalForm.targetMensual) || 0,
-          targetAnualAuditorias: parseInt(sucursalForm.targetAnualAuditorias) || 12,
-          targetMensualCapacitaciones: parseInt(sucursalForm.targetMensualCapacitaciones) || 1,
-          targetAnualCapacitaciones: parseInt(sucursalForm.targetAnualCapacitaciones) || 12,
-          empresaId: empresaId,
-          createdBy: actorUid,
-          createdByRole: userProfile?.role || null,
-          createdAt: Timestamp.now(),
-          updatedAt: Timestamp.now(),
-          fechaCreacion: Timestamp.now()
-        });
-
-        await registrarAccionSistema(
-          ownerId,
-          `Sucursal creada: ${sucursalForm.nombre}`,
-          {
-            sucursalId: docRef.id,
-            nombre: sucursalForm.nombre,
-            empresaId: empresaId,
-            direccion: sucursalForm.direccion
-          },
-          'crear',
-          'sucursal',
-          docRef.id
-        );
-
-        // Auto-crear reglas base de capacitación para la nueva sucursal
-        try {
-          const seedResult = await autoSeedTrainingRulesForBranch({
-            ownerId,
-            companyId: empresaId,
-            branchId: docRef.id
-          });
-          logger.debug('[SucursalesTab] autoSeedTrainingRulesForBranch', seedResult);
-        } catch (seedErr) {
-          logger.warn('[SucursalesTab] No se pudieron auto-crear reglas base de capacitación', seedErr);
-          // No bloquear la creación de la sucursal si falla el seed.
-        }
+        await sucursalService.crearSucursalCompleta(ownerId, { ...sucursalForm, empresaId }, actor);
 
         Swal.fire({
           icon: 'success',
@@ -293,8 +202,7 @@ const SucursalesTab = ({ empresaId, empresaNombre, userEmpresas, loadEmpresasSta
         });
       } else {
         // Modo edición
-        const sucursalRef = doc(dbAudit, ...firestoreRoutesCore.sucursal(ownerId, sucursalForm.id));
-        await updateDoc(sucursalRef, {
+        await sucursalService.updateSucursal(ownerId, sucursalForm.id, {
           nombre: sucursalForm.nombre,
           direccion: sucursalForm.direccion,
           telefono: sucursalForm.telefono,
@@ -302,12 +210,10 @@ const SucursalesTab = ({ empresaId, empresaNombre, userEmpresas, loadEmpresasSta
           targetMensual: parseInt(sucursalForm.targetMensual) || 0,
           targetAnualAuditorias: parseInt(sucursalForm.targetAnualAuditorias) || 12,
           targetMensualCapacitaciones: parseInt(sucursalForm.targetMensualCapacitaciones) || 1,
-          targetAnualCapacitaciones: parseInt(sucursalForm.targetAnualCapacitaciones) || 12,
-          updatedBy: actorUid,
-          updatedAt: Timestamp.now(),
-          fechaModificacion: Timestamp.now()
-        });
+          targetAnualCapacitaciones: parseInt(sucursalForm.targetAnualCapacitaciones) || 12
+        }, actor);
 
+        // Mantener registrarAccionSistema (solo log) aquí por compatibilidad visual de historial
         await registrarAccionSistema(
           ownerId,
           `Sucursal actualizada: ${sucursalForm.nombre}`,
@@ -374,22 +280,18 @@ const SucursalesTab = ({ empresaId, empresaNombre, userEmpresas, loadEmpresasSta
         }
         
         // Verificar si hay empleados asociados
-        const empleadosRef = collection(dbAudit, ...firestoreRoutesCore.empleados(ownerId));
-        const empleadosSnapshot = await getDocs(
-          query(empleadosRef, where('sucursalId', '==', sucursal.id))
-        );
+        const empleadosCount = await sucursalService.countEmpleadosBySucursal(ownerId, sucursal.id);
 
-        if (empleadosSnapshot.docs.length > 0) {
+        if (empleadosCount > 0) {
           Swal.fire({
             icon: 'error',
             title: 'No se puede eliminar',
-            text: `La sucursal "${sucursal.nombre}" tiene ${empleadosSnapshot.docs.length} empleado(s) asociado(s). Elimina primero los empleados.`
+            text: `La sucursal "${sucursal.nombre}" tiene ${empleadosCount} empleado(s) asociado(s). Elimina primero los empleados.`
           });
           return;
         }
 
-        const sucursalRef = doc(dbAudit, ...firestoreRoutesCore.sucursal(ownerId, sucursal.id));
-        await deleteDoc(sucursalRef);
+        await sucursalService.deleteSucursal(ownerId, sucursal.id, { uid: userProfile?.uid || null, role: userProfile?.role || null });
 
         await registrarAccionSistema(
           ownerId,
