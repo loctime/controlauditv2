@@ -1,6 +1,6 @@
 import React from 'react';
 import { Alert, Button, Chip, Paper, Table, TableBody, TableCell, TableHead, TableRow, Typography } from '@mui/material';
-import { formatDateAR } from '@/utils/dateUtils';
+import { formatDateAR, toDate } from '@/utils/dateUtils';
 
 function statusConfig(complianceStatus) {
   switch (complianceStatus) {
@@ -20,10 +20,9 @@ function statusConfig(complianceStatus) {
 function diffInMonths(from, until) {
   if (!from || !until) return null;
 
-  const start = from && typeof from.toDate === 'function' ? from.toDate() : new Date(from);
-  const end = until && typeof until.toDate === 'function' ? until.toDate() : new Date(until);
-
-  if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime())) return null;
+  const start = toDate(from);
+  const end = toDate(until);
+  if (!start || !end || Number.isNaN(start.getTime()) || Number.isNaN(end.getTime())) return null;
 
   const yearsDiff = end.getFullYear() - start.getFullYear();
   const monthsDiff = end.getMonth() - start.getMonth();

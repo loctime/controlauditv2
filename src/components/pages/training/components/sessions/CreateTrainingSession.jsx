@@ -150,7 +150,9 @@ export default function CreateTrainingSession({
   const [blockedEmployees, setBlockedEmployees] = useState([]);
   const [scheduledPeriod, setScheduledPeriod] = useState(null);
   const [loadingParticipants, setLoadingParticipants] = useState(false);
+  const [highlightIncompleteEmployeeId, setHighlightIncompleteEmployeeId] = useState(null);
   const ratingCellRefs = useRef({});
+  const rowRefs = useRef({});
 
   // Inicializar con datos precargados si existen
   useEffect(() => {
@@ -485,6 +487,24 @@ export default function CreateTrainingSession({
     updateRequirements();
   }, [ownerId, form.trainingTypeId]);
 
+  // Scroll al primer ítem incompleto y quitar resaltado tras unos segundos
+  useEffect(() => {
+    if (!highlightIncompleteEmployeeId) return;
+    const el = rowRefs.current[highlightIncompleteEmployeeId];
+    if (el) {
+      const t = setTimeout(() => {
+        el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }, 100);
+      return () => clearTimeout(t);
+    }
+  }, [highlightIncompleteEmployeeId]);
+
+  useEffect(() => {
+    if (!highlightIncompleteEmployeeId) return;
+    const t = setTimeout(() => setHighlightIncompleteEmployeeId(null), 5500);
+    return () => clearTimeout(t);
+  }, [highlightIncompleteEmployeeId]);
+
   // Validar y guardar todo
   const saveTrainingSession = async () => {
     const filesToUpload = uploadedFilesRef.current;
@@ -500,6 +520,36 @@ export default function CreateTrainingSession({
     if (selectedIds.length === 0) {
       setError('Selecciona al menos un participante');
       return;
+    }
+
+    // En modo "quick" (registro ejecutado): asistencia y evaluación completas
+    if (mode === 'quick') {
+      const withIncompleteAttendance = selectedIds.filter((employeeId) => {
+        const record = participantRecords[employeeId];
+        return !record || record.attendanceStatus === TRAINING_ATTENDANCE_STATUSES.INVITED;
+      });
+      if (withIncompleteAttendance.length > 0) {
+        const firstInTableOrder = filteredEmployees.find((e) => withIncompleteAttendance.includes(e.id))?.id ?? withIncompleteAttendance[0];
+        setHighlightIncompleteEmployeeId(firstInTableOrder);
+        setError('Completa la columna de asistencia de todos los participantes (marca Presente o Ausente justificado en cada uno).');
+        return;
+      }
+      if (requiresEvaluation) {
+        const presentIds = selectedIds.filter(
+          (id) => participantRecords[id]?.attendanceStatus === TRAINING_ATTENDANCE_STATUSES.PRESENT
+        );
+        const withPendingEvaluation = presentIds.filter((id) => {
+          const status = participantRecords[id]?.evaluationStatus;
+          return status !== TRAINING_EVALUATION_STATUSES.APPROVED && status !== TRAINING_EVALUATION_STATUSES.FAILED;
+        });
+        if (withPendingEvaluation.length > 0) {
+          const firstInTableOrder = filteredEmployees.find((e) => withPendingEvaluation.includes(e.id))?.id ?? withPendingEvaluation[0];
+          setHighlightIncompleteEmployeeId(firstInTableOrder);
+          setError('Completa la evaluación (A o R) de todos los participantes presentes.');
+          return;
+        }
+      }
+      setHighlightIncompleteEmployeeId(null);
     }
 
     // Validar firmas si se requieren (eliminado por solicitud)
@@ -943,13 +993,24 @@ export default function CreateTrainingSession({
                       const name = employee.nombre || employee.nombreCompleto || employee.id;
                       const attendanceMissing = isSelected && !isBlocked && record.attendanceStatus === TRAINING_ATTENDANCE_STATUSES.INVITED;
 
+                      const isHighlighted = highlightIncompleteEmployeeId === employee.id;
                       return (
                         <TableRow
                           key={employee.id}
+                          ref={(ref) => { rowRefs.current[employee.id] = ref; }}
                           selected={isSelected}
                           sx={{
                             backgroundColor: isSelected ? 'action.selected' : 'inherit',
-                            '&:hover': { backgroundColor: 'action.hover' }
+                            '&:hover': { backgroundColor: 'action.hover' },
+                            ...(isHighlighted && {
+                              boxShadow: (theme) => `inset 0 0 0 2px ${theme.palette.warning.main}`,
+                              backgroundColor: (theme) => theme.palette.mode === 'light' ? theme.palette.warning.light : theme.palette.warning.dark,
+                              animation: 'highlightPulse 1.2s ease-in-out 4',
+                              '@keyframes highlightPulse': {
+                                '0%, 100%': { opacity: 1 },
+                                '50%': { opacity: 0.65 }
+                              }
+                            })
                           }}
                         >
                           <TableCell
