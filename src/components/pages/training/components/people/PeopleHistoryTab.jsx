@@ -219,6 +219,7 @@ export default function PeopleHistoryTab({ ownerId, selectedEmployee }) {
             <TableHead>
               <TableRow>
                 <TableCell>Capacitación</TableCell>
+                <TableCell>Fecha realización</TableCell>
                 <TableCell>Fecha vigencia desde</TableCell>
                 <TableCell>Vence</TableCell>
                 <TableCell>Estado</TableCell>
@@ -233,6 +234,7 @@ export default function PeopleHistoryTab({ ownerId, selectedEmployee }) {
                 return (
                   <TableRow key={row.id}>
                     <TableCell>{trainingName}</TableCell>
+                    <TableCell>{formatDateAR(row.sourceExecutedDate || row.attendanceTakenAt)}</TableCell>
                     <TableCell>{formatDateAR(row.validFrom)}</TableCell>
                     <TableCell>{formatDateAR(row.validUntil)}</TableCell>
                     <TableCell>
