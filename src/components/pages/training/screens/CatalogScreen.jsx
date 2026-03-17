@@ -92,7 +92,7 @@ export default function CatalogScreen({ onNavigateToPlans }) {
     description: '',
     modality: 'in_person',
     recommendedDurationMinutes: 60,
-    validityMonths: 12,
+    validityMonths: 1,
     requiresEvaluation: false,
     requiresScore: false,
     status: 'active'

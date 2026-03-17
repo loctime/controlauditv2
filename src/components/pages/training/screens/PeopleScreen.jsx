@@ -20,6 +20,12 @@ const PEOPLE_SUB_TABS = [
   { id: 'history', label: 'Historial' }
 ];
 
+const PEOPLE_SUB_TAB_IDS = PEOPLE_SUB_TABS.map((t) => t.id);
+
+function normalizePeopleSubTab(value) {
+  return PEOPLE_SUB_TAB_IDS.includes(value) ? value : 'summary';
+}
+
 export default function PeopleScreen() {
   const { userProfile, userSucursales = [], userEmpresas = [] } = useAuth();
   const ownerId = userProfile?.ownerId;
@@ -31,6 +37,14 @@ export default function PeopleScreen() {
   const [selectedEmployee, setSelectedEmployee] = useState(null);
   const [records, setRecords] = useState([]);
   const [peopleSubTab, setPeopleSubTab] = useState('summary');
+
+  // Si el tab guardado ya no existe (ej. "certificates" eliminado), volver a "summary"
+  useEffect(() => {
+    if (!PEOPLE_SUB_TAB_IDS.includes(peopleSubTab)) {
+      setPeopleSubTab('summary');
+    }
+  }, [peopleSubTab]);
+
   const [viewSession, setViewSession] = useState(null);
   const [loadingSessionId, setLoadingSessionId] = useState(null);
 
@@ -225,7 +239,7 @@ export default function PeopleScreen() {
   return (
     <Box>
       {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
-      {loadingRecords && peopleSubTab === 'summary' && (
+      {loadingRecords && normalizePeopleSubTab(peopleSubTab) === 'summary' && (
         <Alert severity="info" sx={{ mb: 2 }}>Cargando historial del empleado...</Alert>
       )}
 
@@ -245,8 +259,8 @@ export default function PeopleScreen() {
           {selectedEmployee && (
             <Grid item xs={12} md={8}>
               <Tabs
-                value={peopleSubTab}
-                onChange={(_, v) => setPeopleSubTab(v)}
+                value={normalizePeopleSubTab(peopleSubTab)}
+                onChange={(_, v) => setPeopleSubTab(normalizePeopleSubTab(v))}
                 sx={{ borderBottom: 1, borderColor: 'divider' }}
               >
                 {PEOPLE_SUB_TABS.map((t) => (
@@ -260,7 +274,7 @@ export default function PeopleScreen() {
 
       {selectedEmployee && (
         <Box sx={{ mt: 1 }}>
-          {peopleSubTab === 'summary' && (
+          {normalizePeopleSubTab(peopleSubTab) === 'summary' && (
             <PeopleSummaryTab
               selectedEmployee={enrichedEmployee}
               records={records}
@@ -268,7 +282,7 @@ export default function PeopleScreen() {
               onViewSession={openSessionModal}
             />
           )}
-          {peopleSubTab === 'history' && (
+          {normalizePeopleSubTab(peopleSubTab) === 'history' && (
             <PeopleHistoryTab ownerId={ownerId} selectedEmployee={enrichedEmployee} />
           )}
         </Box>
