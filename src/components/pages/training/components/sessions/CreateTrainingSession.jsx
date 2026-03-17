@@ -1019,9 +1019,6 @@ export default function CreateTrainingSession({
                                     onClick={() => {
                                       if (!isSelected) toggleEmployee(employee.id);
                                       updateParticipantRecord(employee.id, 'attendanceStatus', TRAINING_ATTENDANCE_STATUSES.PRESENT);
-                                      if (requiresEvaluation) {
-                                        updateParticipantRecord(employee.id, 'score', 3);
-                                      }
                                     }}
                                     disabled={!isSelected}
                                     sx={isSelected && record.attendanceStatus === TRAINING_ATTENDANCE_STATUSES.PRESENT ? { bgcolor: 'primary.main', color: 'primary.contrastText', '&:hover': { bgcolor: 'primary.dark' } } : undefined}
@@ -1056,10 +1053,11 @@ export default function CreateTrainingSession({
                                   <Button
                                     size="small"
                                     fullWidth
-                                    onClick={() => {
-                                      if (!isSelected) toggleEmployee(employee.id);
-                                      updateParticipantRecord(employee.id, 'evaluationStatus', TRAINING_EVALUATION_STATUSES.APPROVED);
-                                    }}
+onClick={() => {
+                                        if (!isSelected) toggleEmployee(employee.id);
+                                        updateParticipantRecord(employee.id, 'evaluationStatus', TRAINING_EVALUATION_STATUSES.APPROVED);
+                                        updateParticipantRecord(employee.id, 'score', 3);
+                                      }}
                                     disabled={!isSelected || record.attendanceStatus !== TRAINING_ATTENDANCE_STATUSES.PRESENT}
                                     sx={{
                                       flex: 1,
@@ -1078,10 +1076,11 @@ export default function CreateTrainingSession({
                                   <Button
                                     size="small"
                                     fullWidth
-                                    onClick={() => {
-                                      if (!isSelected) toggleEmployee(employee.id);
-                                      updateParticipantRecord(employee.id, 'evaluationStatus', TRAINING_EVALUATION_STATUSES.FAILED);
-                                    }}
+onClick={() => {
+                                        if (!isSelected) toggleEmployee(employee.id);
+                                        updateParticipantRecord(employee.id, 'evaluationStatus', TRAINING_EVALUATION_STATUSES.FAILED);
+                                        updateParticipantRecord(employee.id, 'score', 1);
+                                      }}
                                     disabled={!isSelected || record.attendanceStatus !== TRAINING_ATTENDANCE_STATUSES.PRESENT}
                                     sx={{
                                       flex: 1,

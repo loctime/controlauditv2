@@ -223,9 +223,14 @@ export default function SessionDetailModal({ open, onClose, ownerId, session }) 
     if (!ownerId || !session?.id || !record?.employeeId) return;
     setUpdatingAttendanceId(record.employeeId);
     try {
+      const updates = { [field]: value };
+      if (field === 'evaluationStatus') {
+        if (value === TRAINING_EVALUATION_STATUSES.FAILED) updates.score = 1;
+        if (value === TRAINING_EVALUATION_STATUSES.APPROVED) updates.score = 3;
+      }
       await trainingAttendanceService.upsertAttendance(ownerId, session.id, record.employeeId, {
         ...record,
-        [field]: value,
+        ...updates,
         sessionData: session
       });
       await loadData();
