@@ -210,8 +210,7 @@ export default function PeopleHistoryTab({ ownerId, selectedEmployee }) {
                 <TableCell>Fecha vigencia desde</TableCell>
                 <TableCell>Vence</TableCell>
                 <TableCell>Estado</TableCell>
-                <TableCell>Certificado</TableCell>
-                <TableCell>Evidencias</TableCell>
+                <TableCell>Ver</TableCell>
               </TableRow>
             </TableHead>
             <TableBody>
@@ -226,8 +225,23 @@ export default function PeopleHistoryTab({ ownerId, selectedEmployee }) {
                     <TableCell>
                       <Chip label={statusLabel} color={statusColor} size="small" />
                     </TableCell>
-                    <TableCell>{row.certificateId ? 'Sí' : '—'}</TableCell>
-                    <TableCell>{Array.isArray(row.evidenceIds) && row.evidenceIds.length > 0 ? row.evidenceIds.length : '—'}</TableCell>
+                    <TableCell>
+                      {row.sessionId ? (
+                        loadingSessionId === row.sessionId ? (
+                          <CircularProgress size={24} />
+                        ) : (
+                          <Button
+                            size="small"
+                            variant="outlined"
+                            onClick={() => openSessionModal(row.sessionId)}
+                          >
+                            Ver
+                          </Button>
+                        )
+                      ) : (
+                        '—'
+                      )}
+                    </TableCell>
                   </TableRow>
                 );
               })}
