@@ -155,7 +155,7 @@ export const employeeTrainingRecordService = {
       return recordId;
     }
 
-    const compliance = computeCompliance(latest.validUntil);
+    const compliance = computeCompliance(latest.finalValidUntil);
     const payload = {
       employeeId,
       trainingTypeId,

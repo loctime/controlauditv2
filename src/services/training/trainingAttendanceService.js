@@ -24,6 +24,7 @@ import {
   TRAINING_ATTENDANCE_STATUSES,
   TRAINING_EVALUATION_STATUSES
 } from '../../types/trainingDomain';
+import { trainingCatalogService } from './trainingCatalogService';
 import { trainingComplianceService } from './trainingComplianceService';
 import { trainingPeriodResultService } from './trainingPeriodResultService';
 import {
@@ -152,6 +153,24 @@ function getSessionTimestamp(sessionData = {}) {
   return sessionData.executedDate || sessionData.scheduledDate || sessionData.updatedAt || sessionData.createdAt || null;
 }
 
+/** Convierte Date o Firestore Timestamp a Timestamp. */
+function toTimestamp(value) {
+  if (!value) return null;
+  if (value && typeof value.toDate === 'function') return value;
+  const d = value instanceof Date ? value : new Date(value);
+  return Number.isNaN(d.getTime()) ? null : Timestamp.fromDate(d);
+}
+
+/** Suma meses a una fecha (Timestamp o Date) y devuelve Firestore Timestamp. */
+function addMonthsToTimestamp(value, months) {
+  const numMonths = Number(months) || 0;
+  if (numMonths <= 0) return null;
+  const d = value && (value.toDate ? value.toDate() : new Date(value));
+  if (!d || Number.isNaN(d.getTime())) return null;
+  const out = new Date(d.getFullYear(), d.getMonth() + numMonths, d.getDate(), d.getHours(), d.getMinutes(), d.getSeconds(), d.getMilliseconds());
+  return Timestamp.fromDate(out);
+}
+
 function enrichAttendanceForConsolidation(record, sessionData = null) {
   return {
     ...record,
@@ -211,6 +230,20 @@ export const trainingAttendanceService = {
       throw new Error('trainingTypeId es requerido');
     }
 
+    // Vigencia desde catálogo cuando asiste: validFrom = executedDate, validUntil = executedDate + validityMonths
+    let computedValidFrom = payload.validFrom || null;
+    let computedValidUntil = payload.validUntil || null;
+    const isPresent = payload.attendanceStatus === TRAINING_ATTENDANCE_STATUSES.PRESENT;
+    if (isPresent && !computedValidFrom && !computedValidUntil) {
+      const executedDate = getSessionTimestamp(sessionData);
+      if (executedDate) {
+        const catalogItem = await trainingCatalogService.getById(ownerId, trainingTypeId);
+        const validityMonths = catalogItem?.validityMonths ?? 12;
+        computedValidFrom = toTimestamp(executedDate);
+        computedValidUntil = addMonthsToTimestamp(executedDate, validityMonths);
+      }
+    }
+
     const attendanceData = {
       employeeId,
       sessionId,
@@ -225,8 +258,8 @@ export const trainingAttendanceService = {
       notes: payload.notes || '',
       evidenceIds: payload.evidenceIds || [],
       certificateId: payload.certificateId || null,
-      validFrom: payload.validFrom || null,
-      validUntil: payload.validUntil || null,
+      validFrom: payload.validFrom || computedValidFrom || null,
+      validUntil: payload.validUntil || computedValidUntil || null,
       attendanceTakenAt: payload.attendanceTakenAt || now,
       correctedAt: payload.correctedAt || null,
       correctedBy: payload.correctedBy || null,

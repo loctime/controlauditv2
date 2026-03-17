@@ -5,7 +5,8 @@ import { empleadoService } from '../../../../services/empleadoService';
 import {
   employeeTrainingRecordService,
   trainingCatalogService,
-  trainingCertificateService
+  trainingCertificateService,
+  trainingComplianceService
 } from '../../../../services/training';
 import EmployeeAutocomplete from '../components/people/EmployeeAutocomplete';
 import PeopleSummaryTab from '../components/people/PeopleSummaryTab';
@@ -92,8 +93,24 @@ export default function PeopleScreen() {
       setLoadingRecords(true);
       setError('');
       try {
-        const [history, catalog, certificates] = await Promise.all([
-          employeeTrainingRecordService.listByEmployee(ownerId, selectedEmployee.id),
+        let history = await employeeTrainingRecordService.listByEmployee(ownerId, selectedEmployee.id);
+
+        // Refrescar estado de cumplimiento desde period results para no mostrar todo como "Faltantes"
+        if (history.length > 0) {
+          await Promise.all(
+            history.map((record) =>
+              trainingComplianceService.recomputeEmployeeTrainingRecord(
+                ownerId,
+                selectedEmployee.id,
+                record.trainingTypeId,
+                { companyId: record.companyId, branchId: record.branchId }
+              )
+            )
+          );
+          history = await employeeTrainingRecordService.listByEmployee(ownerId, selectedEmployee.id);
+        }
+
+        const [catalog, certificates] = await Promise.all([
           trainingCatalogService.listAll(ownerId),
           trainingCertificateService.listByEmployee(ownerId, selectedEmployee.id).catch(() => [])
         ]);
