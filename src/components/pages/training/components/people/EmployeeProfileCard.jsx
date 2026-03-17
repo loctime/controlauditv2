@@ -96,21 +96,33 @@ export default function EmployeeProfileCard({
   const totalRecords = compliant + expiringSoon + expired + missing;
   const compliancePercent = totalRecords > 0 ? compliant / totalRecords : 0;
 
-  const Label = ({ children }) => (
+  const InlineField = ({ label, value }) => (
     <Typography variant="body2" color="text.secondary">
-      {children}
-    </Typography>
-  );
-
-  const Value = ({ children }) => (
-    <Typography component="span" sx={{ fontWeight: 500 }}>
-      {children}
+      <Box
+        component="span"
+        sx={{
+          fontWeight: 500,
+          textDecoration: 'underline',
+          textUnderlineOffset: '2px'
+        }}
+      >
+        {label}:
+      </Box>{' '}
+      <Box
+        component="span"
+        sx={{
+          color: 'text.primary',
+          fontWeight: 600
+        }}
+      >
+        {value}
+      </Box>
     </Typography>
   );
 
   return (
     <Paper elevation={elevation} sx={{ p: 2 }}>
-      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 2 }}>
+      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 1.5 }}>
         <Avatar
           sx={{
             width: 40,
@@ -133,84 +145,78 @@ export default function EmployeeProfileCard({
         </Box>
       </Box>
 
+      {/* Estado de capacitaciones, justo debajo del nombre */}
+      <Box
+        sx={{
+          bgcolor: 'action.hover',
+          borderRadius: 1,
+          px: 1.5,
+          py: 1.25,
+          mb: 1.5
+        }}
+      >
+        <Typography variant="body2" color="text.secondary" sx={{ mb: 0.75 }}>
+          Estado de capacitaciones
+        </Typography>
+        {totalRecords > 0 && (
+          <Box sx={{ mb: 1 }}>
+            <Typography variant="caption" color="text.secondary">
+              Cumplimiento: {Math.round(compliancePercent * 100)}%
+            </Typography>
+            <LinearProgress
+              variant="determinate"
+              value={compliancePercent * 100}
+              color="success"
+              sx={{ mt: 0.25, height: 6, borderRadius: 1 }}
+            />
+          </Box>
+        )}
+        <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
+          <Tooltip title={COMPLIANCE_TOOLTIPS.missing} arrow placement="top">
+            <Chip
+              label={`Faltantes: ${missing}`}
+              variant="outlined"
+              size="small"
+              color="default"
+            />
+          </Tooltip>
+          <Tooltip title={COMPLIANCE_TOOLTIPS.expired} arrow placement="top">
+            <Chip
+              label={`Vencidas: ${expired}`}
+              color="error"
+              size="small"
+            />
+          </Tooltip>
+          <Tooltip title={COMPLIANCE_TOOLTIPS.expiringSoon} arrow placement="top">
+            <Chip
+              label={`Por vencer: ${expiringSoon}`}
+              color="warning"
+              size="small"
+            />
+          </Tooltip>
+          <Tooltip title={COMPLIANCE_TOOLTIPS.compliant} arrow placement="top">
+            <Chip
+              label={`Vigentes: ${compliant}`}
+              color="success"
+              size="small"
+            />
+          </Tooltip>
+        </Stack>
+      </Box>
+
       <Grid container spacing={1.5}>
         {/* Datos principales */}
         <Grid item xs={6}>
-          <Label>DNI</Label>
-          <Value>{dni}</Value>
+          <InlineField label="DNI" value={dni} />
         </Grid>
         <Grid item xs={6}>
-          <Label>Legajo</Label>
-          <Value>{legajo}</Value>
+          <InlineField label="Legajo" value={legajo} />
         </Grid>
         <Grid item xs={12}>
-          <Label>Empresa</Label>
-          <Value>{empresaNombre}</Value>
+          <InlineField label="Empresa" value={empresaNombre} />
         </Grid>
         <Grid item xs={12}>
-          <Label>Sucursal</Label>
-          <Value>{sucursalNombre}</Value>
-        </Grid>
-
-        {/* Estado de capacitaciones */}
-        <Grid item xs={12}>
-          <Box
-            sx={{
-              bgcolor: 'action.hover',
-              borderRadius: 1,
-              px: 1.5,
-              py: 1.25,
-              mt: 0.5
-            }}
-          >
-            <Typography variant="body2" color="text.secondary" sx={{ mb: 0.75 }}>
-              Estado de capacitaciones
-            </Typography>
-            {totalRecords > 0 && (
-              <Box sx={{ mb: 1 }}>
-                <Typography variant="caption" color="text.secondary">
-                  Cumplimiento: {Math.round(compliancePercent * 100)}%
-                </Typography>
-                <LinearProgress
-                  variant="determinate"
-                  value={compliancePercent * 100}
-                  color="success"
-                  sx={{ mt: 0.25, height: 6, borderRadius: 1 }}
-                />
-              </Box>
-            )}
-            <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
-              <Tooltip title={COMPLIANCE_TOOLTIPS.missing} arrow placement="top">
-                <Chip
-                  label={`Faltantes: ${missing}`}
-                  variant="outlined"
-                  size="small"
-                  color="default"
-                />
-              </Tooltip>
-              <Tooltip title={COMPLIANCE_TOOLTIPS.expired} arrow placement="top">
-                <Chip
-                  label={`Vencidas: ${expired}`}
-                  color="error"
-                  size="small"
-                />
-              </Tooltip>
-              <Tooltip title={COMPLIANCE_TOOLTIPS.expiringSoon} arrow placement="top">
-                <Chip
-                  label={`Por vencer: ${expiringSoon}`}
-                  color="warning"
-                  size="small"
-                />
-              </Tooltip>
-              <Tooltip title={COMPLIANCE_TOOLTIPS.compliant} arrow placement="top">
-                <Chip
-                  label={`Vigentes: ${compliant}`}
-                  color="success"
-                  size="small"
-                />
-              </Tooltip>
-            </Stack>
-          </Box>
+          <InlineField label="Sucursal" value={sucursalNombre} />
         </Grid>
       </Grid>
     </Paper>

@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { Alert, Box, CircularProgress, Paper, Tab, Tabs, Typography } from '@mui/material';
+import { Alert, Box, CircularProgress, Grid, Paper, Tab, Tabs, Typography } from '@mui/material';
 import { useAuth } from '@/components/context/AuthContext';
 import { getUsers } from '../../../../core/services/ownerUserService';
 import { empleadoService } from '../../../../services/empleadoService';
@@ -233,39 +233,45 @@ export default function PeopleScreen() {
         <Typography variant="h6" sx={{ mb: 1.5 }}>
           Historial de capacitación por persona
         </Typography>
-        <EmployeeAutocomplete
-          options={employees}
-          loading={loadingEmployees}
-          value={selectedEmployee}
-          onChange={setSelectedEmployee}
-        />
+        <Grid container spacing={2} alignItems="center">
+          <Grid item xs={12} md={4}>
+            <EmployeeAutocomplete
+              options={employees}
+              loading={loadingEmployees}
+              value={selectedEmployee}
+              onChange={setSelectedEmployee}
+            />
+          </Grid>
+          {selectedEmployee && (
+            <Grid item xs={12} md={8}>
+              <Tabs
+                value={peopleSubTab}
+                onChange={(_, v) => setPeopleSubTab(v)}
+                sx={{ borderBottom: 1, borderColor: 'divider' }}
+              >
+                {PEOPLE_SUB_TABS.map((t) => (
+                  <Tab key={t.id} value={t.id} label={t.label} />
+                ))}
+              </Tabs>
+            </Grid>
+          )}
+        </Grid>
       </Paper>
 
       {selectedEmployee && (
-        <>
-          <Tabs
-            value={peopleSubTab}
-            onChange={(_, v) => setPeopleSubTab(v)}
-            sx={{ borderBottom: 1, borderColor: 'divider', mb: 2 }}
-          >
-            {PEOPLE_SUB_TABS.map((t) => (
-              <Tab key={t.id} value={t.id} label={t.label} />
-            ))}
-          </Tabs>
-          <Box sx={{ mt: 1 }}>
-            {peopleSubTab === 'summary' && (
-              <PeopleSummaryTab
-                selectedEmployee={enrichedEmployee}
-                records={records}
-                complianceSummary={complianceSummary}
-                onViewSession={openSessionModal}
-              />
-            )}
-            {peopleSubTab === 'history' && (
-              <PeopleHistoryTab ownerId={ownerId} selectedEmployee={enrichedEmployee} />
-            )}
-          </Box>
-        </>
+        <Box sx={{ mt: 1 }}>
+          {peopleSubTab === 'summary' && (
+            <PeopleSummaryTab
+              selectedEmployee={enrichedEmployee}
+              records={records}
+              complianceSummary={complianceSummary}
+              onViewSession={openSessionModal}
+            />
+          )}
+          {peopleSubTab === 'history' && (
+            <PeopleHistoryTab ownerId={ownerId} selectedEmployee={enrichedEmployee} />
+          )}
+        </Box>
       )}
 
       {!selectedEmployee && (
