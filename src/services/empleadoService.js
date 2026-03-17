@@ -256,6 +256,15 @@ export const empleadoService = {
 
       // Normalizar empresaId y sucursalId
       const normalizedData = { ...empleadoData };
+
+      // Compatibilidad inmediata para capacitaciones: cargo → rol/puesto
+      if (typeof normalizedData.cargo === 'string') {
+        const cargoTrimmed = normalizedData.cargo.trim();
+        if (cargoTrimmed) {
+          normalizedData.rol = cargoTrimmed;
+          normalizedData.puesto = cargoTrimmed;
+        }
+      }
       
       if ('empresaId' in empleadoData) {
         normalizedData.empresaId = normalizeId(empleadoData.empresaId, 'empresaId');
@@ -264,6 +273,12 @@ export const empleadoService = {
       if ('sucursalId' in empleadoData) {
         normalizedData.sucursalId = normalizeId(empleadoData.sucursalId, 'sucursalId');
       }
+
+      logger.debug('[empleadoService.crearEmpleado] rol/puesto final', {
+        cargo: normalizedData.cargo || null,
+        rol: normalizedData.rol || null,
+        puesto: normalizedData.puesto || null
+      });
 
       const empleadosRef = collection(dbAudit, ...firestoreRoutesCore.empleados(ownerId));
       const empleadoRef = await addDocWithAppId(empleadosRef, {
@@ -304,8 +319,24 @@ export const empleadoService = {
       if (!ownerId) throw new Error('ownerId es requerido');
 
       const empleadoRef = doc(dbAudit, ...firestoreRoutesCore.empleado(ownerId, empleadoId));
+      const normalizedUpdate = { ...updateData };
+      if (typeof normalizedUpdate.cargo === 'string') {
+        const cargoTrimmed = normalizedUpdate.cargo.trim();
+        if (cargoTrimmed) {
+          normalizedUpdate.rol = cargoTrimmed;
+          normalizedUpdate.puesto = cargoTrimmed;
+        }
+      }
+
+      logger.debug('[empleadoService.updateEmpleado] rol/puesto final', {
+        empleadoId,
+        cargo: normalizedUpdate.cargo || null,
+        rol: normalizedUpdate.rol || null,
+        puesto: normalizedUpdate.puesto || null
+      });
+
       await updateDocWithAppId(empleadoRef, {
-        ...updateData,
+        ...normalizedUpdate,
         updatedAt: new Date(),
         updatedBy: user?.uid
       });

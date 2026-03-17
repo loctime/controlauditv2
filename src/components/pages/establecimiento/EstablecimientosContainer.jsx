@@ -109,6 +109,8 @@ const EstablecimientosContainer = () => {
     return email.split('@')[0];
   };
 
+  const ownerEmail = userProfile?.email || '';
+
   const toggleRow = (empresaId) => {
     const newExpanded = new Set(expandedRows);
     if (newExpanded.has(empresaId)) {
@@ -245,6 +247,8 @@ const EstablecimientosContainer = () => {
                       onToggleRow={toggleRow}
                       onTabChange={setActiveTab}
                       formatearEmail={formatearEmail}
+                      ownerEmail={ownerEmail}
+                      effectiveOwnerId={ownerId}
                       onEditClick={handleOpenEditModal}
                       onOperariosClick={handleOpenOperariosModal}
                       EliminarEmpresaComponent={EliminarEmpresa}

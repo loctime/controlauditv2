@@ -30,6 +30,8 @@ const EmpresaRow = React.memo(({
   onToggleRow,
   onTabChange,
   formatearEmail,
+  ownerEmail = '',
+  effectiveOwnerId = null,
   onEditClick,
   onOperariosClick,
   EliminarEmpresaComponent,
@@ -38,6 +40,14 @@ const EmpresaRow = React.memo(({
   canManageOperarios = false
 }) => {
   const theme = useTheme();
+  const ownerLabel = (() => {
+    if (empresa?.propietarioEmail) return formatearEmail(empresa.propietarioEmail);
+    // Fallback: si la empresa pertenece al owner actual y tenemos email del usuario logueado
+    if (ownerEmail && effectiveOwnerId && empresa?.ownerId && String(empresa.ownerId) === String(effectiveOwnerId)) {
+      return formatearEmail(ownerEmail);
+    }
+    return 'N/A';
+  })();
   
   return (
   <TableRow hover>
@@ -97,7 +107,7 @@ const EmpresaRow = React.memo(({
     </TableCell>
     <TableCell>
       <Typography variant="body2">
-        {empresa.propietarioEmail ? formatearEmail(empresa.propietarioEmail) : 'N/A'}
+        {ownerLabel}
       </Typography>
     </TableCell>
     <TableCell>

@@ -194,8 +194,8 @@ export const trainingComplianceService = {
     for (const employee of employeesPage) {
       const roleId = roleCandidate(employee);
       const roleIds = employeeRoleIdSet(employee);
-      const employeeCompanyId = employee?.empresaId || companyId || null;
-      const employeeBranchId = employee?.sucursalId || branchId || null;
+      const employeeCompanyId = normalizeId(employee?.empresaId || companyId || null);
+      const employeeBranchId = normalizeId(employee?.sucursalId || branchId || null);
 
       const candidateRules = [];
       // Reunir reglas de todos los posibles IDs de rol del empleado
@@ -211,11 +211,13 @@ export const trainingComplianceService = {
             const ruleRoleId = normalizeRuleRoleId(rule);
             const okRole = !ruleRoleId || roleIds.has(normalizeId(ruleRoleId));
             // Mantener compatibilidad con lógica existente: solo descartar si ambos lados existen y no coinciden.
-            const okBranch = !rule.branchId || !employeeBranchId || rule.branchId === employeeBranchId;
-            const okCompany = !rule.companyId || !employeeCompanyId || rule.companyId === employeeCompanyId;
+            const ruleBranchId = normalizeId(rule.branchId || rule.sucursalId || null);
+            const ruleCompanyId = normalizeId(rule.companyId || rule.empresaId || null);
+            const okBranch = !ruleBranchId || !employeeBranchId || ruleBranchId === employeeBranchId;
+            const okCompany = !ruleCompanyId || !employeeCompanyId || ruleCompanyId === employeeCompanyId;
             return okRole && okBranch && okCompany;
           })
-          .map((rule) => rule.trainingTypeId)
+          .map((rule) => normalizeId(rule.trainingTypeId))
           .filter(Boolean)
           .filter((id) => (trainingTypeFilterSet ? trainingTypeFilterSet.has(id) : true))
       ));

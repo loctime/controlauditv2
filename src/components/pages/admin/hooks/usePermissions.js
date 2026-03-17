@@ -4,6 +4,7 @@ import { useAuth } from '@/components/context/AuthContext';
 
 export const usePermissions = () => {
   const { userProfile, role } = useAuth();
+  const isAdminLike = role === 'admin' || role === 'superdev';
 
   // ✅ Memoizar permisos para evitar recálculos
   const permissions = useMemo(() => {
@@ -62,27 +63,27 @@ export const usePermissions = () => {
 
   // ✅ Permisos para empresas - usando solo role y empresasPermitidas
   const canCreateEmpresa = useMemo(() => {
-    return role === 'admin';
-  }, [role]);
+    return isAdminLike;
+  }, [isAdminLike]);
 
   const canEditEmpresa = useMemo(() => {
-    return role === 'admin';
-  }, [role]);
+    return isAdminLike;
+  }, [isAdminLike]);
 
   const canDeleteEmpresa = useMemo(() => {
-    return role === 'admin';
-  }, [role]);
+    return isAdminLike;
+  }, [isAdminLike]);
 
   const canManageOperarios = useMemo(() => {
-    return role === 'admin';
-  }, [role]);
+    return isAdminLike;
+  }, [isAdminLike]);
 
   // Función para verificar si puede ver una empresa específica
   const canViewEmpresa = useCallback((empresaId) => {
     if (!userProfile || !empresaId) return false;
     
-    // Admin puede ver todas las empresas
-    if (role === 'admin') return true;
+    // Admin/Superdev puede ver todas las empresas
+    if (isAdminLike) return true;
     
     // Operario solo puede ver empresas asignadas
     if (role === 'operario') {
@@ -91,12 +92,12 @@ export const usePermissions = () => {
     }
     
     return false;
-  }, [userProfile, role]);
+  }, [userProfile, role, isAdminLike]);
 
   // Compatibilidad: mantener canCrearEmpresas para código legacy
   const canCrearEmpresas = useMemo(() => {
-    return role === 'admin';
-  }, [role]);
+    return isAdminLike;
+  }, [isAdminLike]);
 
   const canCrearSucursales = useMemo(() => {
     return permissions.puedeCrearSucursales || role === 'superdev';

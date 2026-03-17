@@ -1,6 +1,6 @@
 import logger from '@/utils/logger';
 import React, { useEffect, useState } from 'react';
-import { Alert, Box, CircularProgress, Grid, MenuItem, Paper, TextField, Typography } from '@mui/material';
+import { Alert, Box, Button, CircularProgress, Grid, MenuItem, Paper, TextField, Typography } from '@mui/material';
 import { useAuth } from '@/components/context/AuthContext';
 import {
   trainingAttendanceService,
@@ -9,6 +9,7 @@ import {
 } from '../../../../services/training';
 import { TRAINING_ATTENDANCE_STATUSES, TRAINING_EVALUATION_STATUSES } from '../../../../types/trainingDomain';
 import ReportsHub from '../components/reports/ReportsHub';
+import { diagnoseTrainingCompliance } from '../../../../utils/diagnostics/diagnoseTrainingCompliance';
 
 function devLog(...args) {
   // eslint-disable-next-line no-console
@@ -133,6 +134,14 @@ export default function ReportsScreen() {
                 </MenuItem>
               ))}
             </TextField>
+          </Grid>
+          <Grid item xs={12} md={4} sx={{ display: 'flex', justifyContent: { xs: 'flex-start', md: 'flex-end' } }}>
+            <Button
+              variant="outlined"
+              onClick={() => diagnoseTrainingCompliance({ ownerId, branchId: branchId || null })}
+            >
+              Diagnosticar reglas
+            </Button>
           </Grid>
         </Grid>
       </Paper>

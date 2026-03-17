@@ -89,13 +89,27 @@ export default function EmpleadoForm({ open, onClose, onSave, empleado, sucursal
 
     try {
       const ownerId = userProfile.ownerId;
+      const cargoTrimmed = typeof formData.cargo === 'string' ? formData.cargo.trim() : '';
       const empleadoData = {
         ...formData,
+        ...(cargoTrimmed
+          ? {
+            rol: cargoTrimmed,
+            puesto: cargoTrimmed
+          }
+          : {}),
         empresaId,
         sucursalId,
         fechaIngreso: Timestamp.fromDate(new Date(formData.fechaIngreso)),
         updatedAt: Timestamp.now()
       };
+
+      logger.debug('[EmpleadoForm] Rol final empleado', {
+        empleadoId: empleado?.id || null,
+        cargo: formData.cargo || null,
+        rol: empleadoData.rol || null,
+        puesto: empleadoData.puesto || null
+      });
 
       if (empleado) {
         // Actualizar

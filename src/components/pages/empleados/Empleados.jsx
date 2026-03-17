@@ -42,10 +42,12 @@ export default function Empleados() {
   const { userProfile, loadingSucursales, role } = useAuth();
   
   // Determinar si el usuario puede crear empleados
-  // Admin siempre puede crear, operario solo si no está bloqueado
-  const canCreateEmpleado = !userProfile?.bloqueado && 
-    userProfile?.activo !== false && 
-    (role === 'admin' || role === 'operario');
+  // Admin/superdev siempre puede crear, operario solo si no está bloqueado y está activo
+  const isAdminLike = role === 'admin' || role === 'superdev';
+  const isActive = userProfile?.status ? userProfile.status === 'active' : (userProfile?.activo !== false);
+  const canCreateEmpleado = !userProfile?.bloqueado &&
+    isActive &&
+    (isAdminLike || role === 'operario');
   
   // Usar selección global
   const {
