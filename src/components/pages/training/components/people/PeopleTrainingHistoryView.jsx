@@ -31,7 +31,7 @@ export default function PeopleTrainingHistoryView({
         <Grid item xs={12}>
           <EmployeeProfileCard
             employee={selectedEmployee}
-            complianceSummary={complianceSummary || { compliant: 0, expiringSoon: 0, expired: 0 }}
+            complianceSummary={complianceSummary || { compliant: 0, expiringSoon: 0, expired: 0, missing: 0 }}
           />
         </Grid>
       )}

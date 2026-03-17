@@ -4,6 +4,7 @@ import {
   Box,
   Chip,
   Grid,
+  LinearProgress,
   Paper,
   Stack,
   Tooltip,
@@ -56,9 +57,10 @@ function getInitials(employee) {
 }
 
 const COMPLIANCE_TOOLTIPS = {
-  compliant: 'Capacitaciones vigentes (dentro del período de validez)',
-  expiringSoon: 'Capacitaciones que vencen pronto (próximos 60 días)',
-  expired: 'Capacitaciones ya vencidas'
+  missing: 'Capacitaciones requeridas que el empleado no ha realizado',
+  expired: 'Capacitaciones realizadas pero vencidas',
+  expiringSoon: 'Capacitaciones que vencen en los próximos 60 días',
+  compliant: 'Capacitaciones realizadas y vigentes'
 };
 
 /**
@@ -67,7 +69,7 @@ const COMPLIANCE_TOOLTIPS = {
  *
  * @param {Object} props
  * @param {Object} props.employee - Empleado (debe incluir empresaNombre y sucursalNombre si están disponibles)
- * @param {Object} props.complianceSummary - { compliant, expiringSoon, expired }
+ * @param {Object} props.complianceSummary - { compliant, expiringSoon, expired, missing }
  * @param {boolean} [props.showTitle] - Mostrar título "Ficha del empleado" (default: true)
  * @param {boolean} [props.elevation] - Elevación del Paper (default: 1)
  */
@@ -89,6 +91,10 @@ export default function EmployeeProfileCard({
   const compliant = Number(complianceSummary.compliant) || 0;
   const expiringSoon = Number(complianceSummary.expiringSoon) || 0;
   const expired = Number(complianceSummary.expired) || 0;
+  const missing = Number(complianceSummary.missing) || 0;
+
+  const totalRecords = compliant + expiringSoon + expired + missing;
+  const compliancePercent = totalRecords > 0 ? compliant / totalRecords : 0;
 
   const Label = ({ children }) => (
     <Typography variant="body2" color="text.secondary">
@@ -159,13 +165,34 @@ export default function EmployeeProfileCard({
             }}
           >
             <Typography variant="body2" color="text.secondary" sx={{ mb: 0.75 }}>
-              Estado general de cumplimiento
+              Estado de capacitaciones
             </Typography>
-            <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
-              <Tooltip title={COMPLIANCE_TOOLTIPS.compliant} arrow placement="top">
-                <Chip
-                  label={`Vigentes: ${compliant}`}
+            {totalRecords > 0 && (
+              <Box sx={{ mb: 1 }}>
+                <Typography variant="caption" color="text.secondary">
+                  Cumplimiento: {Math.round(compliancePercent * 100)}%
+                </Typography>
+                <LinearProgress
+                  variant="determinate"
+                  value={compliancePercent * 100}
                   color="success"
+                  sx={{ mt: 0.25, height: 6, borderRadius: 1 }}
+                />
+              </Box>
+            )}
+            <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
+              <Tooltip title={COMPLIANCE_TOOLTIPS.missing} arrow placement="top">
+                <Chip
+                  label={`Faltantes: ${missing}`}
+                  variant="outlined"
+                  size="small"
+                  color="default"
+                />
+              </Tooltip>
+              <Tooltip title={COMPLIANCE_TOOLTIPS.expired} arrow placement="top">
+                <Chip
+                  label={`Vencidas: ${expired}`}
+                  color="error"
                   size="small"
                 />
               </Tooltip>
@@ -176,10 +203,10 @@ export default function EmployeeProfileCard({
                   size="small"
                 />
               </Tooltip>
-              <Tooltip title={COMPLIANCE_TOOLTIPS.expired} arrow placement="top">
+              <Tooltip title={COMPLIANCE_TOOLTIPS.compliant} arrow placement="top">
                 <Chip
-                  label={`Vencidas: ${expired}`}
-                  color="error"
+                  label={`Vigentes: ${compliant}`}
+                  color="success"
                   size="small"
                 />
               </Tooltip>

@@ -33,7 +33,8 @@ export default function PeopleScreen() {
   const [complianceSummary, setComplianceSummary] = useState({
     compliant: 0,
     expiringSoon: 0,
-    expired: 0
+    expired: 0,
+    missing: 0
   });
 
   const companyMap = useMemo(
@@ -85,7 +86,7 @@ export default function PeopleScreen() {
     const loadRecords = async () => {
       if (!ownerId || !selectedEmployee?.id) {
         setRecords([]);
-        setComplianceSummary({ compliant: 0, expiringSoon: 0, expired: 0 });
+        setComplianceSummary({ compliant: 0, expiringSoon: 0, expired: 0, missing: 0 });
         return;
       }
       setLoadingRecords(true);
@@ -101,6 +102,14 @@ export default function PeopleScreen() {
         const certificatesById = Object.fromEntries(certificates.map((c) => [c.id, c]));
 
         const enriched = history.map((record) => {
+          if (record.complianceStatus && record.complianceStatus !== 'missing' && record.validUntil == null) {
+            console.warn('[PeopleScreen] Record without validUntil but complianceStatus !== missing', {
+              recordId: record.id,
+              employeeId: record.employeeId,
+              trainingTypeId: record.trainingTypeId,
+              complianceStatus: record.complianceStatus
+            });
+          }
           const training = catalogMap[record.trainingTypeId];
           const branch = branchMap[record.branchId];
           const company = companyMap[record.companyId] || (branch ? companyMap[branch.empresaId] : null);
@@ -118,9 +127,15 @@ export default function PeopleScreen() {
         const compliant = enriched.filter((r) => r.complianceStatus === 'compliant').length;
         const expiringSoon = enriched.filter((r) => r.complianceStatus === 'expiring_soon').length;
         const expired = enriched.filter((r) => r.complianceStatus === 'expired').length;
+        const missing = enriched.filter((r) => r.complianceStatus === 'missing').length;
 
         setRecords(enriched);
-        setComplianceSummary({ compliant, expiringSoon, expired });
+        setComplianceSummary({
+          compliant: Number(compliant) || 0,
+          expiringSoon: Number(expiringSoon) || 0,
+          expired: Number(expired) || 0,
+          missing: Number(missing) || 0
+        });
       } catch (err) {
         setError(err.message || 'No se pudo cargar el historial del empleado.');
       } finally {
@@ -129,7 +144,7 @@ export default function PeopleScreen() {
     };
 
     loadRecords();
-  }, [ownerId, selectedEmployee]);
+  }, [ownerId, selectedEmployee, companyMap, branchMap]);
 
   if (!ownerId) {
     return <Alert severity="warning">No hay contexto de empresa disponible para historial por persona.</Alert>;

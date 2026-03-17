@@ -1,3 +1,9 @@
+/**
+ * Employee training records: un documento por (employeeId, trainingTypeId).
+ * Colección Firestore: employee_training_records (ver firestoreRoutes.core).
+ * - getDocument/setDocument usan key 'employeeTrainingRecord' (ruta a doc por recordId).
+ * - queryDocuments usa key 'employeeTrainingRecords' (ruta a la colección). Misma colección.
+ */
 import {
   buildLimit,
   buildOrderBy,
