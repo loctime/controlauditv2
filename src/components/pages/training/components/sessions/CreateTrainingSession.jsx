@@ -7,6 +7,7 @@ import {
   Grid,
   MenuItem,
   Paper,
+  Select,
   Stack,
   TextField,
   Typography,
@@ -94,11 +95,18 @@ const defaultForm = (userProfile) => ({
 
 const defaultParticipantRecord = () => ({
   attendanceStatus: TRAINING_ATTENDANCE_STATUSES.INVITED,
+  evaluationStatus: TRAINING_EVALUATION_STATUSES.PENDING,
   score: 0,
   employeeSignature: null,
   instructorSignature: null,
   notes: ''
 });
+
+const EVALUATION_LABELS = {
+  [TRAINING_EVALUATION_STATUSES.APPROVED]: 'Aprobado',
+  [TRAINING_EVALUATION_STATUSES.FAILED]: 'Desaprobado',
+  [TRAINING_EVALUATION_STATUSES.PENDING]: 'Pendiente'
+};
 
 export default function CreateTrainingSession({
   ownerId,
@@ -540,7 +548,7 @@ export default function CreateTrainingSession({
           companyId: form.companyId,
           branchId: form.branchId,
           attendanceStatus: mode === 'quick' ? record.attendanceStatus : TRAINING_ATTENDANCE_STATUSES.INVITED,
-          evaluationStatus: TRAINING_EVALUATION_STATUSES.APPROVED, // Todos están aprobados si están seleccionados
+          evaluationStatus: requiresEvaluation ? (record.evaluationStatus || TRAINING_EVALUATION_STATUSES.PENDING) : TRAINING_EVALUATION_STATUSES.NOT_APPLICABLE,
           score: record.score,
           employeeSignature: record.employeeSignature,
           instructorSignature: record.instructorSignature,
@@ -877,9 +885,13 @@ export default function CreateTrainingSession({
                       <TableCell
                         padding="checkbox"
                         sx={{
-                          width: compact ? 40 : undefined,
-                          minWidth: compact ? 40 : 60,
-                          ...(compact && { pl: 1.5, pr: 0.5 })
+                          width: 48,
+                          minWidth: 48,
+                          maxWidth: 48,
+                          padding: 0,
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center'
                         }}
                       >
                         <Checkbox
@@ -908,6 +920,11 @@ export default function CreateTrainingSession({
                         Asistencia
                       </TableCell>
                       {requiresEvaluation && (
+                        <TableCell sx={{ width: compact ? 100 : undefined, minWidth: compact ? 100 : 130 }}>
+                          Evaluación
+                        </TableCell>
+                      )}
+                      {requiresEvaluation && (
                         <TableCell sx={{ width: compact ? 70 : undefined, minWidth: compact ? 70 : 120, textAlign: 'center' }}>⭐</TableCell>
                       )}
                       <TableCell sx={{ minWidth: compact ? 0 : 200 }}>Notas</TableCell>
@@ -934,7 +951,16 @@ export default function CreateTrainingSession({
                         >
                           <TableCell
                             padding="checkbox"
-                            sx={compact ? { width: 40, py: 1.25, pl: 1.5, pr: 0.5 } : undefined}
+                            sx={{
+                              width: 48,
+                              minWidth: 48,
+                              maxWidth: 48,
+                              padding: 0,
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              ...(compact && { py: 1.25 })
+                            }}
                           >
                             <Checkbox
                               checked={isSelected}
@@ -1020,6 +1046,26 @@ export default function CreateTrainingSession({
                               </Tooltip>
                             </Box>
                           </TableCell>
+                          {requiresEvaluation && (
+                            <TableCell sx={compact ? { width: 100, py: 1.25 } : { py: 1 }}>
+                              <Select
+                                size="small"
+                                fullWidth
+                                value={record.evaluationStatus || TRAINING_EVALUATION_STATUSES.PENDING}
+                                onChange={(e) => {
+                                  if (!isSelected) toggleEmployee(employee.id);
+                                  updateParticipantRecord(employee.id, 'evaluationStatus', e.target.value);
+                                }}
+                                disabled={!isSelected || record.attendanceStatus !== TRAINING_ATTENDANCE_STATUSES.PRESENT}
+                                sx={compact ? { fontSize: '0.8rem', minWidth: 0 } : undefined}
+                                displayEmpty
+                              >
+                                <MenuItem value={TRAINING_EVALUATION_STATUSES.APPROVED}>{EVALUATION_LABELS[TRAINING_EVALUATION_STATUSES.APPROVED]}</MenuItem>
+                                <MenuItem value={TRAINING_EVALUATION_STATUSES.FAILED}>{EVALUATION_LABELS[TRAINING_EVALUATION_STATUSES.FAILED]}</MenuItem>
+                                <MenuItem value={TRAINING_EVALUATION_STATUSES.PENDING}>{EVALUATION_LABELS[TRAINING_EVALUATION_STATUSES.PENDING]}</MenuItem>
+                              </Select>
+                            </TableCell>
+                          )}
                           {requiresEvaluation && (() => {
                             const starsHighlighted = isSelected && !isBlocked && record.attendanceStatus !== TRAINING_ATTENDANCE_STATUSES.INVITED;
                             const ratingSx = {

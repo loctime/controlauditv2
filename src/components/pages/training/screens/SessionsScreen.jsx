@@ -275,7 +275,7 @@ export default function SessionsScreen() {
             onClose={() => setQuickSessionData(null)}
             slotProps={{ backdrop: { sx: { backgroundColor: 'rgba(0,0,0,0.3)' } } }}
             PaperProps={{
-              sx: { width: { xs: '100%', sm: 520 } }
+              sx: { width: { xs: '100%', sm: 640 } }
             }}
           >
             <Box sx={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
