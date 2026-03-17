@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import {
   Dialog,
   DialogTitle,
@@ -23,7 +23,15 @@ import DownloadIcon from '@mui/icons-material/Download';
 import CloseIcon from '@mui/icons-material/Close';
 import { empleadoService } from '../../../../../services/empleadoService';
 import { resolveFileAccess } from '../../../../../services/fileResolverService';
-import { trainingAttendanceService, trainingEvidenceService } from '../../../../../services/training';
+import {
+  trainingAttendanceService,
+  trainingCertificateService,
+  trainingEvidenceService
+} from '../../../../../services/training';
+import {
+  generateCertificatePDFBlob,
+  downloadCertificatePDF
+} from '../../../../../services/training/trainingCertificatePdfService';
 import {
   TRAINING_ATTENDANCE_STATUSES,
   TRAINING_EVALUATION_STATUSES
@@ -148,18 +156,11 @@ export default function SessionDetailModal({ open, onClose, ownerId, session }) 
   const [attendance, setAttendance] = useState([]);
   const [evidence, setEvidence] = useState([]);
   const [employeeNameMap, setEmployeeNameMap] = useState({});
+  const [generatingCertificateEmployeeId, setGeneratingCertificateEmployeeId] = useState(null);
+  const [certificateError, setCertificateError] = useState('');
 
-  useEffect(() => {
-    if (!open || !ownerId || !session?.id) {
-      setAttendance([]);
-      setEvidence([]);
-      setEmployeeNameMap({});
-      setLoading(false);
-      return;
-    }
-    let alive = true;
-    setLoading(true);
-    setError('');
+  const loadData = useCallback(async () => {
+    if (!ownerId || !session?.id) return;
     const loadEmployees = async () => {
       const byId = new Map();
       if (session.branchId) {
@@ -172,27 +173,80 @@ export default function SessionDetailModal({ open, onClose, ownerId, session }) 
       }
       return Array.from(byId.values());
     };
-    Promise.all([
+    const [att, ev, employees] = await Promise.all([
       trainingAttendanceService.listAttendanceBySession(ownerId, session.id).catch((err) => {
-        if (alive) setError(err.message || 'Error al cargar participantes.');
+        setError(err.message || 'Error al cargar participantes.');
         return [];
       }),
       trainingEvidenceService.listBySession(ownerId, session.id).catch(() => []),
       loadEmployees()
-    ]).then(([att, ev, employees]) => {
-      if (!alive) return;
-      setAttendance(att || []);
-      setEvidence(ev || []);
-      const nameMap = {};
-      (employees || []).forEach((emp) => {
-        const name = employeeDisplayName(emp);
-        if (emp.id && name) nameMap[emp.id] = name;
-      });
-      setEmployeeNameMap(nameMap);
+    ]);
+    setAttendance(att || []);
+    setEvidence(ev || []);
+    const nameMap = {};
+    (employees || []).forEach((emp) => {
+      const name = employeeDisplayName(emp);
+      if (emp.id && name) nameMap[emp.id] = name;
+    });
+    setEmployeeNameMap(nameMap);
+  }, [ownerId, session?.id, session?.branchId, session?.companyId]);
+
+  useEffect(() => {
+    if (!open || !ownerId || !session?.id) {
+      setAttendance([]);
+      setEvidence([]);
+      setEmployeeNameMap({});
       setLoading(false);
+      return;
+    }
+    let alive = true;
+    setLoading(true);
+    setError('');
+    loadData().then(() => {
+      if (alive) setLoading(false);
     });
     return () => { alive = false; };
-  }, [open, ownerId, session?.id, session?.branchId, session?.companyId]);
+  }, [open, ownerId, session?.id, loadData]);
+
+  const handleGenerateCertificate = async (record) => {
+    if (!ownerId || !session?.id || record.certificateId) return;
+    setCertificateError('');
+    setGeneratingCertificateEmployeeId(record.employeeId);
+    try {
+      const employeeName =
+        employeeNameMap[record.employeeId] ||
+        record.employeeDisplayName ||
+        record.employeeName ||
+        record.employeeId ||
+        'Sin dato';
+      const realizationDate = session.executedDate || session.scheduledDate || session.updatedAt || session.createdAt;
+      const blob = await generateCertificatePDFBlob({
+        employeeName,
+        trainingName: session.trainingTypeName || 'Sin dato',
+        realizationDate,
+        expiryDate: record.validUntil ?? null,
+        companyName: session.companyName || ''
+      });
+      const safeName = (employeeName || record.employeeId || 'certificado').replace(/[^a-zA-Z0-9\u00C0-\u024F\s-]/g, '').trim().slice(0, 60) || 'certificado';
+      downloadCertificatePDF(blob, `certificado-${safeName}.pdf`);
+      const now = new Date();
+      await trainingCertificateService.create(ownerId, {
+        sessionId: session.id,
+        employeeId: record.employeeId,
+        trainingTypeId: session.trainingTypeId,
+        validFrom: record.validFrom || null,
+        expiresAt: record.validUntil || null,
+        fileReference: null,
+        issuedAt: record.validFrom || now,
+        status: 'active'
+      });
+      await loadData();
+    } catch (err) {
+      setCertificateError(err?.message || 'No se pudo generar el certificado.');
+    } finally {
+      setGeneratingCertificateEmployeeId(null);
+    }
+  };
 
   if (!session) return null;
 
@@ -215,6 +269,7 @@ export default function SessionDetailModal({ open, onClose, ownerId, session }) 
         ) : (
           <Stack spacing={2}>
             {error && <Alert severity="error">{error}</Alert>}
+            {certificateError && <Alert severity="error" onClose={() => setCertificateError('')}>{certificateError}</Alert>}
 
             {/* Resumen de la sesión */}
             <Box>
@@ -266,12 +321,13 @@ export default function SessionDetailModal({ open, onClose, ownerId, session }) 
                     <TableCell>Evaluación</TableCell>
                     <TableCell>Calificación</TableCell>
                     <TableCell>Notas</TableCell>
+                    <TableCell>Certificado</TableCell>
                   </TableRow>
                 </TableHead>
                 <TableBody>
                   {attendance.length === 0 && (
                     <TableRow>
-                      <TableCell colSpan={5}>
+                      <TableCell colSpan={6}>
                         <Typography variant="body2" color="text.secondary">Sin participantes cargados.</Typography>
                       </TableCell>
                     </TableRow>
@@ -299,6 +355,25 @@ export default function SessionDetailModal({ open, onClose, ownerId, session }) 
                           : '—'}
                       </TableCell>
                       <TableCell>{record.notes || '-'}</TableCell>
+                      <TableCell>
+                        {record.attendanceStatus === TRAINING_ATTENDANCE_STATUSES.PRESENT ? (
+                          record.certificateId ? (
+                            <Typography variant="caption" color="text.secondary">Emitido</Typography>
+                          ) : generatingCertificateEmployeeId === record.employeeId ? (
+                            <CircularProgress size={20} />
+                          ) : (
+                            <Button
+                              size="small"
+                              variant="outlined"
+                              onClick={() => handleGenerateCertificate(record)}
+                            >
+                              Generar certificado PDF
+                            </Button>
+                          )
+                        ) : (
+                          '—'
+                        )}
+                      </TableCell>
                     </TableRow>
                   ))}
                 </TableBody>

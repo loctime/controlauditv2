@@ -59,6 +59,7 @@ if (controlFileApp.options.projectId !== 'controlstorage-eb796') {
 }
 
 // Exports: auth, db, storage para ControlAudit (usando controlstorage-eb796)
+export { controlFileApp };
 export const auth = getAuth(controlFileApp);
 const db = getFirestore(controlFileApp);
 export const dbAudit = db; // Alias para claridad
