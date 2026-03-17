@@ -272,6 +272,7 @@ export const trainingAttendanceService = {
       trainingTypeId,
       companyId,
       branchId,
+      requiresEvaluation: Boolean(requiresEvaluation),
       attendanceStatus: payload.attendanceStatus || TRAINING_ATTENDANCE_STATUSES.INVITED,
       evaluationStatus: resolvedEvaluationStatus,
       score: payload.score ?? null,
@@ -339,11 +340,18 @@ export const trainingAttendanceService = {
       createdAt: payload.createdAt || now
     }, sessionData));
 
-    // Conflicto: otro registro en el mismo período que "consuma" el período (PRESENT + vigencia).
-    // Si la capacitación requiere evaluación, solo APPROVED consume; FAILED no bloquea otra sesión aprobada.
+    // Conflicto: solo bloquear si existe otro PRESENT que sea "consumidor" del período.
+    // Con requiresEvaluation: solo APPROVED consume; FAILED nunca consume y no debe bloquear otra sesión.
     const isPeriodConsumer = (item) => {
-      if (!item || item.isDeleted || item.attendanceStatus !== TRAINING_ATTENDANCE_STATUSES.PRESENT) return false;
-      if (!requiresEvaluation) return true;
+      if (!item || item.isDeleted) return false;
+      if (item.attendanceStatus !== TRAINING_ATTENDANCE_STATUSES.PRESENT) return false;
+
+      const itemRequiresEvaluation =
+        item.requiresEvaluation ??
+        catalogItem?.requiresEvaluation ??
+        false;
+
+      if (!itemRequiresEvaluation) return true;
       return item.evaluationStatus === TRAINING_EVALUATION_STATUSES.APPROVED;
     };
     const existingPresentElsewhere = recomputeSet.find(
@@ -395,7 +403,12 @@ export const trainingAttendanceService = {
         transaction.delete(periodResultRef);
       }
 
-      if (consolidatedResult?.finalStatus === TRAINING_ATTENDANCE_STATUSES.PRESENT) {
+      // Lock solo cuando el consumidor del período tiene vigencia (APPROVED con vigencia o tipo sin evaluación).
+      const consumerHasVigencia = consolidatedResult?.finalValidUntil != null;
+      const shouldSetLock =
+        consolidatedResult?.finalStatus === TRAINING_ATTENDANCE_STATUSES.PRESENT &&
+        (consumerHasVigencia || !requiresEvaluation);
+      if (shouldSetLock) {
         transaction.set(
           nextLockRef,
           decorateWithAppId({
