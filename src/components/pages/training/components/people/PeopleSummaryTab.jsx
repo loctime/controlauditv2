@@ -6,7 +6,8 @@ import EmployeeTrainingTimeline from './EmployeeTrainingTimeline';
 export default function PeopleSummaryTab({
   selectedEmployee,
   records,
-  complianceSummary
+  complianceSummary,
+  onViewSession
 }) {
   if (!selectedEmployee) {
     return (
@@ -25,7 +26,7 @@ export default function PeopleSummaryTab({
         />
       </Grid>
       <Grid item xs={12}>
-        <EmployeeTrainingTimeline records={records} />
+        <EmployeeTrainingTimeline records={records} onViewSession={onViewSession} />
       </Grid>
     </Grid>
   );

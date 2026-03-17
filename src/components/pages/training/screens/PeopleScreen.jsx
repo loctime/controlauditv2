@@ -1,22 +1,23 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { Alert, Box, CircularProgress, Paper, Tab, Tabs, Typography } from '@mui/material';
 import { useAuth } from '@/components/context/AuthContext';
+import { getUsers } from '../../../../core/services/ownerUserService';
 import { empleadoService } from '../../../../services/empleadoService';
 import {
   employeeTrainingRecordService,
   trainingCatalogService,
   trainingCertificateService,
-  trainingComplianceService
+  trainingComplianceService,
+  trainingSessionService
 } from '../../../../services/training';
 import EmployeeAutocomplete from '../components/people/EmployeeAutocomplete';
 import PeopleSummaryTab from '../components/people/PeopleSummaryTab';
 import PeopleHistoryTab from '../components/people/PeopleHistoryTab';
-import PeopleCertificatesTab from '../components/people/PeopleCertificatesTab';
+import SessionDetailModal from '../components/sessions/SessionDetailModal';
 
 const PEOPLE_SUB_TABS = [
   { id: 'summary', label: 'Resumen' },
-  { id: 'history', label: 'Historial' },
-  { id: 'certificates', label: 'Certificados' }
+  { id: 'history', label: 'Historial' }
 ];
 
 export default function PeopleScreen() {
@@ -30,6 +31,8 @@ export default function PeopleScreen() {
   const [selectedEmployee, setSelectedEmployee] = useState(null);
   const [records, setRecords] = useState([]);
   const [peopleSubTab, setPeopleSubTab] = useState('summary');
+  const [viewSession, setViewSession] = useState(null);
+  const [loadingSessionId, setLoadingSessionId] = useState(null);
 
   const [complianceSummary, setComplianceSummary] = useState({
     compliant: 0,
@@ -63,6 +66,49 @@ export default function PeopleScreen() {
       sucursalNombre: sucursalNombre || selectedEmployee.sucursalNombre
     };
   }, [selectedEmployee, companyMap, branchMap]);
+
+  const openSessionModal = useCallback(
+    async (sessionId) => {
+      if (!ownerId || !sessionId) return;
+      setLoadingSessionId(sessionId);
+      try {
+        const [session, catalogList, usersList, employeesList] = await Promise.all([
+          trainingSessionService.getSessionById(ownerId, sessionId),
+          trainingCatalogService.listAll(ownerId).catch(() => []),
+          getUsers(ownerId).catch(() => []),
+          userSucursales?.length
+            ? empleadoService.getEmpleadosBySucursales(ownerId, userSucursales.map((s) => s.id)).catch(() => [])
+            : Promise.resolve([])
+        ]);
+        if (!session) {
+          setLoadingSessionId(null);
+          return;
+        }
+        const catalogMapById = Object.fromEntries((catalogList || []).map((c) => [c.id, c]));
+        const branchMapLocal = Object.fromEntries((userSucursales || []).map((b) => [b.id, b]));
+        const companyMapLocal = Object.fromEntries((userEmpresas || []).map((c) => [c.id, c]));
+        const instructorMap = {
+          ...Object.fromEntries((usersList || []).map((u) => [u.id, `${u.apellido || ''} ${u.nombre || ''}`.trim() || u.email || 'Sin dato'])),
+          ...Object.fromEntries((employeesList || []).map((e) => [e.id, `${e.apellido || ''} ${e.nombre || ''}`.trim() || e.email || 'Sin dato']))
+        };
+        if (userProfile?.uid) {
+          const fullName = `${userProfile.apellido || ''} ${userProfile.nombre || ''}`.trim();
+          instructorMap[userProfile.uid] = fullName || userProfile.email || 'Sin asignar';
+        }
+        const enrichedSession = {
+          ...session,
+          trainingTypeName: catalogMapById[session.trainingTypeId]?.name || 'Sin dato',
+          branchName: branchMapLocal[session.branchId]?.nombre || 'Sin dato',
+          companyName: companyMapLocal[session.companyId]?.nombre || branchMapLocal[session.branchId]?.empresaNombre || 'Sin dato',
+          instructorName: instructorMap[session.instructorId] || 'Sin asignar'
+        };
+        setViewSession(enrichedSession);
+      } finally {
+        setLoadingSessionId(null);
+      }
+    },
+    [ownerId, userEmpresas, userSucursales, userProfile]
+  );
 
   useEffect(() => {
     const loadEmployees = async () => {
@@ -137,7 +183,8 @@ export default function PeopleScreen() {
             trainingName: training?.name || 'Sin dato',
             companyName: company?.nombre || null,
             branchName: branch?.nombre || null,
-            certificate
+            certificate,
+            sessionId: record.lastSessionId || null
           };
         });
 
@@ -211,13 +258,11 @@ export default function PeopleScreen() {
                 selectedEmployee={enrichedEmployee}
                 records={records}
                 complianceSummary={complianceSummary}
+                onViewSession={openSessionModal}
               />
             )}
             {peopleSubTab === 'history' && (
               <PeopleHistoryTab ownerId={ownerId} selectedEmployee={enrichedEmployee} />
-            )}
-            {peopleSubTab === 'certificates' && (
-              <PeopleCertificatesTab ownerId={ownerId} selectedEmployee={enrichedEmployee} />
             )}
           </Box>
         </>
@@ -225,9 +270,16 @@ export default function PeopleScreen() {
 
       {!selectedEmployee && (
         <Typography color="text.secondary">
-          Seleccione un empleado para ver su resumen, historial de realizaciones y certificados.
+          Seleccione un empleado para ver su resumen e historial de realizaciones.
         </Typography>
       )}
+
+      <SessionDetailModal
+        open={Boolean(viewSession)}
+        onClose={() => setViewSession(null)}
+        ownerId={ownerId}
+        session={viewSession}
+      />
     </Box>
   );
 }

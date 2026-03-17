@@ -17,7 +17,7 @@ function statusConfig(complianceStatus) {
   }
 }
 
-export default function EmployeeTrainingTimeline({ records = [] }) {
+export default function EmployeeTrainingTimeline({ records = [], onViewSession }) {
   if (records.length === 0) {
     return (
       <Alert severity="info">
@@ -26,11 +26,9 @@ export default function EmployeeTrainingTimeline({ records = [] }) {
     );
   }
 
-  const handleViewCertificate = (certificate) => {
-    if (!certificate) return;
-    if (certificate.fileReference && typeof window !== 'undefined') {
-      window.open(certificate.fileReference, '_blank', 'noopener,noreferrer');
-    }
+  const handleViewSession = (record) => {
+    if (!onViewSession || !record?.sessionId) return;
+    onViewSession(record.sessionId);
   };
 
   return (
@@ -46,7 +44,7 @@ export default function EmployeeTrainingTimeline({ records = [] }) {
             <TableCell>Vigencia</TableCell>
             <TableCell>Vencimiento</TableCell>
             <TableCell>Estado</TableCell>
-            <TableCell>Certificado</TableCell>
+            <TableCell>Ver</TableCell>
           </TableRow>
         </TableHead>
         <TableBody>
@@ -58,15 +56,21 @@ export default function EmployeeTrainingTimeline({ records = [] }) {
                 {formatDateAR(record.validFrom)} — {formatDateAR(record.validUntil)}
               </TableCell>
               <TableCell>{formatDateAR(record.validUntil)}</TableCell>
-              <TableCell><Chip label={statusConfig(record.complianceStatus).label} color={statusConfig(record.complianceStatus).color} size="small" /></TableCell>
               <TableCell>
-                {record.certificate ? (
+                <Chip
+                  label={statusConfig(record.complianceStatus).label}
+                  color={statusConfig(record.complianceStatus).color}
+                  size="small"
+                />
+              </TableCell>
+              <TableCell>
+                {record.sessionId ? (
                   <Button
                     size="small"
                     variant="outlined"
-                    onClick={() => handleViewCertificate(record.certificate)}
+                    onClick={() => handleViewSession(record)}
                   >
-                    Ver certificado
+                    Ver
                   </Button>
                 ) : (
                   '-'
