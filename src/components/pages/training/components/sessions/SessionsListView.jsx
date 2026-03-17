@@ -46,6 +46,7 @@ export default function SessionsListView({
   sessions,
   attendanceCountBySession = {},
   evidenceCountBySession = {},
+  filterSummary = '',
   onView,
   onEdit,
   onExecute,
@@ -54,10 +55,11 @@ export default function SessionsListView({
   mode = 'default' // 'default' | 'history' (solo Ver, título historial)
 }) {
   const isHistory = mode === 'history';
+  const title = isHistory ? 'Historial de sesiones' : 'Sesiones programadas y en curso';
   return (
     <Paper sx={{ p: 1 }}>
       <Typography variant="h6" sx={{ p: 1 }}>
-        {isHistory ? 'Historial de sesiones' : 'Sesiones programadas y en curso'}
+        {title}{filterSummary ? ` — ${filterSummary}` : ''}
       </Typography>
       <Table size="small">
         <TableHead>

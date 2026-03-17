@@ -50,8 +50,7 @@ export default function SessionHistoryScreen() {
   const [companyId, setCompanyId] = useState('');
   const [branchId, setBranchId] = useState('');
   const [filterTrainingTypeId, setFilterTrainingTypeId] = useState('');
-  const [filterDateFrom, setFilterDateFrom] = useState('');
-  const [filterDateTo, setFilterDateTo] = useState('');
+  const [filterDate, setFilterDate] = useState('');
   const [filterInstructorId, setFilterInstructorId] = useState('');
   const [catalogItems, setCatalogItems] = useState([]);
   const [instructorOptions, setInstructorOptions] = useState([]);
@@ -74,6 +73,40 @@ export default function SessionHistoryScreen() {
     () => sessions.find((s) => s.id === selectedSessionId) || null,
     [sessions, selectedSessionId]
   );
+
+  const filterSummary = useMemo(() => {
+    const parts = [];
+    if (companyId) {
+      const name = userEmpresas.find((c) => c.id === companyId)?.nombre || companyId;
+      parts.push(`empresa ${name}`);
+    }
+    if (branchId) {
+      const name = branchesByCompany.find((b) => b.id === branchId)?.nombre || branchId;
+      parts.push(`sucursal ${name}`);
+    }
+    if (filterTrainingTypeId && catalogItems.length) {
+      const name = catalogItems.find((c) => c.id === filterTrainingTypeId)?.name || filterTrainingTypeId;
+      parts.push(`capacitación ${name}`);
+    } else if (filterTrainingTypeId) {
+      parts.push(`capacitación ${filterTrainingTypeId}`);
+    }
+    if (filterDate) {
+      const d = new Date(filterDate);
+      const formatted = Number.isNaN(d.getTime()) ? filterDate : d.toLocaleDateString('es-AR');
+      parts.push(`fecha ${formatted}`);
+    }
+    if (filterInstructorId && instructorOptions.length) {
+      const label = instructorOptions.find((o) => o.id === filterInstructorId)?.label || filterInstructorId;
+      parts.push(`instructor ${label}`);
+    } else if (filterInstructorId) {
+      parts.push(`instructor ${filterInstructorId}`);
+    }
+    if (selectedEmployee) {
+      const name = personDisplayName(selectedEmployee) || selectedEmployee.email || selectedEmployee.id;
+      parts.push(`empleado ${name}`);
+    }
+    return parts.join(', ');
+  }, [companyId, branchId, filterTrainingTypeId, filterDate, filterInstructorId, selectedEmployee, userEmpresas, branchesByCompany, catalogItems, instructorOptions]);
 
   useEffect(() => {
     if (!ownerId) return;
@@ -108,8 +141,12 @@ export default function SessionHistoryScreen() {
         branchId: branchId || undefined,
         status: 'closed',
         trainingTypeId: filterTrainingTypeId || undefined,
-        dateFrom: filterDateFrom ? new Date(filterDateFrom) : undefined,
-        dateTo: filterDateTo ? new Date(filterDateTo + 'T23:59:59.999') : undefined
+        ...(filterDate
+          ? {
+              dateFrom: new Date(filterDate),
+              dateTo: new Date(filterDate + 'T23:59:59.999')
+            }
+          : {})
       };
       let sessionList = await trainingSessionService.listSessions(ownerId, filters);
 
@@ -179,7 +216,7 @@ export default function SessionHistoryScreen() {
     } finally {
       setLoading(false);
     }
-  }, [ownerId, companyId, branchId, selectedEmployee?.id, filterTrainingTypeId, filterDateFrom, filterDateTo, filterInstructorId, userSucursales, userEmpresas]);
+  }, [ownerId, companyId, branchId, selectedEmployee?.id, filterTrainingTypeId, filterDate, filterInstructorId, userSucursales, userEmpresas]);
 
   useEffect(() => {
     load();
@@ -234,19 +271,10 @@ export default function SessionHistoryScreen() {
           <TextField
             size="small"
             type="date"
-            label="Fecha desde"
+            label="Fecha"
             InputLabelProps={{ shrink: true }}
-            value={filterDateFrom}
-            onChange={(e) => setFilterDateFrom(e.target.value)}
-            sx={{ width: 150 }}
-          />
-          <TextField
-            size="small"
-            type="date"
-            label="Fecha hasta"
-            InputLabelProps={{ shrink: true }}
-            value={filterDateTo}
-            onChange={(e) => setFilterDateTo(e.target.value)}
+            value={filterDate}
+            onChange={(e) => setFilterDate(e.target.value)}
             sx={{ width: 150 }}
           />
           <FormControl size="small" sx={{ minWidth: 180 }}>
@@ -283,6 +311,7 @@ export default function SessionHistoryScreen() {
             sessions={sessions}
             attendanceCountBySession={attendanceCountBySession}
             evidenceCountBySession={evidenceCountBySession}
+            filterSummary={filterSummary}
             mode="history"
             onView={(session) => setSelectedSessionId(session.id)}
             onEdit={() => {}}
