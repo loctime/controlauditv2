@@ -32,9 +32,7 @@ import { TRAINING_SESSION_STATUSES } from '../../../../types/trainingDomain';
 import SessionsListView from '../components/sessions/SessionsListView';
 import CreateTrainingSession from '../components/sessions/CreateTrainingSession';
 import TrainingSessionEntry from '../components/sessions/TrainingSessionEntry';
-import SessionExecutionView from '../components/sessions/SessionExecutionView';
-import SessionEvidencePanel from '../components/sessions/SessionEvidencePanel';
-import SessionClosurePanel from '../components/sessions/SessionClosurePanel';
+import SessionDetailModal from '../components/sessions/SessionDetailModal';
 
 function personDisplayName(person) {
   if (!person) return '';
@@ -80,6 +78,7 @@ export default function SessionsScreen() {
   const [instructorOptions, setInstructorOptions] = useState([]);
   const [quickSessionData, setQuickSessionData] = useState(null);
   const [showSessionsList, setShowSessionsList] = useState(false);
+  const [viewSession, setViewSession] = useState(null);
 
   const selectedSession = useMemo(
     () => sessions.find((session) => session.id === selectedSessionId) || null,
@@ -317,7 +316,7 @@ export default function SessionsScreen() {
                 sessions={sessions}
                 attendanceCountBySession={attendanceCountBySession}
                 evidenceCountBySession={evidenceCountBySession}
-                onView={(session) => setSelectedSessionId(session.id)}
+                onView={(session) => setViewSession(session)}
                 onEdit={openEdit}
                 onExecute={(session) => {
                   setSelectedSessionId(session.id);
@@ -335,81 +334,14 @@ export default function SessionsScreen() {
           )}
         </Grid>
 
-        <Grid item xs={12}>
-          {selectedSessionId && (
-            <Paper sx={{ p: 2 }}>
-              <Typography variant="h6" sx={{ mb: 1.5 }}>
-                3. Sesion seleccionada
-              </Typography>
-              {selectedSession ? (
-                <Stack spacing={1.5}>
-                  <Typography variant="subtitle1">Resumen de la sesion</Typography>
-                  <Grid container spacing={1.5}>
-                    <Grid item xs={12} md={3}>
-                      <Typography variant="body2" color="text.secondary">Capacitacion</Typography>
-                      <Typography>{selectedSession.trainingTypeName || 'Sin dato'}</Typography>
-                    </Grid>
-                    <Grid item xs={12} md={3}>
-                      <Typography variant="body2" color="text.secondary">Empresa</Typography>
-                      <Typography>{selectedSession.companyName || 'Sin dato'}</Typography>
-                    </Grid>
-                    <Grid item xs={12} md={3}>
-                      <Typography variant="body2" color="text.secondary">Sucursal</Typography>
-                      <Typography>{selectedSession.branchName || 'Sin dato'}</Typography>
-                    </Grid>
-                    <Grid item xs={12} md={3}>
-                      <Typography variant="body2" color="text.secondary">Instructor</Typography>
-                      <Typography>{selectedSession.instructorName || 'Sin asignar'}</Typography>
-                    </Grid>
-                    <Grid item xs={12} md={3}>
-                      <Typography variant="body2" color="text.secondary">Fecha</Typography>
-                      <Typography>
-                        {selectedSession.scheduledDate?.toDate
-                          ? selectedSession.scheduledDate.toDate().toLocaleString()
-                          : String(selectedSession.scheduledDate || '')}
-                      </Typography>
-                    </Grid>
-                    <Grid item xs={12} md={3}>
-                      <Typography variant="body2" color="text.secondary">Modalidad</Typography>
-                      <Typography>{selectedSession.modality || '-'}</Typography>
-                    </Grid>
-                    <Grid item xs={12} md={3}>
-                      <Typography variant="body2" color="text.secondary">Ubicacion</Typography>
-                      <Typography>{selectedSession.location || '-'}</Typography>
-                    </Grid>
-                    <Grid item xs={12} md={3}>
-                      <Typography variant="body2" color="text.secondary">Estado</Typography>
-                      <Typography>{labelSessionStatus(selectedSession.status)}</Typography>
-                    </Grid>
-                  </Grid>
-                </Stack>
-              ) : (
-                <Typography color="text.secondary">
-                  Selecciona una sesion en la lista para ver su detalle operativo.
-                </Typography>
-              )}
-            </Paper>
-          )}
-        </Grid>
-
-        <Grid item xs={12}>
-          {selectedSessionId && (
-            <SessionExecutionView ownerId={ownerId} session={selectedSession} onChanged={load} />
-          )}
-        </Grid>
-
-        <Grid item xs={12} md={6}>
-          {selectedSessionId && (
-            <SessionEvidencePanel ownerId={ownerId} session={selectedSession} />
-          )}
-        </Grid>
-
-        <Grid item xs={12} md={6}>
-          {selectedSessionId && (
-            <SessionClosurePanel ownerId={ownerId} session={selectedSession} onChanged={load} />
-          )}
-        </Grid>
       </Grid>
+
+      <SessionDetailModal
+        open={Boolean(viewSession)}
+        onClose={() => setViewSession(null)}
+        ownerId={ownerId}
+        session={viewSession}
+      />
 
       <Dialog open={Boolean(editingSession)} onClose={() => setEditingSession(null)} maxWidth="sm" fullWidth>
         <DialogTitle>Editar sesion</DialogTitle>

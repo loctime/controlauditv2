@@ -23,7 +23,7 @@ import {
 } from '../../../../services/training';
 import EmployeeAutocomplete from '../components/people/EmployeeAutocomplete';
 import SessionsListView from '../components/sessions/SessionsListView';
-import SessionExecutionView from '../components/sessions/SessionExecutionView';
+import SessionDetailModal from '../components/sessions/SessionDetailModal';
 
 function personDisplayName(person) {
   if (!person) return '';
@@ -62,17 +62,12 @@ export default function SessionHistoryScreen() {
   const [loadingEmployees, setLoadingEmployees] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
-  const [selectedSessionId, setSelectedSessionId] = useState(null);
+  const [viewSession, setViewSession] = useState(null);
 
   const branchesByCompany = useMemo(() => {
     if (!companyId) return userSucursales;
     return userSucursales.filter((s) => s.empresaId === companyId);
   }, [companyId, userSucursales]);
-
-  const selectedSession = useMemo(
-    () => sessions.find((s) => s.id === selectedSessionId) || null,
-    [sessions, selectedSessionId]
-  );
 
   const filterSummary = useMemo(() => {
     const parts = [];
@@ -313,25 +308,19 @@ export default function SessionHistoryScreen() {
             evidenceCountBySession={evidenceCountBySession}
             filterSummary={filterSummary}
             mode="history"
-            onView={(session) => setSelectedSessionId(session.id)}
+            onView={(session) => setViewSession(session)}
             onEdit={() => {}}
             onExecute={() => {}}
             onMoveToClosure={() => {}}
             onCancel={() => {}}
           />
 
-          {selectedSessionId && selectedSession && (
-            <Box sx={{ mt: 3 }}>
-              <Typography variant="h6" sx={{ mb: 1.5 }}>
-                Detalle de la sesión
-              </Typography>
-              <SessionExecutionView
-                ownerId={ownerId}
-                session={selectedSession}
-                onChanged={load}
-              />
-            </Box>
-          )}
+          <SessionDetailModal
+            open={Boolean(viewSession)}
+            onClose={() => setViewSession(null)}
+            ownerId={ownerId}
+            session={viewSession}
+          />
         </>
       )}
     </Box>

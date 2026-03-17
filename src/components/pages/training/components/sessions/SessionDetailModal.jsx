@@ -1,0 +1,334 @@
+import React, { useEffect, useState } from 'react';
+import {
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  IconButton,
+  Stack,
+  Typography,
+  Box,
+  Divider,
+  Grid,
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableRow,
+  Paper,
+  CircularProgress,
+  Alert,
+  Button
+} from '@mui/material';
+import DownloadIcon from '@mui/icons-material/Download';
+import CloseIcon from '@mui/icons-material/Close';
+import { empleadoService } from '../../../../../services/empleadoService';
+import { resolveFileAccess } from '../../../../../services/fileResolverService';
+import { trainingAttendanceService, trainingEvidenceService } from '../../../../../services/training';
+import {
+  TRAINING_ATTENDANCE_STATUSES,
+  TRAINING_EVALUATION_STATUSES
+} from '../../../../../types/trainingDomain';
+
+function attendanceDisplayStatus(status) {
+  return status === TRAINING_ATTENDANCE_STATUSES.PRESENT ? 'Presente' : 'Ausente';
+}
+
+const evaluationLabels = {
+  [TRAINING_EVALUATION_STATUSES.APPROVED]: 'Aprobado',
+  [TRAINING_EVALUATION_STATUSES.FAILED]: 'Desaprobado',
+  [TRAINING_EVALUATION_STATUSES.PENDING]: 'Pendiente',
+  [TRAINING_EVALUATION_STATUSES.NOT_APPLICABLE]: 'No aplica'
+};
+
+/** Escala de calificación en el módulo de capacitación (Rating 1..max). */
+const SCORE_MAX = 3;
+
+const evidenceTypeLabels = {
+  photo: 'Foto',
+  signed_sheet: 'Planilla firmada',
+  digital_signature: 'Firma digital',
+  exam_file: 'Archivo de evaluación',
+  document: 'Documento'
+};
+
+function formatDate(value) {
+  if (!value) return '-';
+  const date = value?.toDate ? value.toDate() : new Date(value);
+  return Number.isNaN(date.getTime()) ? '-' : date.toLocaleString('es-AR');
+}
+
+/** Vista previa y descarga de una evidencia (usa fileId en fileReference). */
+function EvidenceItem({ evidence, typeLabel }) {
+  const [access, setAccess] = useState(null);
+  const [error, setError] = useState('');
+  const fileRef = evidence?.fileReference ? { fileId: evidence.fileReference } : null;
+
+  useEffect(() => {
+    if (!fileRef?.fileId) {
+      setAccess(null);
+      return;
+    }
+    let alive = true;
+    resolveFileAccess(fileRef)
+      .then((result) => {
+        if (alive) setAccess(result);
+      })
+      .catch((err) => {
+        if (alive) setError(err?.message || 'No se pudo cargar');
+      });
+    return () => { alive = false; };
+  }, [evidence?.fileReference]);
+
+  const viewUrl = access?.viewUrl || access?.downloadUrl;
+  const isImage = evidence?.evidenceType === 'photo' || access?.previewType === 'image';
+
+  return (
+    <Paper variant="outlined" sx={{ p: 1.5 }}>
+      <Typography variant="body2" fontWeight={600}>
+        {typeLabel}
+      </Typography>
+      {error && (
+        <Typography variant="caption" color="error" sx={{ display: 'block', mt: 0.5 }}>{error}</Typography>
+      )}
+      {viewUrl && isImage && (
+        <Box sx={{ mt: 1, mb: 1, borderRadius: 1, overflow: 'hidden', bgcolor: 'action.hover' }}>
+          <img
+            src={viewUrl}
+            alt={evidence?.notes || 'Evidencia'}
+            style={{ maxWidth: '100%', maxHeight: 220, objectFit: 'contain', display: 'block' }}
+          />
+        </Box>
+      )}
+      {viewUrl && !isImage && access?.previewType === 'pdf' && (
+        <Box sx={{ mt: 1, mb: 1, height: 220, borderRadius: 1, overflow: 'hidden', bgcolor: 'action.hover' }}>
+          <iframe title={typeLabel} src={viewUrl} style={{ width: '100%', height: '100%', border: 0 }} />
+        </Box>
+      )}
+      {viewUrl && !isImage && access?.previewType !== 'pdf' && (
+        <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 1 }}>
+          Vista previa no disponible para este tipo de archivo.
+        </Typography>
+      )}
+      {!viewUrl && !error && fileRef?.fileId && (
+        <Box sx={{ mt: 1 }}>
+          <CircularProgress size={20} />
+        </Box>
+      )}
+      {(access?.downloadUrl || viewUrl) && (
+        <Button
+          size="small"
+          startIcon={<DownloadIcon />}
+          component="a"
+          href={access?.downloadUrl || viewUrl}
+          download
+          target="_blank"
+          rel="noreferrer"
+          sx={{ mt: 1 }}
+        >
+          Descargar
+        </Button>
+      )}
+      {evidence?.notes && (
+        <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>{evidence.notes}</Typography>
+      )}
+    </Paper>
+  );
+}
+
+function employeeDisplayName(emp) {
+  if (!emp) return '';
+  if (emp.nombreCompleto) return emp.nombreCompleto;
+  if (emp.apellido && emp.nombre) return `${emp.apellido}, ${emp.nombre}`;
+  return emp.nombre || emp.apellido || emp.email || emp.id || '';
+}
+
+export default function SessionDetailModal({ open, onClose, ownerId, session }) {
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+  const [attendance, setAttendance] = useState([]);
+  const [evidence, setEvidence] = useState([]);
+  const [employeeNameMap, setEmployeeNameMap] = useState({});
+
+  useEffect(() => {
+    if (!open || !ownerId || !session?.id) {
+      setAttendance([]);
+      setEvidence([]);
+      setEmployeeNameMap({});
+      setLoading(false);
+      return;
+    }
+    let alive = true;
+    setLoading(true);
+    setError('');
+    const loadEmployees = async () => {
+      const byId = new Map();
+      if (session.branchId) {
+        const byBranch = await empleadoService.getEmpleadosBySucursal(ownerId, session.branchId);
+        (byBranch || []).forEach((e) => e.id && byId.set(e.id, e));
+      }
+      if (session.companyId) {
+        const byCompany = await empleadoService.getEmpleadosByEmpresa(ownerId, session.companyId);
+        (byCompany || []).forEach((e) => e.id && byId.set(e.id, e));
+      }
+      return Array.from(byId.values());
+    };
+    Promise.all([
+      trainingAttendanceService.listAttendanceBySession(ownerId, session.id).catch((err) => {
+        if (alive) setError(err.message || 'Error al cargar participantes.');
+        return [];
+      }),
+      trainingEvidenceService.listBySession(ownerId, session.id).catch(() => []),
+      loadEmployees()
+    ]).then(([att, ev, employees]) => {
+      if (!alive) return;
+      setAttendance(att || []);
+      setEvidence(ev || []);
+      const nameMap = {};
+      (employees || []).forEach((emp) => {
+        const name = employeeDisplayName(emp);
+        if (emp.id && name) nameMap[emp.id] = name;
+      });
+      setEmployeeNameMap(nameMap);
+      setLoading(false);
+    });
+    return () => { alive = false; };
+  }, [open, ownerId, session?.id, session?.branchId, session?.companyId]);
+
+  if (!session) return null;
+
+  const presentCount = attendance.filter((r) => r.attendanceStatus === TRAINING_ATTENDANCE_STATUSES.PRESENT).length;
+  const absentCount = attendance.length - presentCount;
+
+  return (
+    <Dialog open={open} onClose={onClose} maxWidth="md" fullWidth scroll="paper">
+      <DialogTitle sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', pr: 1 }}>
+        <Typography component="span" variant="h6">Detalle de la sesión</Typography>
+        <IconButton size="small" onClick={onClose} aria-label="Cerrar">
+          <CloseIcon />
+        </IconButton>
+      </DialogTitle>
+      <DialogContent dividers>
+        {loading ? (
+          <Box sx={{ display: 'flex', justifyContent: 'center', py: 4 }}>
+            <CircularProgress />
+          </Box>
+        ) : (
+          <Stack spacing={2}>
+            {error && <Alert severity="error">{error}</Alert>}
+
+            {/* Resumen de la sesión */}
+            <Box>
+              <Typography variant="subtitle1" fontWeight={600} sx={{ mb: 1 }}>Resumen</Typography>
+              <Grid container spacing={1.5}>
+                <Grid item xs={12} sm={6} md={4}>
+                  <Typography variant="body2" color="text.secondary">Capacitación</Typography>
+                  <Typography variant="body1">{session.trainingTypeName || 'Sin dato'}</Typography>
+                </Grid>
+                <Grid item xs={12} sm={6} md={4}>
+                  <Typography variant="body2" color="text.secondary">Empresa</Typography>
+                  <Typography variant="body1">{session.companyName || 'Sin dato'}</Typography>
+                </Grid>
+                <Grid item xs={12} sm={6} md={4}>
+                  <Typography variant="body2" color="text.secondary">Sucursal</Typography>
+                  <Typography variant="body1">{session.branchName || 'Sin dato'}</Typography>
+                </Grid>
+                <Grid item xs={12} sm={6} md={4}>
+                  <Typography variant="body2" color="text.secondary">Instructor</Typography>
+                  <Typography variant="body1">{session.instructorName || 'Sin asignar'}</Typography>
+                </Grid>
+                <Grid item xs={12} sm={6} md={4}>
+                  <Typography variant="body2" color="text.secondary">Fecha</Typography>
+                  <Typography variant="body1">{formatDate(session.scheduledDate)}</Typography>
+                </Grid>
+                <Grid item xs={12} sm={6} md={4}>
+                  <Typography variant="body2" color="text.secondary">Modalidad</Typography>
+                  <Typography variant="body1">{session.modality || '-'}</Typography>
+                </Grid>
+                <Grid item xs={12} sm={6} md={4}>
+                  <Typography variant="body2" color="text.secondary">Ubicación</Typography>
+                  <Typography variant="body1">{session.location || '-'}</Typography>
+                </Grid>
+              </Grid>
+            </Box>
+
+            <Divider />
+
+            {/* Participantes: asistentes y ausentes */}
+            <Box>
+              <Typography variant="subtitle1" fontWeight={600} sx={{ mb: 1 }}>
+                Participantes ({presentCount} asistentes, {absentCount} ausentes)
+              </Typography>
+              <Table size="small" sx={{ '& td, & th': { borderColor: 'divider' } }}>
+                <TableHead>
+                  <TableRow>
+                    <TableCell>Participante</TableCell>
+                    <TableCell>Asistencia</TableCell>
+                    <TableCell>Evaluación</TableCell>
+                    <TableCell>Calificación</TableCell>
+                    <TableCell>Notas</TableCell>
+                  </TableRow>
+                </TableHead>
+                <TableBody>
+                  {attendance.length === 0 && (
+                    <TableRow>
+                      <TableCell colSpan={5}>
+                        <Typography variant="body2" color="text.secondary">Sin participantes cargados.</Typography>
+                      </TableCell>
+                    </TableRow>
+                  )}
+                  {attendance.map((record, idx) => (
+                    <TableRow key={record.id || record.employeeId || idx}>
+                      <TableCell>
+                        {employeeNameMap[record.employeeId] ||
+                          record.employeeDisplayName ||
+                          record.employeeName ||
+                          record.employeeId ||
+                          'Sin dato'}
+                      </TableCell>
+                      <TableCell>
+                        {attendanceDisplayStatus(record.attendanceStatus)}
+                      </TableCell>
+                      <TableCell>
+                        {record.attendanceStatus === TRAINING_ATTENDANCE_STATUSES.PRESENT
+                          ? (evaluationLabels[record.evaluationStatus] || record.evaluationStatus || '-')
+                          : '—'}
+                      </TableCell>
+                      <TableCell>
+                        {record.attendanceStatus === TRAINING_ATTENDANCE_STATUSES.PRESENT && record.score != null
+                          ? `${Number(record.score)}/${SCORE_MAX}`
+                          : '—'}
+                      </TableCell>
+                      <TableCell>{record.notes || '-'}</TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </Box>
+
+            <Divider />
+
+            {/* Evidencias */}
+            <Box>
+              <Typography variant="subtitle1" fontWeight={600} sx={{ mb: 1 }}>
+                Evidencias ({evidence.length})
+              </Typography>
+              {evidence.length === 0 ? (
+                <Typography variant="body2" color="text.secondary">No hay evidencias cargadas.</Typography>
+              ) : (
+                <Stack spacing={1.5}>
+                  {evidence.map((ev) => (
+                    <EvidenceItem
+                      key={ev.id}
+                      evidence={ev}
+                      typeLabel={evidenceTypeLabels[ev.evidenceType] || ev.evidenceType}
+                    />
+                  ))}
+                </Stack>
+              )}
+            </Box>
+          </Stack>
+        )}
+      </DialogContent>
+    </Dialog>
+  );
+}
