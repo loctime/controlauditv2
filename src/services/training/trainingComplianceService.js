@@ -1,7 +1,8 @@
 import { Timestamp } from 'firebase/firestore';
 import {
   createDocument,
-  queryDocuments
+  queryDocuments,
+  buildOrderBy
 } from './trainingBaseService';
 import { trainingRequirementService } from './trainingRequirementService';
 import { employeeTrainingRecordService } from './employeeTrainingRecordService';
@@ -43,6 +44,31 @@ function roleCandidate(employee) {
 
 function mapById(items = []) {
   return Object.fromEntries(items.map((item) => [item.id, item]));
+}
+
+function normalizeRuleRoleId(rule) {
+  return rule?.roleId || rule?.jobRoleId || rule?.puestoId || rule?.rolId || rule?.puesto || rule?.rol || null;
+}
+
+function normalizeId(value) {
+  if (value == null) return null;
+  if (typeof value === 'string') return value;
+  if (typeof value === 'number') return String(value);
+  if (typeof value === 'object' && value != null) {
+    if (value.id != null) return String(value.id);
+  }
+  return String(value);
+}
+
+function employeeRoleIdSet(employee) {
+  const candidates = [
+    employee?.jobRoleId,
+    employee?.puestoId,
+    employee?.rolId,
+    employee?.puesto,
+    employee?.rol
+  ].map(normalizeId).filter(Boolean);
+  return new Set(candidates);
 }
 
 export const trainingComplianceService = {
@@ -119,7 +145,7 @@ export const trainingComplianceService = {
     pageSize = 50,
     persist = false
   } = {}) {
-    const [catalog, employees] = await Promise.all([
+    const [catalog, employees, rules] = await Promise.all([
       trainingCatalogService.listActive(ownerId),
       (async () => {
         if (employeeIds?.length > 0) {
@@ -131,12 +157,24 @@ export const trainingComplianceService = {
         if (branchId) return empleadoService.getEmpleadosBySucursal(ownerId, branchId);
         if (companyId) return empleadoService.getEmpleadosByEmpresa(ownerId, companyId);
         return queryDocuments(ownerId, 'empleados', [buildOrderBy('updatedAt', 'desc')]);
-      })()
+      })(),
+      trainingRequirementService.listRules(ownerId, {
+        companyId: companyId || undefined,
+        branchId: branchId || undefined,
+        status: 'active'
+      }).catch(() => [])
     ]);
 
-    const filteredTrainingTypes = trainingTypeIds?.length > 0
-      ? catalog.filter((item) => trainingTypeIds.includes(item.id))
-      : catalog;
+    const catalogById = mapById(catalog || []);
+    const trainingTypeFilterSet = trainingTypeIds?.length > 0 ? new Set(trainingTypeIds) : null;
+
+    // Optimización: indexar reglas por roleId (incluye null/global)
+    const rulesByRole = (rules || []).reduce((acc, rule) => {
+      const roleKey = normalizeRuleRoleId(rule) || '*';
+      if (!acc[roleKey]) acc[roleKey] = [];
+      acc[roleKey].push(rule);
+      return acc;
+    }, {});
 
     const totalEmployees = employees.length;
     const safePageSize = Math.max(1, Math.min(500, pageSize));
@@ -155,7 +193,40 @@ export const trainingComplianceService = {
 
     for (const employee of employeesPage) {
       const roleId = roleCandidate(employee);
-      for (const trainingType of filteredTrainingTypes) {
+      const roleIds = employeeRoleIdSet(employee);
+      const employeeCompanyId = employee?.empresaId || companyId || null;
+      const employeeBranchId = employee?.sucursalId || branchId || null;
+
+      const candidateRules = [];
+      // Reunir reglas de todos los posibles IDs de rol del empleado
+      roleIds.forEach((rid) => {
+        if (rulesByRole[rid]?.length) candidateRules.push(...rulesByRole[rid]);
+      });
+      if (rulesByRole['*']?.length) candidateRules.push(...rulesByRole['*']);
+
+      // Capacitación requerida SOLO si matchea alcance (role/company/branch) del empleado.
+      const requiredTrainingTypeIds = Array.from(new Set(
+        candidateRules
+          .filter((rule) => {
+            const ruleRoleId = normalizeRuleRoleId(rule);
+            const okRole = !ruleRoleId || roleIds.has(normalizeId(ruleRoleId));
+            // Mantener compatibilidad con lógica existente: solo descartar si ambos lados existen y no coinciden.
+            const okBranch = !rule.branchId || !employeeBranchId || rule.branchId === employeeBranchId;
+            const okCompany = !rule.companyId || !employeeCompanyId || rule.companyId === employeeCompanyId;
+            return okRole && okBranch && okCompany;
+          })
+          .map((rule) => rule.trainingTypeId)
+          .filter(Boolean)
+          .filter((id) => (trainingTypeFilterSet ? trainingTypeFilterSet.has(id) : true))
+      ));
+
+      // Caso sin reglas: no generar filas para ese empleado.
+      if (requiredTrainingTypeIds.length === 0) continue;
+
+      for (const trainingTypeId of requiredTrainingTypeIds) {
+        const trainingType = catalogById[trainingTypeId];
+        if (!trainingType) continue;
+
         const cellId = getTrainingRecordId(employee.id, trainingType.id);
         const record = recordsByCellId[cellId] || null;
         const normalized = {
@@ -165,8 +236,8 @@ export const trainingComplianceService = {
           roleId,
           trainingTypeId: trainingType.id,
           trainingTypeName: trainingType.name || trainingType.id,
-          companyId: employee.empresaId || record?.companyId || companyId || null,
-          branchId: employee.sucursalId || record?.branchId || branchId || null,
+          companyId: employeeCompanyId || record?.companyId || null,
+          branchId: employeeBranchId || record?.branchId || null,
           ...complianceFromRecord(record),
           sourceRecordId: record?.id || null,
           sources: record?.sources || []
@@ -182,8 +253,8 @@ export const trainingComplianceService = {
       page: safePage,
       pageSize: safePageSize,
       totalEmployees,
-      totalTrainingTypes: filteredTrainingTypes.length,
-      totalCells: totalEmployees * filteredTrainingTypes.length,
+      totalTrainingTypes: (catalog || []).length,
+      totalCells: matrix.length,
       rows: matrix
     };
   }
