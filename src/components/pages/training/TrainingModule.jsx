@@ -13,12 +13,11 @@ import ComplianceScreen from './screens/ComplianceScreen';
 import CalendarScreen from './screens/CalendarScreen';
 
 const MODULE_TABS = [
-  { id: 'dashboard', label: 'Tablero' },
+  { id: 'reports', label: 'Reportes' },
   { id: 'sessions', label: 'Sesiones' },
   { id: 'historial', label: 'Historial' },
-  { id: 'people', label: 'Personas' },
-  { id: 'reports', label: 'Reportes' },
   { id: 'compliance', label: 'Cumplimiento' },
+  { id: 'people', label: 'Personas' },
   { id: 'configuration', label: 'Configuración', adminOnly: true }
 ];
 
