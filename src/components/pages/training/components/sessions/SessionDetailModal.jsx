@@ -153,7 +153,7 @@ function employeeDisplayName(emp) {
   return emp.nombre || emp.apellido || emp.email || emp.id || '';
 }
 
-export default function SessionDetailModal({ open, onClose, ownerId, session }) {
+export default function SessionDetailModal({ open, onClose, ownerId, session, readOnly = false }) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [attendance, setAttendance] = useState([]);
@@ -403,7 +403,7 @@ export default function SessionDetailModal({ open, onClose, ownerId, session }) 
                       <TableCell>
                         {attendanceDisplayStatus(record.attendanceStatus)}
                       </TableCell>
-                      {requiresEvaluation && (
+          {requiresEvaluation && (
                         <TableCell>
                           {record.attendanceStatus === TRAINING_ATTENDANCE_STATUSES.PRESENT ? (
                             updatingAttendanceId === record.employeeId ? (
@@ -414,7 +414,11 @@ export default function SessionDetailModal({ open, onClose, ownerId, session }) 
                                   <Button
                                     size="small"
                                     fullWidth
-                                    onClick={() => handleUpdateEvaluation(record, 'evaluationStatus', TRAINING_EVALUATION_STATUSES.APPROVED)}
+                        onClick={() => {
+                          if (readOnly) return;
+                          handleUpdateEvaluation(record, 'evaluationStatus', TRAINING_EVALUATION_STATUSES.APPROVED);
+                        }}
+                        disabled={readOnly}
                                     sx={{
                                       flex: 1,
                                       minWidth: 0,
@@ -432,7 +436,11 @@ export default function SessionDetailModal({ open, onClose, ownerId, session }) 
                                   <Button
                                     size="small"
                                     fullWidth
-                                    onClick={() => handleUpdateEvaluation(record, 'evaluationStatus', TRAINING_EVALUATION_STATUSES.FAILED)}
+                        onClick={() => {
+                          if (readOnly) return;
+                          handleUpdateEvaluation(record, 'evaluationStatus', TRAINING_EVALUATION_STATUSES.FAILED);
+                        }}
+                        disabled={readOnly}
                                     sx={{
                                       flex: 1,
                                       minWidth: 0,
@@ -459,9 +467,11 @@ export default function SessionDetailModal({ open, onClose, ownerId, session }) 
                             <TextField
                               type="number"
                               size="small"
+                              disabled={readOnly}
                               inputProps={{ min: 0, max: SCORE_MAX, step: 1 }}
                               value={record.score ?? ''}
                               onBlur={(e) => {
+                                if (readOnly) return;
                                 const v = e.target.value === '' ? null : Number(e.target.value);
                                 if (v !== record.score && v !== (record.score ?? null)) {
                                   handleUpdateEvaluation(record, 'score', v);

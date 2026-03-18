@@ -241,6 +241,7 @@ export default function ComplianceScreen() {
         onClose={() => setViewSession(null)}
         ownerId={ownerId}
         session={viewSession}
+        readOnly
       />
     </Box>
   );

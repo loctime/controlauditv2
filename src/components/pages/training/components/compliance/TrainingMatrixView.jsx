@@ -82,6 +82,9 @@ function buildCsv(rows = []) {
 
 function TrainingSubRow({ row, onViewSession, isOdd }) {
   const sessionId = row?.sessionId || row?.lastSessionId;
+  // La columna representa la ultima sesion guardada para ese empleado/capacitacion.
+  // Solo se oculta si no existe ningun registro de sesion.
+  const canViewSession = Boolean(sessionId);
   return (
     <TableRow
       sx={{
@@ -113,7 +116,7 @@ function TrainingSubRow({ row, onViewSession, isOdd }) {
 
       {/* ver sesión */}
       <TableCell sx={{ borderBottom: 'none', py: 0.75 }}>
-        {sessionId ? (
+        {canViewSession ? (
           <Button
             size="small"
             variant="outlined"
@@ -278,7 +281,7 @@ function EmployeeRow({ employeeRows, onViewSession }) {
                     Estado
                   </TableCell>
                   <TableCell sx={{ fontWeight: 600, fontSize: 12, color: 'text.secondary', borderBottom: '1px solid', borderColor: 'divider' }}>
-                    Sesión
+                    ultima sesion
                   </TableCell>
                 </TableRow>
               </TableHead>
