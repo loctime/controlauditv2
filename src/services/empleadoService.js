@@ -26,10 +26,44 @@ export const empleadoService = {
 
       // 1. Obtener sucursales de la empresa (owner-centric)
       const sucursalesRef = collection(dbAudit, ...firestoreRoutesCore.sucursales(ownerId));
-      const sucursalesSnapshot = await getDocs(
+      const normalizeId = (v) => {
+        if (v == null) return null;
+        if (typeof v === 'string') return v;
+        if (typeof v === 'number') return String(v);
+        if (typeof v === 'object' && v?.id != null) return String(v.id);
+        return String(v);
+      };
+
+      // Intento 1: empresaId tal cual
+      let sucursalesSnapshot = await getDocs(
         query(sucursalesRef, where('empresaId', '==', empresaId))
       );
-      const sucursalesIds = sucursalesSnapshot.docs.map(doc => doc.id);
+      let sucursalesIds = sucursalesSnapshot.docs.map((doc) => doc.id);
+
+      // Intento 2: forzar string (si en Firestore está guardado como string)
+      if (sucursalesIds.length === 0) {
+        const empresaIdAsString = normalizeId(empresaId);
+        if (empresaIdAsString && empresaIdAsString !== empresaId) {
+          sucursalesSnapshot = await getDocs(
+            query(sucursalesRef, where('empresaId', '==', empresaIdAsString))
+          );
+          sucursalesIds = sucursalesSnapshot.docs.map((doc) => doc.id);
+        }
+      }
+
+      // Fallback 3: si no hay coincidencias, buscar en memoria (legacy / tipos distintos)
+      if (sucursalesIds.length === 0) {
+        const empresaIdNorm = normalizeId(empresaId);
+        if (!empresaIdNorm) return [];
+
+        const allSnapshot = await getDocs(sucursalesRef);
+        const matchingDocs = allSnapshot.docs.filter((doc) => {
+          const data = doc.data() || {};
+          const candidates = [data.empresaId, data.empresa?.id, data.empresaIdLegacy].filter(Boolean);
+          return candidates.some((c) => normalizeId(c) === empresaIdNorm);
+        });
+        sucursalesIds = matchingDocs.map((d) => d.id);
+      }
       
       if (sucursalesIds.length === 0) return [];
 

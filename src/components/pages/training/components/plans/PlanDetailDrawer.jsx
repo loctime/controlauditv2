@@ -17,6 +17,7 @@ import {
   Typography
 } from '@mui/material';
 import { Close as CloseIcon } from '@mui/icons-material';
+import DeleteIcon from '@mui/icons-material/Delete';
 import { format, parseISO, isValid } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { useAuth } from '@/components/context/AuthContext';
@@ -106,55 +107,112 @@ function TabDetalle({ plan, companies, branches }) {
   );
 }
 
-function TabEditar({ plan, onSaved, companies, branches }) {
+function TabEditar({ plan, onSaved, onClose, companies, branches }) {
   const { userProfile, userEmpresas = [], userSucursales = [] } = useAuth();
   const ownerId = userProfile?.ownerId;
   const empresas = companies?.length ? companies : userEmpresas;
   const sucursales = branches?.length ? branches : userSucursales;
+  const companyName = empresas?.find((c) => c.id === plan?.companyId)?.nombre || plan?.companyId || '—';
+  const branchName = sucursales?.find((s) => s.id === plan?.branchId)?.nombre || plan?.branchId || '—';
+  const planYear = plan?.year ?? new Date().getFullYear();
 
   const [form, setForm] = useState({
-    companyId: '',
-    branchId: '',
-    year: new Date().getFullYear(),
     status: 'draft',
     notes: ''
   });
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
+  const [deletingPlan, setDeletingPlan] = useState(false);
+
+  const [items, setItems] = useState([]);
+  const [typeNameMap, setTypeNameMap] = useState({});
+  const [itemsLoading, setItemsLoading] = useState(false);
+  const [itemsError, setItemsError] = useState('');
+  const [deletingItemId, setDeletingItemId] = useState(null);
+
+  const loadItems = useCallback(async () => {
+    if (!ownerId || !plan?.id) return;
+    setItemsLoading(true);
+    setItemsError('');
+    try {
+      const [list, catalog] = await Promise.all([
+        trainingPlanService.listPlanItems(ownerId, { planId: plan.id }),
+        trainingCatalogService.listAll(ownerId)
+      ]);
+      setItems(Array.isArray(list) ? list : []);
+      const map = Object.fromEntries((catalog || []).map((c) => [c.id, c.name || c.id]));
+      setTypeNameMap(map);
+    } catch (err) {
+      setItemsError(err?.message || 'No se pudieron cargar las capacitaciones del plan.');
+      setItems([]);
+    } finally {
+      setItemsLoading(false);
+    }
+  }, [ownerId, plan?.id]);
+
+  useEffect(() => {
+    loadItems();
+  }, [loadItems]);
+
+  const handleDeleteTrainingType = async (trainingTypeId, groupItems) => {
+    if (!ownerId || !trainingTypeId) return;
+    const deletableItems = (groupItems || []).filter((i) => i?.id && i.status !== 'completed' && i.status !== 'cancelled');
+    if (deletableItems.length === 0) return;
+
+    const typeName = typeNameMap[trainingTypeId] || trainingTypeId || '—';
+    const ok = window.confirm(`¿Eliminar "${typeName}" del plan anual?`);
+    if (!ok) return;
+
+    setDeletingItemId(trainingTypeId);
+    setItemsError('');
+    try {
+      await Promise.all(
+        deletableItems.map((it) => trainingPlanService.updatePlanItem(ownerId, it.id, { status: 'cancelled' }))
+      );
+      await loadItems();
+      onSaved?.();
+    } catch (err) {
+      setItemsError(err?.message || 'No se pudo eliminar la capacitación del plan.');
+    } finally {
+      setDeletingItemId(null);
+    }
+  };
 
   useEffect(() => {
     if (!plan?.id) return;
     setForm({
-      companyId: plan.companyId || '',
-      branchId: plan.branchId || '',
-      year: plan.year ?? new Date().getFullYear(),
       status: plan.status || 'draft',
       notes: plan.notes || ''
     });
     setError('');
   }, [plan?.id, plan?.companyId, plan?.branchId, plan?.year, plan?.status, plan?.notes]);
 
-  const handleChange = (field) => (e) => {
-    const value = field === 'year' ? parseInt(e.target.value, 10) || '' : e.target.value;
-    setForm((prev) => ({ ...prev, [field]: value }));
-    if (field === 'companyId') setForm((prev) => ({ ...prev, branchId: '' }));
-  };
+  const handleChange = (field) => (e) => setForm((prev) => ({ ...prev, [field]: e.target.value }));
 
-  const filteredBranches = sucursales.filter((s) => !form.companyId || s.empresaId === form.companyId);
+  const handleDeletePlan = async () => {
+    if (!ownerId || !plan?.id) return;
+    const ok = window.confirm(`¿Eliminar el plan anual ${planYear} (${companyName} / ${branchName})?`);
+    if (!ok) return;
+
+    setDeletingPlan(true);
+    setError('');
+    try {
+      await trainingPlanService.removePlan(ownerId, plan.id);
+      onSaved?.();
+      onClose?.();
+    } catch (err) {
+      setError(err?.message || 'No se pudo eliminar el plan anual.');
+    } finally {
+      setDeletingPlan(false);
+    }
+  };
 
   const handleSave = async () => {
     if (!ownerId || !plan?.id) return;
-    if (!form.companyId || !form.branchId) {
-      setError('Empresa y sucursal son obligatorias.');
-      return;
-    }
     setSaving(true);
     setError('');
     try {
       await trainingPlanService.updatePlan(ownerId, plan.id, {
-        companyId: form.companyId,
-        branchId: form.branchId,
-        year: form.year ? Number(form.year) : undefined,
         status: form.status,
         notes: (form.notes || '').trim()
       });
@@ -169,43 +227,26 @@ function TabEditar({ plan, onSaved, companies, branches }) {
   return (
     <Stack spacing={2} sx={{ pt: 1 }}>
       {error && <Alert severity="error" onClose={() => setError('')}>{error}</Alert>}
-      <TextField
-        select
-        label="Empresa"
-        value={form.companyId}
-        onChange={handleChange('companyId')}
-        fullWidth
-        size="small"
-        required
+      <Box
+        sx={{
+          display: 'grid',
+          gridTemplateColumns: { xs: '1fr', sm: 'repeat(3, 1fr)' },
+          gap: 2
+        }}
       >
-        <MenuItem value="">Seleccionar</MenuItem>
-        {(empresas || []).map((c) => (
-          <MenuItem key={c.id} value={c.id}>{c.nombre}</MenuItem>
-        ))}
-      </TextField>
-      <TextField
-        select
-        label="Sucursal"
-        value={form.branchId}
-        onChange={handleChange('branchId')}
-        fullWidth
-        size="small"
-        required
-      >
-        <MenuItem value="">Seleccionar</MenuItem>
-        {filteredBranches.map((b) => (
-          <MenuItem key={b.id} value={b.id}>{b.nombre}</MenuItem>
-        ))}
-      </TextField>
-      <TextField
-        type="number"
-        label="Año"
-        value={form.year || ''}
-        onChange={handleChange('year')}
-        fullWidth
-        size="small"
-        inputProps={{ min: 2020, max: 2030 }}
-      />
+        <Box>
+          <Typography variant="caption" color="text.secondary">Empresa</Typography>
+          <Typography variant="body1">{companyName}</Typography>
+        </Box>
+        <Box>
+          <Typography variant="caption" color="text.secondary">Sucursal</Typography>
+          <Typography variant="body1">{branchName}</Typography>
+        </Box>
+        <Box>
+          <Typography variant="caption" color="text.secondary">Año</Typography>
+          <Typography variant="body1">{planYear}</Typography>
+        </Box>
+      </Box>
       <TextField
         select
         label="Estado"
@@ -227,6 +268,88 @@ function TabEditar({ plan, onSaved, companies, branches }) {
         multiline
         rows={3}
       />
+
+      <Box sx={{ pt: 1.5, borderTop: '1px solid', borderColor: 'divider' }}>
+        <Typography variant="subtitle1" sx={{ mt: 1, mb: 1, fontWeight: 700 }}>
+          Capacitaciones asignadas
+        </Typography>
+
+        {itemsError && (
+          <Alert severity="error" onClose={() => setItemsError('')} sx={{ mb: 1 }}>
+            {itemsError}
+          </Alert>
+        )}
+
+        {itemsLoading ? (
+          <Typography color="text.secondary">Cargando…</Typography>
+        ) : (
+          <>
+            {items.filter((i) => i.status !== 'cancelled').length === 0 ? (
+              <Typography color="text.secondary">No hay capacitaciones asignadas.</Typography>
+            ) : (
+              (() => {
+                const groupedByType = items
+                  .filter((i) => i.status !== 'cancelled')
+                  .reduce((acc, it) => {
+                    const key = it.trainingTypeId || '';
+                    if (!acc[key]) acc[key] = [];
+                    acc[key].push(it);
+                    return acc;
+                  }, {});
+
+                const entries = Object.entries(groupedByType).filter(([k]) => k);
+                if (entries.length === 0) {
+                  return <Typography color="text.secondary">No hay capacitaciones asignadas.</Typography>;
+                }
+
+                return (
+                  <List dense disablePadding>
+                    {entries.map(([trainingTypeId, groupItems]) => {
+                      const typeName = typeNameMap[trainingTypeId] || trainingTypeId || '—';
+                      const nonCompletedCount = (groupItems || []).filter((i) => i.status !== 'completed' && i.status !== 'cancelled').length;
+                      const deletingThis = deletingItemId === trainingTypeId;
+
+                      return (
+                        <ListItem
+                          key={trainingTypeId}
+                          disablePadding
+                          sx={{ pl: 0 }}
+                          secondaryAction={
+                            <IconButton
+                              edge="end"
+                              aria-label="Eliminar"
+                              onClick={() => handleDeleteTrainingType(trainingTypeId, groupItems)}
+                              disabled={itemsLoading || deletingThis || nonCompletedCount === 0}
+                            >
+                              <DeleteIcon fontSize="small" />
+                            </IconButton>
+                          }
+                        >
+                          <ListItemText
+                            primary={typeName}
+                            secondary={`Ítems: ${(groupItems || []).length}`}
+                          />
+                        </ListItem>
+                      );
+                    })}
+                  </List>
+                );
+              })()
+            )}
+          </>
+        )}
+      </Box>
+
+      <Button
+        variant="outlined"
+        color="error"
+        onClick={handleDeletePlan}
+        disabled={saving || deletingPlan || itemsLoading}
+        fullWidth
+      >
+        {deletingPlan ? 'Eliminando...' : 'Eliminar plan anual'}
+      </Button>
+
       <Button variant="contained" onClick={handleSave} disabled={saving} fullWidth>
         {saving ? 'Guardando…' : 'Guardar'}
       </Button>
@@ -346,6 +469,7 @@ export default function PlanDetailDrawer({
           <TabEditar
             plan={plan}
             onSaved={onSaved}
+            onClose={onClose}
             companies={companies}
             branches={branches}
           />

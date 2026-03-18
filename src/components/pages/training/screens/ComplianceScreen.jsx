@@ -116,8 +116,8 @@ export default function ComplianceScreen() {
     setError('');
 
     try {
-      const companyId = filters.companyId || null;
-      const branchId = filters.branchId || null;
+      const companyId = filters.companyId ? String(filters.companyId) : null;
+      const branchId = filters.branchId ? String(filters.branchId) : null;
 
       const matrixData = await trainingComplianceService.buildMatrix(ownerId, {
         companyId,
@@ -166,7 +166,14 @@ export default function ComplianceScreen() {
             select
             label="Empresa"
             value={filters.companyId}
-            onChange={(e) => setFilters((prev) => ({ ...prev, companyId: e.target.value, branchId: '', page: 1 }))}
+            onChange={(e) =>
+              setFilters((prev) => ({
+                ...prev,
+                companyId: e.target.value ? String(e.target.value) : '',
+                branchId: '',
+                page: 1
+              }))
+            }
             sx={{ minWidth: 220 }}
           >
             <MenuItem value="">Todas</MenuItem>
@@ -176,7 +183,13 @@ export default function ComplianceScreen() {
             select
             label="Sucursal"
             value={filters.branchId}
-            onChange={(e) => setFilters((prev) => ({ ...prev, branchId: e.target.value, page: 1 }))}
+            onChange={(e) =>
+              setFilters((prev) => ({
+                ...prev,
+                branchId: e.target.value ? String(e.target.value) : '',
+                page: 1
+              }))
+            }
             sx={{ minWidth: 220 }}
           >
             <MenuItem value="">Todas</MenuItem>
