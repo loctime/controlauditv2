@@ -68,7 +68,7 @@ export default function CatalogScreen({ onNavigateToPlans }) {
   const [newCategoryName, setNewCategoryName] = useState('');
   const [addingCategory, setAddingCategory] = useState(false);
   const [editItem, setEditItem] = useState(null);
-  const [editForm, setEditForm] = useState({ name: '', categoryIds: [], modality: 'in_person', recommendedDurationMinutes: 60, validityMonths: 12, description: '', status: 'active' });
+  const [editForm, setEditForm] = useState({ name: '', categoryIds: [], modality: 'in_person', recommendedDurationMinutes: 60, description: '', status: 'active' });
   const [editSelectedCategories, setEditSelectedCategories] = useState([]);
   const [savingEdit, setSavingEdit] = useState(false);
   const [deleteConfirmItem, setDeleteConfirmItem] = useState(null);
@@ -81,6 +81,7 @@ export default function CatalogScreen({ onNavigateToPlans }) {
   const [addToPlanForm, setAddToPlanForm] = useState({
     companyId: '',
     branchId: '',
+    validityMonths: 12,
     startMonth: 1,
     notes: ''
   });
@@ -92,7 +93,6 @@ export default function CatalogScreen({ onNavigateToPlans }) {
     description: '',
     modality: 'in_person',
     recommendedDurationMinutes: 60,
-    validityMonths: 1,
     requiresEvaluation: false,
     requiresScore: false,
     status: 'active'
@@ -203,7 +203,6 @@ export default function CatalogScreen({ onNavigateToPlans }) {
         ...form,
         categoryIds,
         recommendedDurationMinutes: Number(form.recommendedDurationMinutes || 0),
-        validityMonths: Number(form.validityMonths || 0),
       });
       setForm((prev) => ({ ...prev, name: '', description: '' }));
       setSelectedCategories([]);
@@ -222,7 +221,6 @@ export default function CatalogScreen({ onNavigateToPlans }) {
       name: item.name || '',
       modality: item.modality || 'in_person',
       recommendedDurationMinutes: item.recommendedDurationMinutes ?? 60,
-      validityMonths: item.validityMonths ?? 12,
       description: item.description || '',
       status: item.status || 'active',
       requiresEvaluation: item.requiresEvaluation === true,
@@ -246,7 +244,6 @@ export default function CatalogScreen({ onNavigateToPlans }) {
         categoryIds,
         modality: editForm.modality,
         recommendedDurationMinutes: Number(editForm.recommendedDurationMinutes || 0),
-        validityMonths: Number(editForm.validityMonths || 0),
         description: (editForm.description || '').trim() || undefined,
         status: editForm.status,
         requiresEvaluation: editForm.requiresEvaluation === true,
@@ -288,6 +285,7 @@ export default function CatalogScreen({ onNavigateToPlans }) {
     setAddToPlanForm({
       companyId: '',
       branchId: '',
+      validityMonths: 12,
       startMonth: 1,
       notes: ''
     });
@@ -298,6 +296,11 @@ export default function CatalogScreen({ onNavigateToPlans }) {
       setAddToPlanError('Selecciona empresa y sucursal.');
       return;
     }
+    const validityMonthsNumber = Number(addToPlanForm.validityMonths);
+    if (!Number.isFinite(validityMonthsNumber) || validityMonthsNumber <= 0) {
+      setAddToPlanError('La vigencia (meses) debe ser mayor a 0.');
+      return;
+    }
     setAddToPlanSaving(true);
     setAddToPlanError('');
     try {
@@ -306,7 +309,7 @@ export default function CatalogScreen({ onNavigateToPlans }) {
         branchId: addToPlanForm.branchId,
         year: new Date().getFullYear(),
         trainingTypeId: addToPlanItem.id,
-        validityMonths: Number(addToPlanItem.validityMonths) || 12,
+        validityMonths: validityMonthsNumber,
         startMonth: Number(addToPlanForm.startMonth) || 1,
         notes: (addToPlanForm.notes || '').trim() || '',
         responsibleUserId: userProfile?.uid || ''
@@ -322,7 +325,7 @@ export default function CatalogScreen({ onNavigateToPlans }) {
 
   const closeAddToPlanModal = () => {
     setAddToPlanItem(null);
-    setAddToPlanForm({ companyId: '', branchId: '', startMonth: 1, notes: '' });
+    setAddToPlanForm({ companyId: '', branchId: '', validityMonths: 12, startMonth: 1, notes: '' });
     setAddToPlanError('');
     setAddToPlanSuccess(false);
   };
@@ -390,10 +393,8 @@ export default function CatalogScreen({ onNavigateToPlans }) {
               <TextField select label="Modalidad" value={form.modality} onChange={(e) => setForm({ ...form, modality: e.target.value })}>
                 <MenuItem value="in_person">Presencial</MenuItem>
                 <MenuItem value="virtual">Virtual</MenuItem>
-                <MenuItem value="hybrid">Híbrida</MenuItem>
               </TextField>
               <TextField type="number" label="Duración recomendada (minutos)" value={form.recommendedDurationMinutes} onChange={(e) => setForm({ ...form, recommendedDurationMinutes: e.target.value })} />
-              <TextField type="number" label="Vigencia (meses)" value={form.validityMonths} onChange={(e) => setForm({ ...form, validityMonths: e.target.value })} />
               <Stack direction="row" flexWrap="wrap" spacing={2}>
                 <FormControlLabel
                   control={<Checkbox checked={form.requiresEvaluation === true} onChange={(e) => setForm({ ...form, requiresEvaluation: e.target.checked })} />}
@@ -450,7 +451,6 @@ export default function CatalogScreen({ onNavigateToPlans }) {
                   <MenuItem value="">Todas</MenuItem>
                   <MenuItem value="in_person">Presencial</MenuItem>
                   <MenuItem value="virtual">Virtual</MenuItem>
-                  <MenuItem value="hybrid">Híbrida</MenuItem>
                 </TextField>
                 <TextField
                   select
@@ -536,10 +536,8 @@ export default function CatalogScreen({ onNavigateToPlans }) {
             <TextField select label="Modalidad" value={editForm.modality} onChange={(e) => setEditForm((f) => ({ ...f, modality: e.target.value }))} fullWidth>
               <MenuItem value="in_person">Presencial</MenuItem>
               <MenuItem value="virtual">Virtual</MenuItem>
-              <MenuItem value="hybrid">Híbrida</MenuItem>
             </TextField>
             <TextField type="number" label="Duración (min)" value={editForm.recommendedDurationMinutes} onChange={(e) => setEditForm((f) => ({ ...f, recommendedDurationMinutes: e.target.value }))} fullWidth />
-            <TextField type="number" label="Vigencia (meses)" value={editForm.validityMonths} onChange={(e) => setEditForm((f) => ({ ...f, validityMonths: e.target.value }))} fullWidth />
             <Stack direction="row" flexWrap="wrap" spacing={2}>
               <FormControlLabel
                 control={<Checkbox checked={editForm.requiresEvaluation === true} onChange={(e) => setEditForm((f) => ({ ...f, requiresEvaluation: e.target.checked }))} />}
@@ -612,14 +610,14 @@ export default function CatalogScreen({ onNavigateToPlans }) {
                       Frecuencia automática
                     </Typography>
                     <Typography variant="body2" sx={{ mb: 0.5 }}>
-                      1 capacitación cada {Number(addToPlanItem.validityMonths) || 12} meses
+                      1 capacitación cada {Number(addToPlanForm.validityMonths) || 12} meses
                     </Typography>
                     <Typography variant="caption" color="text.secondary" display="block" sx={{ mb: 0.25 }}>
                       Meses planificados
                     </Typography>
                     <Typography variant="body2">
                       {(() => {
-                        const validityMonths = Number(addToPlanItem.validityMonths) || 12;
+                        const validityMonths = Number(addToPlanForm.validityMonths) || 12;
                         const startMonth = Number(addToPlanForm.startMonth) || 1;
                         const months = generatePlannedMonths(validityMonths, startMonth);
                         const names = months.map((m) =>
@@ -632,6 +630,15 @@ export default function CatalogScreen({ onNavigateToPlans }) {
                     </Typography>
                   </Box>
                 )}
+                <TextField
+                  type="number"
+                  fullWidth
+                  required
+                  label="Vigencia (meses)"
+                  value={addToPlanForm.validityMonths}
+                  onChange={(e) => setAddToPlanForm((f) => ({ ...f, validityMonths: Number(e.target.value) }))}
+                  inputProps={{ min: 1, step: 1 }}
+                />
                 <TextField
                   select
                   fullWidth
@@ -704,7 +711,7 @@ export default function CatalogScreen({ onNavigateToPlans }) {
               <Button
                 variant="contained"
                 onClick={addTrainingTypeToPlan}
-                disabled={addToPlanSaving || !addToPlanForm.companyId || !addToPlanForm.branchId}
+                    disabled={addToPlanSaving || !addToPlanForm.companyId || !addToPlanForm.branchId || !addToPlanForm.validityMonths}
               >
                 {addToPlanSaving ? 'Agregando...' : 'Confirmar'}
               </Button>
