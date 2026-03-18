@@ -85,6 +85,15 @@ function TrainingSubRow({ row, onViewSession, isOdd }) {
   // La columna representa la ultima sesion guardada para ese empleado/capacitacion.
   // Solo se oculta si no existe ningun registro de sesion.
   const canViewSession = Boolean(sessionId);
+
+  const lastAttendanceStatus = row?.lastAttendanceStatus || row?.lastResult;
+  const ratingLabel = !canViewSession
+    ? '-'
+    : lastAttendanceStatus === 'present'
+      ? row?.complianceStatus === 'missing'
+        ? 'Reprobado'
+        : 'Aprobado'
+      : 'Ausente';
   return (
     <TableRow
       sx={{
@@ -114,7 +123,14 @@ function TrainingSubRow({ row, onViewSession, isOdd }) {
         {statusChip(row.complianceStatus)}
       </TableCell>
 
-      {/* ver sesión */}
+      {/* calificacion */}
+      <TableCell sx={{ borderBottom: 'none', py: 0.75 }}>
+        <Typography variant="body2" color="text.secondary">
+          {ratingLabel}
+        </Typography>
+      </TableCell>
+
+      {/* ver ultima sesion */}
       <TableCell sx={{ borderBottom: 'none', py: 0.75 }}>
         {canViewSession ? (
           <Button
@@ -275,10 +291,13 @@ function EmployeeRow({ employeeRows, onViewSession }) {
                     Capacitación
                   </TableCell>
                   <TableCell sx={{ fontWeight: 600, fontSize: 12, color: 'text.secondary', borderBottom: '1px solid', borderColor: 'divider' }}>
-                    Vencimiento
+                    Proxima capacitacion
                   </TableCell>
                   <TableCell sx={{ fontWeight: 600, fontSize: 12, color: 'text.secondary', borderBottom: '1px solid', borderColor: 'divider' }}>
                     Estado
+                  </TableCell>
+                  <TableCell sx={{ fontWeight: 600, fontSize: 12, color: 'text.secondary', borderBottom: '1px solid', borderColor: 'divider' }}>
+                    Calificacion ultima sesion
                   </TableCell>
                   <TableCell sx={{ fontWeight: 600, fontSize: 12, color: 'text.secondary', borderBottom: '1px solid', borderColor: 'divider' }}>
                     ultima sesion
