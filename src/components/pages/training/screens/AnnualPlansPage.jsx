@@ -216,9 +216,9 @@ export default function AnnualPlansPage({
       {
         field: 'year',
         headerName: 'Año',
-        type: 'number',
         width: 100,
-        valueGetter: (value) => (value != null ? value : '—')
+        // Evita el formateo numérico regional del DataGrid (ej: 2025 -> 2.025)
+        renderCell: ({ row }) => <>{row?.year != null ? String(row.year) : '—'}</>
       },
       {
         field: 'status',
