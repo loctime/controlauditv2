@@ -1,5 +1,5 @@
 import logger from '@/utils/logger';
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import {
   Alert,
   Box,
@@ -12,9 +12,13 @@ import {
   Typography
 } from '@mui/material';
 import { useAuth } from '@/components/context/AuthContext';
+import { getUsers } from '../../../../core/services/ownerUserService';
+import { empleadoService } from '../../../../services/empleadoService';
 import {
   auditEvidenceService,
+  trainingCatalogService,
   trainingComplianceService,
+  trainingSessionService,
   trainingRiskComplianceService,
   trainingRoleRequirementService
 } from '../../../../services/training';
@@ -23,6 +27,7 @@ import TrainingMatrixView from '../components/compliance/TrainingMatrixView';
 import RoleComplianceView from '../components/compliance/RoleComplianceView';
 import RiskComplianceView from '../components/compliance/RiskComplianceView';
 import AuditExportPanel from '../components/compliance/AuditExportPanel';
+import SessionDetailModal from '../components/sessions/SessionDetailModal';
 
 export default function ComplianceScreen() {
   const { userProfile, userEmpresas = [], userSucursales = [] } = useAuth();
@@ -41,6 +46,69 @@ export default function ComplianceScreen() {
   const [missingByRole, setMissingByRole] = useState([]);
   const [roleSuggestions, setRoleSuggestions] = useState([]);
   const [riskData, setRiskData] = useState({ totals: {}, rows: [] });
+
+  const [viewSession, setViewSession] = useState(null);
+
+  const openSessionModal = useCallback(
+    async (sessionId) => {
+      if (!ownerId || !sessionId) return;
+
+      try {
+        const [session, catalogList, usersList, employeesList] = await Promise.all([
+          trainingSessionService.getSessionById(ownerId, sessionId),
+          trainingCatalogService.listAll(ownerId).catch(() => []),
+          getUsers(ownerId).catch(() => []),
+          userSucursales?.length
+            ? empleadoService
+              .getEmpleadosBySucursales(ownerId, userSucursales.map((s) => s.id))
+              .catch(() => [])
+            : Promise.resolve([])
+        ]);
+
+        if (!session) return;
+
+        const catalogMapById = Object.fromEntries((catalogList || []).map((c) => [c.id, c]));
+        const branchMapLocal = Object.fromEntries((userSucursales || []).map((b) => [b.id, b]));
+        const companyMapLocal = Object.fromEntries((userEmpresas || []).map((c) => [c.id, c]));
+
+        const instructorMap = {
+          ...Object.fromEntries(
+            (usersList || []).map((u) => [
+              u.id,
+              `${u.apellido || ''} ${u.nombre || ''}`.trim() || u.email || 'Sin dato'
+            ])
+          ),
+          ...Object.fromEntries(
+            (employeesList || []).map((e) => [
+              e.id,
+              `${e.apellido || ''} ${e.nombre || ''}`.trim() || e.email || 'Sin dato'
+            ])
+          )
+        };
+
+        if (userProfile?.uid) {
+          const fullName = `${userProfile.apellido || ''} ${userProfile.nombre || ''}`.trim();
+          instructorMap[userProfile.uid] = fullName || userProfile.email || 'Sin asignar';
+        }
+
+        const enrichedSession = {
+          ...session,
+          trainingTypeName: catalogMapById[session.trainingTypeId]?.name || 'Sin dato',
+          branchName: branchMapLocal[session.branchId]?.nombre || 'Sin dato',
+          companyName:
+            companyMapLocal[session.companyId]?.nombre ||
+            branchMapLocal[session.branchId]?.empresaNombre ||
+            'Sin dato',
+          instructorName: instructorMap[session.instructorId] || 'Sin asignar'
+        };
+
+        setViewSession(enrichedSession);
+      } catch (err) {
+        logger.error('[ComplianceScreen] openSessionModal error', err);
+      }
+    },
+    [ownerId, userEmpresas, userSucursales, userProfile]
+  );
 
   const load = async () => {
     if (!ownerId) return;
@@ -82,7 +150,7 @@ export default function ComplianceScreen() {
   }, [ownerId, filters.companyId, filters.branchId, filters.page, filters.pageSize]);
 
   if (!ownerId) {
-    return <Alert severity="warning">No hay contexto de owner disponible para cumplimiento de capacitación.</Alert>;
+    return <Alert severity="warning">No hay contexto de owner disponible para cumplimiento de capacitaciï¿½n.</Alert>;
   }
 
   const branchOptions = userSucursales.filter((branch) => !filters.companyId || branch.empresaId === filters.companyId);
@@ -142,7 +210,11 @@ export default function ComplianceScreen() {
           </Grid>
 
           <Grid item xs={12}>
-            <TrainingMatrixView rows={matrix.rows} />
+            <TrainingMatrixView
+              rows={matrix.rows}
+              onExportCsv={undefined}
+              onViewSession={openSessionModal}
+            />
           </Grid>
 
           <Grid item xs={12} md={6}>
@@ -163,6 +235,13 @@ export default function ComplianceScreen() {
           </Grid>
         </Grid>
       )}
+
+      <SessionDetailModal
+        open={Boolean(viewSession)}
+        onClose={() => setViewSession(null)}
+        ownerId={ownerId}
+        session={viewSession}
+      />
     </Box>
   );
 }
