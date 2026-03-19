@@ -135,6 +135,8 @@ export const useAuditoriaHandlers = ({
         comentarios,
         imagenes, // Guardar las imágenes reales (File objects)
         clasificaciones,
+        // FIX: accionesRequeridas no se incluía en auditoriaData; nunca se guardaba ni se restauraba
+        accionesRequeridas,
         activeStep,
         firmaAuditor, // Guardar firma del auditor
         firmaResponsable, // Guardar firma del responsable
