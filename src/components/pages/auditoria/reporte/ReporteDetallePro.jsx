@@ -116,7 +116,7 @@ const ReporteDetallePro = forwardRef(({ open = false, onClose = () => {}, report
   const empresa = normalizarEmpresaCompleta(reporte);
   const formulario = normalizarFormularioCompleto(reporte);
   const sucursal = reporte.sucursal || '';
-  const respuestasNormalizadas = normalizarRespuestas(reporte.respuestas || []);
+  const respuestasNormalizadas = normalizarRespuestas(reporte.respuestas || {}, secciones);
   const imagenesNormalizadas = normalizarArchivosPorPregunta(reporte, secciones, canonicalFiles);
   const comentariosNormalizados = normalizarComentarios(reporte.comentarios, secciones);
   const clasificacionesNormalizadas = normalizarClasificaciones(reporte.clasificaciones, secciones);

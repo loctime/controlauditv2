@@ -2,35 +2,100 @@ import logger from '@/utils/logger';
 // Utilidades de normalización para reportes de auditoría
 // Funciones extraídas de ReporteDetallePro.jsx para mejorar mantenibilidad
 import { convertirShareTokenAUrl } from '@/utils/imageUtils';
-// Normaliza respuestas a array de arrays de strings
-export const normalizarRespuestas = (res) => {
-  if (!Array.isArray(res)) {
-    // Si es objeto (caso Firestore), convertir a array
-    if (res && typeof res === 'object') {
-      res = Object.values(res);
-    } else {
-      return [];
+// Normaliza respuestas a `respuestas[seccionIndex][preguntaIndex]`
+// Soporta:
+// - array 2D clásico: [[...],[...]]
+// - array de objetos { seccion, valores: [...] }
+// - map Firestore: { "seccion_0_pregunta_0": "...", ... }
+export const normalizarRespuestas = (res, secciones = []) => {
+  const seccionesArr = Array.isArray(secciones) ? secciones : [];
+
+  const crearMatrizVacia = () => {
+    if (seccionesArr.length === 0) return [];
+    return seccionesArr.map(s => {
+      const preguntas = Array.isArray(s?.preguntas) ? s.preguntas : [];
+      return preguntas.map(() => '');
+    });
+  };
+
+  if (!res) return crearMatrizVacia();
+
+  // Caso: map Firestore con claves `seccion_{i}_pregunta_{j}`
+  if (typeof res === 'object' && !Array.isArray(res)) {
+    const regex = /^seccion_(\d+)_pregunta_(\d+)$/;
+    const keys = Object.keys(res || {});
+
+    // Base alineada a `secciones` si existe
+    let matriz = crearMatrizVacia();
+
+    // Si `secciones` vino vacío o no tenemos base, inferimos desde el map
+    if (matriz.length === 0) {
+      let maxS = -1;
+      const maxP = new Map(); // sIdx -> maxPIdx
+
+      keys.forEach((k) => {
+        const m = k.match(regex);
+        if (!m) return;
+        const sIdx = parseInt(m[1], 10);
+        const pIdx = parseInt(m[2], 10);
+        maxS = Math.max(maxS, sIdx);
+        maxP.set(sIdx, Math.max(maxP.get(sIdx) ?? -1, pIdx));
+      });
+
+      const numSecciones = maxS + 1;
+      matriz = Array.from({ length: numSecciones }, (_, sIdx) => {
+        const maxPreg = maxP.get(sIdx) ?? -1;
+        const len = maxPreg + 1;
+        return Array.from({ length: len }, () => '');
+      });
     }
+
+    // Cargar valores (sin romper dimensiones)
+    keys.forEach((k) => {
+      const m = k.match(regex);
+      if (!m) return;
+      const sIdx = parseInt(m[1], 10);
+      const pIdx = parseInt(m[2], 10);
+      const valor = res[k];
+
+      if (!matriz[sIdx]) return;
+      if (pIdx < 0) return;
+
+      if (pIdx >= matriz[sIdx].length) {
+        matriz[sIdx] = [...matriz[sIdx], ...Array.from({ length: pIdx - matriz[sIdx].length + 1 }, () => '')];
+      }
+
+      matriz[sIdx][pIdx] = typeof valor === 'string' ? valor : (valor?.valor ?? '');
+    });
+
+    return matriz;
   }
-  // Si es array de objetos {seccion, valores}
-  if (res.length > 0 && res[0] && typeof res[0] === 'object' && Array.isArray(res[0].valores)) {
+
+  // Caso: array de objetos {seccion, valores}
+  if (Array.isArray(res) && res.length > 0 && res[0] && typeof res[0] === 'object' && Array.isArray(res[0].valores)) {
     return res.map(obj => Array.isArray(obj.valores) ? obj.valores : []);
   }
-  // Si es array anidado clásico
-  return res.map(arr => {
-    if (arr && typeof arr === 'object' && !Array.isArray(arr)) {
-      arr = Object.values(arr);
-    }
-    return Array.isArray(arr)
-      ? arr.map(val =>
-          typeof val === "string"
-            ? val
-            : (val && typeof val === "object" && val.valor)
-              ? val.valor
-              : ""
-        )
-      : [];
-  });
+
+  // Caso: array anidado clásico
+  if (Array.isArray(res)) {
+    return res.map(arr => {
+      if (arr && typeof arr === 'object' && !Array.isArray(arr)) {
+        arr = Object.values(arr);
+      }
+      return Array.isArray(arr)
+        ? arr.map(val =>
+            typeof val === "string"
+              ? val
+              : (val && typeof val === "object" && val.valor)
+                ? val.valor
+                : ""
+          )
+        : [];
+    });
+  }
+
+  // Fallback: nada compatible
+  return crearMatrizVacia();
 };
 
 // Normaliza empresa
