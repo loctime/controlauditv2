@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import {
   Box,
   Typography,
@@ -20,6 +20,8 @@ import BuildIcon from '@mui/icons-material/Build';
 import PeopleIcon from '@mui/icons-material/People';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import ExpandLessIcon from '@mui/icons-material/ExpandLess';
+import InsertDriveFileIcon from '@mui/icons-material/InsertDriveFile';
+import PictureAsPdfIcon from '@mui/icons-material/PictureAsPdf';
 import { DatePicker } from '@mui/x-date-pickers/DatePicker';
 import dayjs from 'dayjs';
 import {
@@ -37,6 +39,54 @@ const toFileArray = (value) => {
   if (Array.isArray(value)) return value;
   return [value];
 };
+
+function LocalPendingFilePreview({ file, height = 100 }) {
+  const [objectUrl, setObjectUrl] = useState(null);
+
+  const isImage = file instanceof File && typeof file.type === 'string' && file.type.toLowerCase().startsWith('image/');
+  const isPdf = file instanceof File && typeof file.type === 'string' && file.type.toLowerCase() === 'application/pdf';
+
+  useEffect(() => {
+    if (!isImage) {
+      setObjectUrl(null);
+      return;
+    }
+
+    const url = URL.createObjectURL(file);
+    setObjectUrl(url);
+
+    return () => {
+      URL.revokeObjectURL(url);
+    };
+  }, [file, isImage]);
+
+  if (isImage && objectUrl) {
+    return (
+      <img
+        src={objectUrl}
+        alt={file?.name || 'imagen'}
+        style={{ maxWidth: '100%', maxHeight: height, objectFit: 'cover', borderRadius: 6, display: 'block' }}
+      />
+    );
+  }
+
+  return (
+    <Box
+      sx={{
+        width: '100%',
+        height,
+        borderRadius: 1,
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        bgcolor: 'rgba(0,0,0,0.04)',
+        border: '1px solid rgba(0,0,0,0.08)'
+      }}
+    >
+      {isPdf ? <PictureAsPdfIcon color="action" /> : <InsertDriveFileIcon color="action" />}
+    </Box>
+  );
+}
 
 export default function PreguntaItem({
   seccionIndex,
@@ -241,11 +291,14 @@ export default function PreguntaItem({
                 fileItem && typeof fileItem === 'object' && (fileItem.fileId || fileItem.shareToken)
                   ? fileItem
                   : null;
+              const isLocalFile = typeof File !== 'undefined' && fileItem instanceof File;
 
               return (
                 <Box key={`${preguntaIndex}-${fileIndex}`} sx={{ position: 'relative', width: isMobile ? 90 : 120 }}>
                   {previewFileRef ? (
                     <UnifiedFilePreview fileRef={previewFileRef} height={isMobile ? 80 : 100} />
+                  ) : isLocalFile ? (
+                    <LocalPendingFilePreview file={fileItem} height={isMobile ? 80 : 100} />
                   ) : (
                     <Typography variant="caption" color="text.secondary">
                       Archivo pendiente: {fileItem?.name || 'sin nombre'}
