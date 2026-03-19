@@ -206,9 +206,9 @@ class AutoSaveService {
           if (db) {
             const offlineData = await db.getAllFromIndex('auditorias', 'by-userId', userId);
             for (const auditoria of offlineData) {
-              // Limpiar autoguardados (status 'auto_saved' o 'pending_sync' con autoSaved=true)
-              if ((auditoria.autoSaved && auditoria.status === 'auto_saved') || 
-                  (auditoria.status === 'pending_sync' && auditoria.autoSaved)) {
+              // Limpiar todas las entradas creadas por autoSaveService (autoSaved !== undefined)
+              // Las entradas de guardarAuditoriaOffline no tienen ese campo y no se tocan
+              if (auditoria.autoSaved !== undefined) {
                 // Eliminar fotos asociadas
                 const fotos = await db.getAllFromIndex('fotos', 'by-auditoriaId', auditoria.id);
                 for (const foto of fotos) {
@@ -549,11 +549,13 @@ class AutoSaveService {
         await this.saveOfflineImages(auditoriaData.imagenes, auditoriaId, db);
       }
 
-      // Encolar para sincronización si los datos NO están ya en Firestore
-      // Esto aplica tanto a guardados manuales como a autoguardados que quedaron offline
-      if (!savedToFirestore) {
+      // Encolar para sincronización solo si estamos offline y los datos no están en Firestore
+      // Si hay conexión, no se encola: el próximo autoguardado irá directo a Firestore
+      if (!savedToFirestore && !this.isOnline) {
         await syncQueueService.enqueueAuditoria(saveData, 1, { origin: 'autosave' });
         logger.debug('Auditoría encolada para sincronización con Firestore', { auditoriaId });
+      } else if (!savedToFirestore) {
+        logger.debug('Online: autoguardado almacenado localmente sin encolar sync', { auditoriaId });
       } else {
         logger.debug('Auditoría ya en Firestore, guardada en IndexedDB como respaldo offline', { auditoriaId });
       }
