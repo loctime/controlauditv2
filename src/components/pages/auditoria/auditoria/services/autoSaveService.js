@@ -392,30 +392,9 @@ class AutoSaveService {
         logger.error('AutoSaveService: El respaldo en IndexedDB falló. Los datos están en Firestore pero no disponibles sin conexión.', { userId, sessionId });
       }
 
-      // También guardar en localStorage como respaldo (con arrays como arrays, no strings JSON)
-      const datosParaLocalStorage = {
-        empresaSeleccionada: auditoriaData.empresaSeleccionada ? {
-          id: auditoriaData.empresaSeleccionada.id,
-          nombre: auditoriaData.empresaSeleccionada.nombre
-        } : null,
-        sucursalSeleccionada: auditoriaData.sucursalSeleccionada || '',
-        formularioSeleccionadoId: auditoriaData.formularioSeleccionadoId || '',
-        secciones: auditoriaData.secciones || [],
-        respuestas: auditoriaData.respuestas || [], // Guardar como array, no string JSON
-        comentarios: auditoriaData.comentarios || [], // Guardar como array, no string JSON
-        filesDraftByQuestion: this.buildFilesDraftByQuestion(auditoriaData.imagenes || []),
-        clasificaciones: auditoriaData.clasificaciones || [], // Guardar como array, no string JSON
-        accionesRequeridas: auditoriaData.accionesRequeridas || [], // Guardar como array, no string JSON
-        activeStep: auditoriaData.activeStep || 0,
-        firmaAuditor: auditoriaData.firmaAuditor || null,
-        firmaResponsable: auditoriaData.firmaResponsable || null,
-        userId,
-        sessionId,
-        timestamp: auditoriaData.timestamp || Date.now(),
-        lastModified: new Date(),
-        autoSaved: true
-      };
-      this.saveToLocalStorage(datosParaLocalStorage);
+      // FIX: No sobreescribir localStorage aquí. saveOffline (llamado arriba) ya guardó con el id
+      // correcto de la auditoría. Sobreescribir acá eliminaba el id, rompiendo el fallback de
+      // restoreAuditoria que depende de localData.id para llamar a restoreAuditoriaImages.
 
       this.lastSaveTime = Date.now();
       
@@ -624,7 +603,8 @@ class AutoSaveService {
                 width: 0,
                 height: 0,
                 size: imagen.size,
-                createdAt: existingAuditoria?.createdAt || Date.now(),
+                // FIX: existingAuditoria no existe en este scope (era variable de saveOffline); usar Date.now() directamente
+                createdAt: Date.now(),
                 originalName: imagen.name
               };
 
@@ -867,9 +847,38 @@ class AutoSaveService {
         return auditoriaData;
       }
 
-      // Reconstruir el array de imágenes con los File objects
-      const imagenesBase = this.restoreImagenesFromDraft(auditoriaData.filesDraftByQuestion || auditoriaData.imagenes || []);
-      const imagenesRestauradas = [...imagenesBase];
+      // FIX: No usar restoreImagenesFromDraft (filtra con .filter(Boolean) y colapsa posiciones).
+      // Construir la base preservando null en lugar de pending_local para que los File objects
+      // de IndexedDB se inserten en su questionItemIndex exacto sin pisar file_ref vecinos.
+      const draft = auditoriaData.filesDraftByQuestion || auditoriaData.imagenes || [];
+      const imagenesRestauradas = Array.isArray(draft) ? draft.map((seccion) => {
+        if (!Array.isArray(seccion)) return [];
+        return seccion.map((cell) => {
+          const list = Array.isArray(cell) ? cell : cell ? [cell] : [];
+          return list.map((item) => {
+            if (!item || typeof item !== 'object') return null;
+            if (item.kind === 'file_ref' && (item.fileId || item.shareToken)) {
+              return {
+                fileDocId: item.fileDocId || null,
+                fileId: item.fileId || item.shareToken,
+                shareToken: item.shareToken || null,
+                name: item.name || 'archivo',
+                mimeType: item.mimeType || 'application/octet-stream',
+                size: item.size || 0,
+                module: item.module || 'auditorias',
+                entityId: item.entityId || null,
+                companyId: item.companyId || null,
+                uploadedBy: item.uploadedBy || null,
+                uploadedAt: item.uploadedAt || null,
+                status: item.status || 'active',
+                schemaVersion: item.schemaVersion || 1
+              };
+            }
+            return null; // pending_local: null placeholder, será reemplazado por File desde IndexedDB
+            // Sin .filter(Boolean) para preservar índices exactos
+          });
+        });
+      }) : [];
 
       for (const foto of fotos) {
         const { seccionIndex, preguntaIndex, blob, mime, originalName } = foto;
