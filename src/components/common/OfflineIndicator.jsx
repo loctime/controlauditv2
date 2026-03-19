@@ -29,13 +29,16 @@ import {
   CloudDone,
   Storage,
   PhotoCamera,
-  Assignment
+  Assignment,
+  DeleteSweep,
+  ClearAll
 } from '@mui/icons-material';
 import Badge from '@mui/material/Badge';
 import { useConnectivity } from '../../hooks/useConnectivity';
 import autoSaveService from '../../components/pages/auditoria/auditoria/services/autoSaveService';
 import syncQueueService from '../../services/syncQueue';
 import { formatBytes } from '../../services/offlineDatabase';
+import { clearCompleteUserCache } from '../../services/completeOfflineCache';
 
 /**
  * Componente indicador de estado offline/online
@@ -120,6 +123,47 @@ const OfflineIndicator = ({ userProfile }) => {
       setOfflineStats(stats);
     } catch (error) {
       logger.error('Error al limpiar datos fallidos:', error);
+    }
+  };
+
+  const handleClearSyncQueue = async () => {
+    const f = queueStats?.failed ?? 0;
+    const allCount =
+      queueStats?.totalIncludingFailed ??
+      (queueStats?.total ?? 0) + f;
+    const ok = window.confirm(
+      `¿Vaciar toda la cola de sincronización? Se eliminarán ${allCount} tarea(s)${
+        f ? ` (${f} fallida(s))` : ''
+      }. Los datos locales (borradores) no se borran, pero no se reintentará la subida hasta que vuelvas a guardar o encolar.`
+    );
+    if (!ok) return;
+    try {
+      await syncQueueService.clearAllQueueItems();
+      const queue = await syncQueueService.getQueueStats();
+      setQueueStats(queue);
+      const stats = await autoSaveService.getOfflineStats();
+      setOfflineStats(stats);
+      setIsProcessing(false);
+    } catch (error) {
+      logger.error('Error al vaciar cola de sincronización:', error);
+    }
+  };
+
+  const handleClearOfflineCache = async () => {
+    const ok = window.confirm(
+      '¿Borrar el caché offline de listados (empresas, formularios, sucursales, etc.)? No elimina borradores de auditorías ni la cola de sincronización.'
+    );
+    if (!ok) return;
+    try {
+      await clearCompleteUserCache();
+      if (userProfile?.uid) {
+        const stats = await autoSaveService.getOfflineStats();
+        const queue = await syncQueueService.getQueueStats();
+        setOfflineStats(stats);
+        setQueueStats(queue);
+      }
+    } catch (error) {
+      logger.error('Error al limpiar caché offline:', error);
     }
   };
 
@@ -396,10 +440,29 @@ const OfflineIndicator = ({ userProfile }) => {
           )}
         </DialogContent>
 
-        <DialogActions>
+        <DialogActions sx={{ flexWrap: 'wrap', gap: 1 }}>
           <Button onClick={() => setShowDetails(false)}>
             Cerrar
           </Button>
+          <Button
+            onClick={handleClearOfflineCache}
+            color="warning"
+            variant="outlined"
+            startIcon={<DeleteSweep />}
+          >
+            Limpiar caché
+          </Button>
+          {queueStats && (queueStats.total > 0 || queueStats.failed > 0) && (
+            <Button
+              onClick={handleClearSyncQueue}
+              color="error"
+              variant="outlined"
+              disabled={isProcessing}
+              startIcon={<ClearAll />}
+            >
+              Vaciar cola de sync
+            </Button>
+          )}
           {queueStats && queueStats.total > 0 && isOnline && (
             <Button 
               onClick={handleManualSync}

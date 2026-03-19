@@ -270,20 +270,18 @@ class SyncQueueService {
   async processQueue() {
     let acquired = false;
     try {
-<<<<<<< HEAD
+      if (!navigator.onLine) {
+        logger.debug('📵 Sin conexión, omitiendo procesamiento de cola');
+        return;
+      }
+
       if (this.isProcessingQueue) {
         logger.debug('[SYNC DEBUG] processQueue skipped | reason: already_running');
         return;
       }
       this.isProcessingQueue = true;
       acquired = true;
-=======
-      if (!navigator.onLine) {
-        logger.debug('📵 Sin conexión, omitiendo procesamiento de cola');
-        return;
-      }
 
->>>>>>> d572df201c54f1176ffb16179a5480089c421492
       const db = await getOfflineDatabase();
       const now = Date.now();
       
@@ -764,6 +762,31 @@ class SyncQueueService {
       return failedItems.length;
     } catch (error) {
       logger.error('❌ Error al limpiar cola:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Vaciar por completo la cola de sincronización (todos los items).
+   * No borra auditorías ni fotos en IndexedDB; solo elimina tareas pendientes de subir.
+   */
+  async clearAllQueueItems() {
+    try {
+      this.stopProcessing();
+      this.isProcessingQueue = false;
+
+      const db = await getOfflineDatabase();
+      const allItems = await db.getAll('syncQueue');
+      for (const item of allItems) {
+        await db.delete('syncQueue', item.id);
+      }
+
+      logger.debug(`🧹 Cola de sincronización vaciada (${allItems.length} items)`);
+      this.notifyListeners('queue_cleared', { count: allItems.length, all: true });
+
+      return allItems.length;
+    } catch (error) {
+      logger.error('❌ Error al vaciar la cola de sincronización:', error);
       throw error;
     }
   }
