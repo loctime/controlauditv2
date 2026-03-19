@@ -4,6 +4,7 @@ import React, { useState } from "react";
 import { Button, Box, Alert, Snackbar, CircularProgress } from "@mui/material";
 import { useAuth } from '@/components/context/AuthContext';
 import AuditoriaService from "../auditoriaService";
+import autoSaveService from './services/autoSaveService';
 import { buildReporteMetadata } from '../../../../services/useMetadataService';
 import { getOfflineDatabase } from '../../../../services/offlineDatabase';
 const BotonGenerarReporte = ({
@@ -98,6 +99,18 @@ const BotonGenerarReporte = ({
 
       // Usar el servicio centralizado para guardar
       const { id: auditoriaId, uploadFailures } = await AuditoriaService.guardarAuditoria(datosAuditoria, currentUserProfile);
+
+      // Limpiar autosave local si el guardado fue a Firestore (online)
+      if (navigator.onLine) {
+        try {
+          await autoSaveService.clearLocalStorage(
+            currentUserProfile?.uid || null,
+            currentUserProfile?.ownerId || null
+          );
+        } catch (clearError) {
+          logger.warn('[BotonGenerarReporte] Error al limpiar autosave:', clearError);
+        }
+      }
 
       setGuardadoExitoso(true);
       const tipoUbicacion = sucursal && sucursal.trim() !== "" ? "Sucursal" : "Casa Central";
