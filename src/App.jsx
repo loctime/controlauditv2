@@ -15,11 +15,36 @@ import MobileDebug from './components/common/MobileDebug';
 import ErrorBoundary from './components/common/ErrorBoundary';
 import FeedbackButton from './components/common/FeedbackButton';
 import { useConnectivitySimple } from './hooks/useConnectivitySimple';
+import syncQueueService from './services/syncQueue';
 
 const App = () => {
   const { isOnline, checkRealConnectivity } = useConnectivitySimple();
   const [hasLoadedOnce, setHasLoadedOnce] = useState(false);
   const [isInitialLoad, setIsInitialLoad] = useState(true);
+
+  // Disparar sincronización cuando vuelve el internet
+  useEffect(() => {
+    const handleOnline = () => {
+      syncQueueService.processQueue();
+    };
+    window.addEventListener('online', handleOnline);
+    return () => window.removeEventListener('online', handleOnline);
+  }, []);
+
+  // Reanudar procesamiento de cola si hay items pendientes al iniciar la app
+  useEffect(() => {
+    const resumeQueueIfNeeded = async () => {
+      try {
+        const stats = await syncQueueService.getQueueStats();
+        if (stats.total > 0) {
+          syncQueueService.startProcessing();
+        }
+      } catch (e) {
+        // Silencioso: si falla no afecta el resto de la app
+      }
+    };
+    resumeQueueIfNeeded();
+  }, []);
 
   // Verificar si la app ya se cargó al menos una vez
   useEffect(() => {

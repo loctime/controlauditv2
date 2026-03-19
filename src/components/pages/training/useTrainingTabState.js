@@ -1,7 +1,9 @@
 import { useEffect, useMemo } from 'react';
 import { useSearchParams } from 'react-router-dom';
 
-const DEFAULT_TAB = 'dashboard';
+// Tab default cuando no coincide con un tab permitido (evita mostrar un "Tablero"
+// que puede no existir si el tab se quitó).
+const DEFAULT_TAB = 'reports';
 // matrix oculto temporalmente; section=matrix se trata como catalog
 const CONFIG_SECTIONS = ['catalog', 'plans'];
 

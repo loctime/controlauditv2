@@ -1,19 +1,32 @@
 import logger from '@/utils/logger';
 import React, { useEffect, useState } from 'react';
-import { Alert, Box, Button, CircularProgress, Grid, MenuItem, Paper, TextField, Typography } from '@mui/material';
+import { Alert, Box, Button, CircularProgress, Grid, MenuItem, Paper, Tab, Tabs, TextField, Typography } from '@mui/material';
 import { useAuth } from '@/components/context/AuthContext';
 import {
+  employeeTrainingRecordService,
+  trainingReportingService,
   trainingAttendanceService,
   trainingCatalogService,
   trainingComplianceService
 } from '../../../../services/training';
-import { TRAINING_ATTENDANCE_STATUSES, TRAINING_EVALUATION_STATUSES } from '../../../../types/trainingDomain';
+import {
+  TRAINING_ATTENDANCE_STATUSES,
+  TRAINING_COMPLIANCE_STATUSES,
+  TRAINING_EVALUATION_STATUSES
+} from '../../../../types/trainingDomain';
 import ReportsHub from '../components/reports/ReportsHub';
+import ComplianceKpiCards from '../components/dashboard/ComplianceKpiCards';
 import { diagnoseTrainingCompliance } from '../../../../utils/diagnostics/diagnoseTrainingCompliance';
 
 function devLog(...args) {
   // eslint-disable-next-line no-console
   console.log('[ReportsScreen]', ...args);
+}
+
+function diffDays(validUntil) {
+  const expiryDate = validUntil?.toDate ? validUntil.toDate() : new Date(validUntil);
+  if (!expiryDate || Number.isNaN(expiryDate.getTime())) return null;
+  return Math.ceil((expiryDate.getTime() - Date.now()) / (1000 * 60 * 60 * 24));
 }
 
 export default function ReportsScreen() {
@@ -25,6 +38,14 @@ export default function ReportsScreen() {
   const [branchId, setBranchId] = useState('');
   const [matrixRows, setMatrixRows] = useState([]);
   const [failedEvaluations, setFailedEvaluations] = useState([]);
+  const [compliance, setCompliance] = useState({
+    compliantPercent: 0,
+    expiring30: 0,
+    expiring60: 0,
+    expiring90: 0,
+    expired: 0
+  });
+  const [activeTab, setActiveTab] = useState(0);
 
   devLog('render', {
     ownerId: ownerId || null,
@@ -39,13 +60,22 @@ export default function ReportsScreen() {
     setError('');
 
     try {
-      const [matrixResult, catalog] = await Promise.all([
+      const [matrixResult, catalog, complianceReport, expiringRecords] = await Promise.all([
         trainingComplianceService.buildMatrix(ownerId, {
           branchId: branchId || null,
           page: 1,
           pageSize: 500
         }),
-        trainingCatalogService.listAll(ownerId)
+        trainingCatalogService.listAll(ownerId),
+        trainingReportingService.buildComplianceReport(ownerId, { branchId: branchId || null }),
+        employeeTrainingRecordService.listExpiring(
+          ownerId,
+          branchId || null,
+          [
+            TRAINING_COMPLIANCE_STATUSES.EXPIRING_SOON,
+            TRAINING_COMPLIANCE_STATUSES.EXPIRED
+          ]
+        )
       ]);
 
       const rows = matrixResult?.rows || [];
@@ -55,6 +85,37 @@ export default function ReportsScreen() {
         totalCells: matrixResult?.totalCells ?? null
       });
       setMatrixRows(rows);
+
+      const expiring30 = expiringRecords.filter((record) => {
+        const days = diffDays(record.validUntil);
+        return days !== null && days >= 0 && days <= 30;
+      }).length;
+
+      const expiring60 = expiringRecords.filter((record) => {
+        const days = diffDays(record.validUntil);
+        return days !== null && days >= 0 && days <= 60;
+      }).length;
+
+      const expiring90 = expiringRecords.filter((record) => {
+        const days = diffDays(record.validUntil);
+        return days !== null && days >= 0 && days <= 90;
+      }).length;
+
+      const expired = expiringRecords.filter(
+        (record) => record.complianceStatus === TRAINING_COMPLIANCE_STATUSES.EXPIRED
+      ).length;
+
+      const totalRules = complianceReport?.totalRules || 0;
+      const compliantEstimate = Math.max(0, totalRules - (complianceReport?.expiringSoon || 0) - (complianceReport?.expired || 0));
+      const compliantPercent = totalRules > 0 ? Math.round((compliantEstimate / totalRules) * 100) : 0;
+
+      setCompliance({
+        compliantPercent,
+        expiring30,
+        expiring60,
+        expiring90,
+        expired
+      });
 
       const failedByTraining = {};
 
@@ -99,6 +160,14 @@ export default function ReportsScreen() {
       setError(err.message || 'No se pudieron cargar los reportes.');
       setMatrixRows([]);
       setFailedEvaluations([]);
+      // TODO: conectar compliance y mostrar los cards con valores en 0 si falla el cálculo.
+      setCompliance({
+        compliantPercent: 0,
+        expiring30: 0,
+        expiring60: 0,
+        expiring90: 0,
+        expired: 0
+      });
     } finally {
       setLoading(false);
     }
@@ -157,7 +226,24 @@ export default function ReportsScreen() {
           <CircularProgress />
         </Box>
       ) : (
-        <ReportsHub matrixRows={matrixRows} failedEvaluations={failedEvaluations} />
+        <Box>
+          <Tabs
+            value={activeTab}
+            onChange={(_, value) => setActiveTab(value)}
+            aria-label="Reportes de capacitación y cumplimiento"
+          >
+            <Tab label="Cumplimiento operativo" />
+            <Tab label="Reportes gerenciales" />
+          </Tabs>
+
+          <Box sx={{ pt: 2 }}>
+            {activeTab === 0 ? (
+              <ComplianceKpiCards compliance={compliance} />
+            ) : (
+              <ReportsHub matrixRows={matrixRows} failedEvaluations={failedEvaluations} />
+            )}
+          </Box>
+        </Box>
       )}
     </Box>
   );
