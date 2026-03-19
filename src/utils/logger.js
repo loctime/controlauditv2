@@ -6,7 +6,9 @@ const LEVELS = {
   none: 0
 };
 
-const rawLevel = (import.meta.env.VITE_LOG_LEVEL || 'error').toLowerCase();
+// En desarrollo, si no configuras VITE_LOG_LEVEL, asumimos debug para ver trazas.
+const envLogLevel = import.meta.env.VITE_LOG_LEVEL;
+const rawLevel = (envLogLevel || (import.meta.env.DEV ? 'debug' : 'error')).toLowerCase();
 const activeLevel = Object.prototype.hasOwnProperty.call(LEVELS, rawLevel) ? rawLevel : 'error';
 
 const shouldLog = (level) => LEVELS[activeLevel] >= LEVELS[level];
@@ -14,7 +16,8 @@ const shouldLog = (level) => LEVELS[activeLevel] >= LEVELS[level];
 const logger = {
   debug: (...args) => {
     if (shouldLog('debug')) {
-      console.debug(...args);
+      // Usar console.log en vez de console.debug para que no dependa del filtro del navegador.
+      console.log(...args);
     }
   },
 
@@ -22,13 +25,14 @@ const logger = {
   debugProd: (...args) => {
     if (!import.meta.env.PROD) return;
     if (shouldLog('debug')) {
-      console.debug('[PROD]', ...args);
+      console.log('[PROD]', ...args);
     }
   },
 
   info: (...args) => {
     if (shouldLog('info')) {
-      console.info(...args);
+      // Usar console.log para que sea visible incluso si console.info está filtrado.
+      console.log(...args);
     }
   },
 
@@ -48,7 +52,7 @@ const logger = {
   // Se registra como `info` para respetar VITE_LOG_LEVEL.
   autosave: (...args) => {
     if (shouldLog('info')) {
-      console.info('[AUTOSAVE]', ...args);
+      console.log('[AUTOSAVE]', ...args);
     }
   },
 
@@ -66,8 +70,8 @@ const logger = {
     // Mantener una salida consistente para que sea fácil de leer en consola.
     const args = payload !== undefined ? [message, error, payload] : [message, error];
 
-    if (normalizedLevel === 'debug') return console.debug('[FIRESTORE]', ...args);
-    if (normalizedLevel === 'info') return console.info('[FIRESTORE]', ...args);
+    if (normalizedLevel === 'debug') return console.log('[FIRESTORE]', ...args);
+    if (normalizedLevel === 'info') return console.log('[FIRESTORE]', ...args);
     if (normalizedLevel === 'warn') return console.warn('[FIRESTORE]', ...args);
     return console.error('[FIRESTORE]', ...args);
   }

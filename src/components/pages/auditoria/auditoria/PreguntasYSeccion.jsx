@@ -1,5 +1,5 @@
 import logger from '@/utils/logger';
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { Button, Box, Typography, Stack, useTheme, useMediaQuery } from '@mui/material';
 import WarningIcon from '@mui/icons-material/Warning';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
@@ -66,6 +66,12 @@ export default function PreguntasYSeccion({
   const [accionesRequeridas, setAccionesRequeridas] = useState([]);
   const [imagenes, setImagenes] = useState([]);
 
+  // Evita que el useEffect de "resincronización" desde props pise el estado local
+  // justo después de subir/borrar desde la UI (causa imágenes que desaparecen).
+  const skipNextImagenesSyncRef = useRef(false);
+  const hasInitImagesRef = useRef(false);
+  const seccionesKeyRef = useRef('');
+
   const [modalAbierto, setModalAbierto] = useState(false);
   const [comentario, setComentario] = useState('');
   const [currentSeccionIndex, setCurrentSeccionIndex] = useState(null);
@@ -79,9 +85,25 @@ export default function PreguntasYSeccion({
   useEffect(() => {
     if (!secciones.length) return;
 
+    // Reiniciar init de imágenes solo si cambia la "forma" del cuestionario.
+    const seccionesKey = `${secciones.length}:${secciones.map((s) => s?.preguntas?.length || 0).join(',')}`;
+    if (seccionesKeyRef.current !== seccionesKey) {
+      seccionesKeyRef.current = seccionesKey;
+      hasInitImagesRef.current = false;
+    }
+
     setRespuestas(normalizeQuestionMatrix(secciones, respuestasExistentes, ''));
     setComentarios(normalizeQuestionMatrix(secciones, comentariosExistentes, ''));
-    setImagenes(normalizeFilesMatrix(secciones, imagenesExistentes));
+    if (skipNextImagenesSyncRef.current) {
+      // Un ciclo de "gracia" para no pisar cambios locales.
+      skipNextImagenesSyncRef.current = false;
+    } else if (!hasInitImagesRef.current) {
+      // Inicializar una vez por estructura de secciones. Después, el estado local
+      // se mantiene por los handlers (subir/borrar), evitando que props vuelvan
+      // a pisar (causa típica de "desaparece enseguida").
+      setImagenes(normalizeFilesMatrix(secciones, imagenesExistentes));
+      hasInitImagesRef.current = true;
+    }
 
     setClasificaciones(
       secciones.map((seccion, seccionIndex) =>
@@ -153,6 +175,7 @@ export default function PreguntasYSeccion({
 
   const handleDeleteImage = async (seccionIndex, preguntaIndex, fileIndex) => {
     const target = imagenes?.[seccionIndex]?.[preguntaIndex]?.[fileIndex] || null;
+    console.log('[AUDITORIA IMG] delete click', { seccionIndex, preguntaIndex, fileIndex });
     const hasCanonicalRef =
       target &&
       typeof target === 'object' &&
@@ -173,29 +196,44 @@ export default function PreguntasYSeccion({
       }
     }
 
-    const next = imagenes.map((seccion, idx) => {
-      if (idx !== seccionIndex) return seccion;
-      const current = Array.isArray(seccion[preguntaIndex]) ? seccion[preguntaIndex] : [];
-      const updated = current.filter((_, index) => index !== fileIndex);
-      return [...seccion.slice(0, preguntaIndex), updated, ...seccion.slice(preguntaIndex + 1)];
+    skipNextImagenesSyncRef.current = true;
+    setImagenes((prevImagenes) => {
+      const next = (prevImagenes || []).map((seccion, idx) => {
+        if (idx !== seccionIndex) return seccion;
+        const current = Array.isArray(seccion[preguntaIndex]) ? seccion[preguntaIndex] : [];
+        const updated = current.filter((_, index) => index !== fileIndex);
+        return [...seccion.slice(0, preguntaIndex), updated, ...seccion.slice(preguntaIndex + 1)];
+      });
+      guardarImagenes?.(next);
+      return next;
     });
-
-    setImagenes(next);
-    guardarImagenes(next);
   };
 
   const handleImageUploaded = (seccionIndex, preguntaIndex, filesSeleccionados = []) => {
     const validFiles = (filesSeleccionados || []).filter((f) => f instanceof File);
+    console.log('[AUDITORIA IMG] handleImageUploaded', {
+      seccionIndex,
+      preguntaIndex,
+      selectedCount: filesSeleccionados?.length || 0,
+      validCount: validFiles.length,
+      names: validFiles.map((f) => f?.name).slice(0, 5)
+    });
     if (!validFiles.length) return;
 
-    const next = imagenes.map((seccion, idx) => {
-      if (idx !== seccionIndex) return seccion;
-      const current = Array.isArray(seccion[preguntaIndex]) ? seccion[preguntaIndex] : [];
-      return [...seccion.slice(0, preguntaIndex), [...current, ...validFiles], ...seccion.slice(preguntaIndex + 1)];
+    skipNextImagenesSyncRef.current = true;
+    setImagenes((prevImagenes) => {
+      const next = (prevImagenes || []).map((seccion, idx) => {
+        if (idx !== seccionIndex) return seccion;
+        const current = Array.isArray(seccion[preguntaIndex]) ? seccion[preguntaIndex] : [];
+        return [
+          ...seccion.slice(0, preguntaIndex),
+          [...current, ...validFiles],
+          ...seccion.slice(preguntaIndex + 1)
+        ];
+      });
+      guardarImagenes?.(next);
+      return next;
     });
-
-    setImagenes(next);
-    guardarImagenes(next);
   };
 
   const handleOpenModal = (seccionIndex, preguntaIndex) => {

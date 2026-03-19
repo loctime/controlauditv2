@@ -28,6 +28,7 @@ import {
   obtenerIconoRespuesta,
   preguntaContestada
 } from '../utils/respuestaUtils.jsx';
+import logger from '@/utils/logger';
 import UnifiedFileUploader from '@/components/common/files/UnifiedFileUploader';
 import UnifiedFilePreview from '@/components/common/files/UnifiedFilePreview';
 
@@ -72,7 +73,29 @@ export default function PreguntaItem({
 
   const handleUploaderChange = (_merged, result) => {
     const accepted = result?.accepted || [];
-    if (!accepted.length || !onImageUploaded) return;
+    const rejected = result?.rejected || [];
+    const warnings = result?.warnings || [];
+    logger.debug('[AUDITORIA IMG] UnifiedFileUploader resultado', {
+      acceptedCount: accepted.length,
+      rejectedCount: rejected.length,
+      warningsCount: warnings.length,
+      acceptedNames: accepted.map((f) => f?.name).slice(0, 5),
+      rejectedNames: rejected.map((r) => r?.fileName).slice(0, 5)
+    });
+
+    if (!accepted.length) return;
+    if (!onImageUploaded) {
+      console.log('[AUDITORIA IMG] onImageUploaded NO definido', { seccionIndex, preguntaIndex });
+      return;
+    }
+
+    console.log('[AUDITORIA IMG] llamando onImageUploaded', {
+      seccionIndex,
+      preguntaIndex,
+      acceptedCount: accepted.length,
+      acceptedIsFile: accepted[0] instanceof File
+    });
+
     onImageUploaded(seccionIndex, preguntaIndex, accepted);
   };
 

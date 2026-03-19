@@ -294,8 +294,22 @@ class AuditoriaService {
         }
       );
 
+      logger.debug('[auditoriaService] guardarAuditoriaOnline: pendingUploads', {
+        pendingUploadsCount: pendingUploads?.length || 0,
+        hasImagenes: Array.isArray(datosAuditoria.imagenes) && datosAuditoria.imagenes.length > 0,
+        entityId: docRef.id,
+        companyId,
+        ownerId
+      });
+
       let uploadFailures = [];
       if (pendingUploads.length > 0) {
+        logger.debug('[auditoriaService] Subiendo archivos evidencia (uploadFiles)', {
+          filesToUpload: pendingUploads.length,
+          module: 'auditorias',
+          entityId: docRef.id
+        });
+
         const uploadResult = await uploadFiles({
           ownerId,
           module: 'auditorias',
@@ -305,6 +319,13 @@ class AuditoriaService {
           uploadedBy: actorId,
           contextType: 'auditoria',
           tipoArchivo: 'evidencia'
+        });
+
+        logger.debug('[auditoriaService] uploadFiles resultado', {
+          fileRefsCount: Array.isArray(uploadResult?.fileRefs) ? uploadResult.fileRefs.length : null,
+          rejectedCount: Array.isArray(uploadResult?.rejected) ? uploadResult.rejected.length : null,
+          warningsCount: Array.isArray(uploadResult?.warnings) ? uploadResult.warnings.length : null,
+          failuresCount: Array.isArray(uploadResult?.failures) ? uploadResult.failures.length : null
         });
 
         uploadFailures = Array.isArray(uploadResult.failures) ? uploadResult.failures : [];

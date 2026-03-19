@@ -1,4 +1,4 @@
-﻿import React from 'react';
+import React from 'react';
 import { Box, Button, Typography } from '@mui/material';
 import { resolveFileAccess } from '../../../services/fileResolverService';
 
@@ -21,6 +21,21 @@ export default function UnifiedFilePreview({ fileRef, height = 240 }) {
 
   const { previewType, viewUrl, downloadUrl } = state;
   const finalDownloadUrl = downloadUrl || viewUrl;
+
+  // Fallback: si resolveFileAccess no logra clasificar como `image`,
+  // pero por mime/ext parece imagen, igual renderizamos usando el URL disponible.
+  const nameForExt = fileRef?.name || fileRef?.nombre || fileRef?.fileName || '';
+  const mimeForType = fileRef?.mimeType || '';
+  const isLikelyImage =
+    (typeof mimeForType === 'string' && mimeForType.toLowerCase().startsWith('image/')) ||
+    (typeof nameForExt === 'string' && /\.(png|jpe?g|gif|webp|bmp|svg|heic|heif)$/i.test(nameForExt));
+
+  const isLikelyControlFileImageUrl =
+    typeof finalDownloadUrl === 'string' && /\/image(\?.*)?$/i.test(finalDownloadUrl);
+
+  if ((isLikelyImage || isLikelyControlFileImageUrl) && finalDownloadUrl) {
+    return <img src={finalDownloadUrl} alt={nameForExt || fileRef?.fileId || fileRef?.shareToken || 'imagen'} style={{ maxWidth: '100%', maxHeight: height, objectFit: 'contain' }} />;
+  }
 
   if (previewType === 'image' && viewUrl) {
     return <img src={viewUrl} alt={fileRef.name} style={{ maxWidth: '100%', maxHeight: height, objectFit: 'contain' }} />;

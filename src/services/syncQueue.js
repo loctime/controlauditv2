@@ -392,6 +392,7 @@ class SyncQueueService {
     // Esto asegura que usamos el clienteAdminId correcto del usuario actual
     // Usar función helper para obtener usuario de forma robusta (maneja problemas de timing)
     let currentUserProfile = null;
+    let tokenOwnerId = null;
     try {
       const { auth, db: firestoreDb } = await import('../firebaseControlFile');
       const { onAuthStateChanged } = await import('firebase/auth');
@@ -430,7 +431,7 @@ class SyncQueueService {
         const currentUser = await getCurrentUser();
         // Obtener ownerId desde custom claims del token
         const tokenResult = await currentUser.getIdTokenResult(true);
-        const tokenOwnerId = tokenResult.claims.ownerId || currentUser.uid; // Admin usa su propio uid
+        tokenOwnerId = tokenResult.claims.ownerId || currentUser.uid; // Admin usa su propio uid
         
         // Leer desde owner-centric: apps/auditoria/owners/{ownerId}/usuarios/{userId}
         const userProfileRef = doc(firestoreDb, 'apps', 'auditoria', 'owners', tokenOwnerId, 'usuarios', currentUser.uid);
@@ -463,6 +464,9 @@ class SyncQueueService {
     const userProfile = currentUserProfile || {
       uid: auditoriaData.userId || auditoriaData.creadoPor,
       email: auditoriaData.userEmail || auditoriaData.usuarioEmail || auditoriaData.creadoPorEmail || 'usuario@ejemplo.com',
+      // CRITICO para AuditoriaService.guardarAuditoriaOnline:
+      // ownerId debe venir del token (custom claims) cuando existe; si no, intentar desde el payload.
+      ownerId: auditoriaData.ownerId || tokenOwnerId || auditoriaData.clienteAdminId || auditoriaData.userId || null,
       clienteAdminId: auditoriaData.clienteAdminId || auditoriaData.userId, // Fallback al uid si no hay clienteAdminId
       displayName: auditoriaData.userDisplayName || auditoriaData.userEmail || 'Usuario',
       role: auditoriaData.userRole || 'operario'
@@ -470,6 +474,7 @@ class SyncQueueService {
     
     logger.debug('[SyncQueue] 📋 Usando userProfile para sincronización:', {
       uid: userProfile.uid,
+      ownerId: userProfile.ownerId,
       clienteAdminId: userProfile.clienteAdminId,
       email: userProfile.email,
       role: userProfile.role,
@@ -485,6 +490,7 @@ class SyncQueueService {
     auditoriaData.clienteAdminId = auditoriaData.clienteAdminId || userProfile.clienteAdminId;
     auditoriaData.creadoPor = auditoriaData.creadoPor || userProfile.uid;
     auditoriaData.creadoPorEmail = auditoriaData.creadoPorEmail || userProfile.email;
+    auditoriaData.ownerId = auditoriaData.ownerId || userProfile.ownerId || tokenOwnerId || null;
 
     // Procesar imágenes si existen
     if (auditoriaData.imagenes && auditoriaData.imagenes.length > 0) {

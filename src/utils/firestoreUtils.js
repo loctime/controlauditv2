@@ -9,14 +9,29 @@ import { addDoc, Timestamp } from 'firebase/firestore';
  */
 export const convertirArraysAObjetos = (arraysAnidados) => {
   const objetoPlano = {};
-  
+
+  if (!Array.isArray(arraysAnidados)) return objetoPlano;
+
   arraysAnidados.forEach((seccionArray, seccionIndex) => {
-    seccionArray.forEach((item, preguntaIndex) => {
-      const clave = `seccion_${seccionIndex}_pregunta_${preguntaIndex}`;
-      objetoPlano[clave] = item;
-    });
+    // Caso 1: arrays anidados reales => [ [item,item], [item] ]
+    if (Array.isArray(seccionArray)) {
+      seccionArray.forEach((item, preguntaIndex) => {
+        const clave = `seccion_${seccionIndex}_pregunta_${preguntaIndex}`;
+        objetoPlano[clave] = item;
+      });
+      return;
+    }
+
+    // Caso 2: array de objetos con estructura { seccion, valores }
+    // (el código de auditoría refactorizada suele mandar este formato)
+    if (seccionArray && typeof seccionArray === 'object' && Array.isArray(seccionArray.valores)) {
+      seccionArray.valores.forEach((item, preguntaIndex) => {
+        const clave = `seccion_${seccionIndex}_pregunta_${preguntaIndex}`;
+        objetoPlano[clave] = item;
+      });
+    }
   });
-  
+
   return objetoPlano;
 };
 
