@@ -6,19 +6,20 @@ import { useAuth } from '@/components/context/AuthContext';
 import AuditoriaService from "../auditoriaService";
 import { buildReporteMetadata } from '../../../../services/useMetadataService';
 import { getOfflineDatabase } from '../../../../services/offlineDatabase';
-const BotonGenerarReporte = ({ 
-  onClick, 
-  deshabilitado, 
-  empresa, 
-  sucursal, 
-  formulario, 
-  respuestas, 
-  comentarios, 
-  imagenes, 
+const BotonGenerarReporte = ({
+  onClick,
+  deshabilitado,
+  empresa,
+  sucursal,
+  formulario,
+  respuestas,
+  comentarios,
+  imagenes,
   clasificaciones,
   secciones,
   firmaAuditor,
   firmaResponsable,
+  datosReporte = {},
   onFinalizar
 }) => {
   const { user, userProfile } = useAuth();
