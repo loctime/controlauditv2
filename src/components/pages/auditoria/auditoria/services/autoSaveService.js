@@ -844,7 +844,13 @@ class AutoSaveService {
       const fotos = await db.getAllFromIndex('fotos', 'by-auditoriaId', auditoriaData.id);
       
       if (fotos.length === 0) {
-        return auditoriaData;
+        // FIX: el store fotos está vacío porque las imágenes son file_ref (ya subidas a ControlFile,
+        // se saltean en saveOfflineImages). Pero auditoriaData no tiene campo imagenes porque saveOffline
+        // lo borra antes de persistir en IndexedDB. Reconstruirlo desde filesDraftByQuestion.
+        return {
+          ...auditoriaData,
+          imagenes: this.restoreImagenesFromDraft(auditoriaData.filesDraftByQuestion || [])
+        };
       }
 
       // FIX: No usar restoreImagenesFromDraft (filtra con .filter(Boolean) y colapsa posiciones).
