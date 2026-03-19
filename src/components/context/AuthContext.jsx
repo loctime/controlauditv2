@@ -506,14 +506,6 @@ const AuthContextComponent = ({ children }) => {
             }
           }
           
-          // Cargar auditorías desde Firestore
-          if (context.uid) {
-            await Promise.all([
-              loadUserAuditorias(firebaseUser.uid, context).then(aud => setUserAuditorias(aud)),
-              loadAuditoriasCompartidas(firebaseUser.uid, context).then(aud => setAuditoriasCompartidas(aud))
-            ]);
-          }
-
           // Activar listeners diferidos después de carga inicial
           setTimeout(() => {
             setEnableDeferredListeners(true);
@@ -691,8 +683,16 @@ const AuthContextComponent = ({ children }) => {
     canViewAuditoria: (auditoriaId) => auditoriaService.canViewAuditoria(auditoriaId, userContext, auditoriasCompartidas),
     getUserSucursales: () => loadUserSucursales(user?.uid),
     getUserFormularios: () => loadUserFormularios(user?.uid),
-    getUserAuditorias: () => loadUserAuditorias(user?.uid, userContext),
-    getAuditoriasCompartidas: () => loadAuditoriasCompartidas(user?.uid, userContext),
+    getUserAuditorias: async () => {
+      const aud = await loadUserAuditorias(user?.uid, userContext);
+      setUserAuditorias(aud);
+      return aud;
+    },
+    getAuditoriasCompartidas: async () => {
+      const aud = await loadAuditoriasCompartidas(user?.uid, userContext);
+      setAuditoriasCompartidas(aud);
+      return aud;
+    },
     role,
     editarPermisosOperario,
     logAccionOperario,
