@@ -517,8 +517,12 @@ class SyncQueueService {
     });
 
     // Guardar en Firebase
-    const auditoriaId = await AuditoriaService.guardarAuditoria(auditoriaData, userProfile);
-    
+    const { id: auditoriaId, uploadFailures } = await AuditoriaService.guardarAuditoria(auditoriaData, userProfile);
+
+    if (uploadFailures && uploadFailures.length > 0) {
+      logger.warn(`[SyncQueue] Auditoría sincronizada con ${uploadFailures.length} imagen(es) que no pudieron subirse:`, uploadFailures);
+    }
+
     // Actualizar estado en IndexedDB
     await db.put('auditorias', {
       ...auditoriaData,

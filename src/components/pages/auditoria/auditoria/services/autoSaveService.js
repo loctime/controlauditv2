@@ -385,7 +385,11 @@ class AutoSaveService {
       }
 
       // IMPORTANTE: También guardar en IndexedDB con imágenes REALES y arrays completos
-      await this.saveOffline(userId, auditoriaData);
+      // savedToFirestore=true: Firestore ya tiene los datos, IndexedDB es solo respaldo offline
+      const indexedDbSaved = await this.saveOffline(userId, auditoriaData, true);
+      if (!indexedDbSaved) {
+        logger.error('AutoSaveService: El respaldo en IndexedDB falló. Los datos están en Firestore pero no disponibles sin conexión.', { userId, sessionId });
+      }
 
       // También guardar en localStorage como respaldo (con arrays como arrays, no strings JSON)
       const datosParaLocalStorage = {
@@ -436,7 +440,9 @@ class AutoSaveService {
   }
 
   // Guardar offline en IndexedDB
-  async saveOffline(userId, auditoriaData) {
+  // savedToFirestore=true: los datos ya están en Firestore, IndexedDB actúa solo como respaldo offline
+  // savedToFirestore=false: los datos NO están en Firestore, deben sincronizarse
+  async saveOffline(userId, auditoriaData, savedToFirestore = false) {
     try {
       // Verificar límites de almacenamiento
       const storageCheck = await checkStorageLimit();
@@ -469,10 +475,8 @@ class AutoSaveService {
 
       // Generar ID único para la auditoría offline
       const auditoriaId = generateOfflineId();
-      
+
       // Preparar datos para IndexedDB con información completa del usuario
-      // IMPORTANTE: Las auditorías autoguardadas NO deben sincronizarse automáticamente
-      const isAutoSaved = auditoriaData.autoSaved !== false; // Por defecto es autoguardado
       const filesDraftByQuestion = this.buildFilesDraftByQuestion(auditoriaData.imagenes || []);
       const auditoriaDataWithoutLegacyImages = { ...auditoriaData };
       delete auditoriaDataWithoutLegacyImages.imagenes;
@@ -491,12 +495,11 @@ class AutoSaveService {
         creadoPorEmail: userProfile?.email || 'usuario@ejemplo.com',
         sessionId: this.generateSessionId(),
         lastModified: new Date(),
-        autoSaved: isAutoSaved,
+        autoSaved: savedToFirestore, // true = backup (ya está en Firestore), false = necesita sincronizarse
         createdAt: Date.now(),
         updatedAt: Date.now(),
-        // Las auditorías autoguardadas NO deben tener status 'pending_sync'
-        // Solo se sincronizan cuando el usuario finaliza la auditoría
-        status: isAutoSaved ? 'auto_saved' : 'pending_sync',
+        // pending_sync: necesita llegar a Firestore | auto_saved: backup de datos ya en Firestore
+        status: savedToFirestore ? 'auto_saved' : 'pending_sync',
         filesDraftByQuestion
       };
 
@@ -515,12 +518,13 @@ class AutoSaveService {
         await this.saveOfflineImages(auditoriaData.imagenes, auditoriaId, db);
       }
 
-      // IMPORTANTE: NO encolar autoguardados para sincronización
-      // Solo se sincronizan cuando el usuario finaliza la auditoría explícitamente
-      if (!isAutoSaved && !saveData.autoSaved) {
+      // Encolar para sincronización si los datos NO están ya en Firestore
+      // Esto aplica tanto a guardados manuales como a autoguardados que quedaron offline
+      if (!savedToFirestore) {
         await syncQueueService.enqueueAuditoria(saveData, 1);
+        logger.debug('Auditoría encolada para sincronización con Firestore', { auditoriaId });
       } else {
-        logger.debug('Auditoría autoguardada NO encolada para sincronización', { auditoriaId });
+        logger.debug('Auditoría ya en Firestore, guardada en IndexedDB como respaldo offline', { auditoriaId });
       }
 
       // También guardar en localStorage como respaldo (sin imágenes)
