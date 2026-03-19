@@ -7,7 +7,8 @@ import {
   getDoc, 
   query, 
   where,
-  limit
+  limit,
+  orderBy
 } from 'firebase/firestore';
 import { dbAudit } from '../firebaseControlFile';
 import { registrarAccionSistema } from '../utils/firestoreUtils';
@@ -34,7 +35,9 @@ export const auditoriaService = {
       const reportesRef = collection(dbAudit, ...firestoreRoutesCore.reportes(ownerId));
       logger.debug('[AUDIT PATH] Leyendo desde:', `apps/auditoria/owners/${ownerId}/reportes`);
       
-      const q = query(reportesRef, limit(500));
+      // Traer siempre los más recientes primero (y limitar sobre ese orden)
+      // Nota: en auditorias se usa `fechaCreacion` (ISO string o Timestamp según legado).
+      const q = query(reportesRef, orderBy('fechaCreacion', 'desc'), limit(500));
       const snapshotResult = await getDocs(q);
       logger.debug('[AUDIT PATH] Resultado principal:', snapshotResult.size, 'documentos');
       

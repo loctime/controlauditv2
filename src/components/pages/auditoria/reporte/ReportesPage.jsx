@@ -258,6 +258,19 @@ const ReportesPage = () => {
     
     let filtered = [...reportes];
 
+    // Normaliza `fechaCreacion` a `Date` para evitar problemas de tipo (Timestamp vs ISO string).
+    const parseFechaCreacion = (fechaCreacion) => {
+      if (!fechaCreacion) return null;
+      try {
+        if (fechaCreacion?.toDate) return fechaCreacion.toDate();
+        if (fechaCreacion instanceof Date) return fechaCreacion;
+        const d = new Date(fechaCreacion);
+        return Number.isNaN(d?.getTime?.()) ? null : d;
+      } catch {
+        return null;
+      }
+    };
+
     // Filtro por empresas
     if (empresasSeleccionadas.length > 0) {
       filtered = filtered.filter(reporte => {
@@ -276,16 +289,30 @@ const ReportesPage = () => {
 
     // Filtro por fechas
     if (fechaDesde) {
+      const fechaDesdeDate =
+        fechaDesde?.startOf && fechaDesde?.toDate
+          ? fechaDesde.startOf('day').toDate()
+          : (fechaDesde.toDate ? fechaDesde.toDate() : new Date(fechaDesde));
+
       filtered = filtered.filter(reporte => {
-        const fechaReporte = new Date(reporte.fechaCreacion);
-        return fechaReporte >= (fechaDesde.toDate ? fechaDesde.toDate() : new Date(fechaDesde));
+        const fechaReporte = parseFechaCreacion(reporte.fechaCreacion);
+        if (!fechaReporte) return false;
+        return fechaReporte >= fechaDesdeDate;
       });
     }
 
     if (fechaHasta) {
+      // `DatePicker` suele devolver la fecha a medianoche local; usamos fin de día para incluir
+      // documentos “del día seleccionado” completos.
+      const fechaHastaDate =
+        fechaHasta?.endOf && fechaHasta?.toDate
+          ? fechaHasta.endOf('day').toDate()
+          : (fechaHasta.toDate ? fechaHasta.toDate() : new Date(fechaHasta));
+
       filtered = filtered.filter(reporte => {
-        const fechaReporte = new Date(reporte.fechaCreacion);
-        return fechaReporte <= (fechaHasta.toDate ? fechaHasta.toDate() : new Date(fechaHasta));
+        const fechaReporte = parseFechaCreacion(reporte.fechaCreacion);
+        if (!fechaReporte) return false;
+        return fechaReporte <= fechaHastaDate;
       });
     }
 
