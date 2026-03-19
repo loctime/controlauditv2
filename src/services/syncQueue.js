@@ -270,12 +270,20 @@ class SyncQueueService {
   async processQueue() {
     let acquired = false;
     try {
+<<<<<<< HEAD
       if (this.isProcessingQueue) {
         logger.debug('[SYNC DEBUG] processQueue skipped | reason: already_running');
         return;
       }
       this.isProcessingQueue = true;
       acquired = true;
+=======
+      if (!navigator.onLine) {
+        logger.debug('📵 Sin conexión, omitiendo procesamiento de cola');
+        return;
+      }
+
+>>>>>>> d572df201c54f1176ffb16179a5480089c421492
       const db = await getOfflineDatabase();
       const now = Date.now();
       
@@ -543,6 +551,22 @@ class SyncQueueService {
     auditoriaData.creadoPor = auditoriaData.creadoPor || userProfile.uid;
     auditoriaData.creadoPorEmail = auditoriaData.creadoPorEmail || userProfile.email;
     auditoriaData.ownerId = auditoriaData.ownerId || userProfile.ownerId || tokenOwnerId || null;
+
+    // Restaurar imágenes offline desde IndexedDB antes de sincronizar
+    try {
+      const { default: autoSaveService } = await import('../components/pages/auditoria/auditoria/services/autoSaveService');
+      // Solo restaurar si no hay imágenes en el payload (fueron eliminadas al guardar offline)
+      if (!auditoriaData.imagenes || auditoriaData.imagenes.length === 0) {
+        const auditoriaConImagenes = await autoSaveService.restoreAuditoriaImages(auditoriaData, db);
+        if (auditoriaConImagenes && auditoriaConImagenes.imagenes) {
+          auditoriaData = { ...auditoriaData, imagenes: auditoriaConImagenes.imagenes };
+          logger.debug('[SyncQueue] ✅ Imágenes restauradas desde IndexedDB:', auditoriaData.imagenes.length, 'secciones');
+        }
+      }
+    } catch (restoreError) {
+      logger.warn('[SyncQueue] ⚠️ No se pudieron restaurar imágenes offline, sincronizando sin fotos:', restoreError.message);
+      // No bloquear la sync si falla la restauración de imágenes
+    }
 
     // Procesar imágenes si existen
     if (auditoriaData.imagenes && auditoriaData.imagenes.length > 0) {

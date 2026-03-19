@@ -12,7 +12,7 @@ const canRoleWrite = (role) => {
   if (!role) return false;
   
   // Roles que permiten escritura
-  const writeRoles = ['supermax', 'max', 'admin', 'maxdev'];
+  const writeRoles = ['supermax', 'max', 'admin', 'maxdev', 'operario'];
   return writeRoles.includes(role);
 };
 
