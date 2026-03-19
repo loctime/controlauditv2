@@ -38,6 +38,8 @@ import PerfilConfiguracion from './PerfilConfiguracion';
 import PerfilFirma from './PerfilFirma';
 import PerfilInfoSistema from './PerfilInfoSistema';
 import PerfilDialogs from './PerfilDialogs';
+import { shouldEnableOffline } from '../../../utils/pwaDetection';
+import CacheManager from '../../common/CacheManager';
 
 const PerfilUsuario = () => {
   const theme = useTheme();
@@ -659,8 +661,15 @@ const PerfilUsuario = () => {
             )}
           </Box>
         </Box>
+
+        {/* Cache offline - solo en PWA móvil */}
+        {shouldEnableOffline() && (
+          <Box sx={{ p: isSmallMobile ? 3 : 4 }}>
+            <CacheManager />
+          </Box>
+        )}
       </Box>
-      
+
       {/* Diálogos modales */}
       <PerfilDialogs
         openDialogSocio={openDialogSocio}
