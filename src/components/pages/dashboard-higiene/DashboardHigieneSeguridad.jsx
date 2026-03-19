@@ -42,7 +42,6 @@ import {
 import { useAuth } from '@/components/context/AuthContext';
 import GraficoIndices from './components/GraficoIndices';
 import SelectoresDashboard from './components/SelectoresDashboard';
-import GlobalFiltersBar from '../../layout/GlobalFiltersBar';
 import MetricChips from './components/MetricChips';
 import AlertState from './components/AlertState';
 import IndiceCardCompact from './components/IndiceCardCompact';
@@ -452,11 +451,6 @@ const DashboardHigieneSeguridad = () => {
           </Alert>
         </Box>
         
-        {/* Filtros globales (Empresa/Sucursal) */}
-        <Box sx={{ mb: 3 }}>
-          <GlobalFiltersBar compact={false} showSucursal={true} />
-        </Box>
-
         {/* Selector de Año */}
         <Box sx={{ mb: 3 }}>
           <SelectoresDashboard

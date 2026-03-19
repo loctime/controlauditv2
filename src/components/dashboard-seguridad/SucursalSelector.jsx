@@ -31,8 +31,8 @@ export default function SucursalSelector({
       boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
       height: isNavbarMode ? 30 : 'auto',
       minHeight: isNavbarMode ? 30 : 'auto',
-      width: isNavbarMode ? { xs: '100%', sm: 280, md: 300 } : '100%',
-      maxWidth: isNavbarMode ? 320 : 'none'
+      width: isNavbarMode ? { xs: '140px', sm: '160px', md: '180px' } : '100%',
+      maxWidth: isNavbarMode ? 180 : 'none'
     }}>
       {!isNavbarMode && (
         <BusinessIcon sx={{ color: '#667eea', fontSize: 24 }} />

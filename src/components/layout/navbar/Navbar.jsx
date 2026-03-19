@@ -23,6 +23,9 @@ import { useState, useEffect } from "react";
 import LogoutIcon from "@mui/icons-material/Logout";
 import { logout } from "../../../firebaseControlFile";
 import { useAuth } from '@/components/context/AuthContext';
+import { useGlobalSelection } from '@/hooks/useGlobalSelection';
+import EmpresaSelector from '@/components/dashboard-seguridad/EmpresaSelector';
+import SucursalSelector from '@/components/dashboard-seguridad/SucursalSelector';
 import { doc, getDoc } from 'firebase/firestore';
 import { dbAudit } from '../../../firebaseControlFile';
 import { firestoreRoutesCore } from '../../../core/firestore/firestoreRoutes.core';
@@ -49,6 +52,15 @@ function Navbar(props) {
   const [menuAnchors, setMenuAnchors] = useState({});
   const navigate = useNavigate();
   const { logoutContext, user, role, permisos, userProfile, bloqueado, isLogged, userContext, selectedOwnerId, getEffectiveOwnerId } = useAuth();
+  const {
+    empresasDisponibles,
+    sucursalesDisponibles,
+    selectedEmpresa: navSelectedEmpresa,
+    selectedSucursal: navSelectedSucursal,
+    setEmpresa: navSetEmpresa,
+    setSucursal: navSetSucursal,
+  } = useGlobalSelection();
+
   const { mode, toggleColorMode } = useColorMode();
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
@@ -123,10 +135,11 @@ function Navbar(props) {
         style={{
           color: "#ffffff",
           textDecoration: "none",
-          fontSize: "0.95rem",
-          padding: "8px 12px",
+          fontSize: "1.1rem",
+          fontWeight: 600,
+          padding: "10px 16px",
           lineHeight: 1.2,
-          borderRadius: "4px",
+          borderRadius: "6px",
           transition: "background-color 0.2s",
         }}
       >
@@ -148,22 +161,23 @@ function Navbar(props) {
           onClick={handleGroupMenuOpen(groupKey)}
           sx={{
             color: "#ffffff",
-            fontSize: '0.95rem',
-            padding: '8px 12px',
+            fontSize: '1.1rem',
+            fontWeight: 600,
+            padding: '10px 16px',
             lineHeight: 1.2,
-            borderRadius: '4px',
+            borderRadius: '6px',
             transition: 'background-color 0.2s',
             cursor: 'pointer',
             display: 'flex',
             alignItems: 'center',
             gap: 0.5,
             '&:hover': {
-              backgroundColor: 'rgba(255,255,255,0.1)',
+              backgroundColor: 'rgba(255,255,255,0.15)',
             },
           }}
         >
           {label}
-          <KeyboardArrowDownIcon sx={{ fontSize: '1rem' }} />
+          <KeyboardArrowDownIcon sx={{ fontSize: '1.2rem' }} />
         </Box>
         <Menu
           anchorEl={anchorEl}
@@ -208,6 +222,20 @@ function Navbar(props) {
           <Box sx={{ color: '#ffffff', fontSize: '0.9rem' }}>
             <div>Usuario: {user.email}</div>
           </Box>
+        </Box>
+      )}
+      {user && !isBloqueado && empresasDisponibles.length > 0 && (
+        <Box sx={{ p: 2, borderBottom: '1px solid rgba(255,255,255,0.1)', display: 'flex', flexDirection: 'column', gap: 1 }}>
+          <EmpresaSelector
+            empresas={empresasDisponibles}
+            selectedEmpresa={navSelectedEmpresa}
+            onEmpresaChange={navSetEmpresa}
+          />
+          <SucursalSelector
+            sucursales={sucursalesDisponibles}
+            selectedSucursal={navSelectedSucursal}
+            onSucursalChange={navSetSucursal}
+          />
         </Box>
       )}
       {isBloqueado ? (
@@ -302,13 +330,14 @@ function Navbar(props) {
           display: "flex",
           justifyContent: { xs: "space-between", md: "center" },
           alignItems: "center",
-          minHeight: { xs: 48, sm: 56 },
-          height: { xs: 48, sm: 56 },
+          minHeight: { xs: 72, sm: 80 },
+          height: { xs: 'auto', sm: 'auto' },
+          py: { xs: 1.5, sm: 2 },
           px: { xs: 1, sm: 1 },
-          py: 0,
           position: "relative",
           zIndex: 2,
           flexShrink: 0,
+          flexDirection: { xs: 'row', md: 'row' },
           '& > *': {
             display: 'flex',
             alignItems: 'center'
@@ -317,15 +346,40 @@ function Navbar(props) {
           {!isBloqueado && (
             <Box sx={{ 
               display: { xs: 'none', md: 'flex' }, 
-              gap: 2, 
+              gap: 2.5, 
               alignItems: 'center',
-              flex: 1
+              flex: 1,
+              flexWrap: 'wrap'
             }}>
               {renderGroupDropdown('gestion')}
               {renderGroupDropdown('empresas')}
               {renderGroupDropdown('auditorias')}
               {renderGroupDropdown('higiene')}
               {renderProfileLink()}
+              {empresasDisponibles.length > 0 && (
+                <Box sx={{ 
+                  display: 'flex', 
+                  gap: 1.5, 
+                  alignItems: 'center',
+                  ml: 2,
+                  order: 10
+                }}>
+                  <EmpresaSelector
+                    empresas={empresasDisponibles}
+                    selectedEmpresa={navSelectedEmpresa}
+                    onEmpresaChange={navSetEmpresa}
+                    compact={true}
+                    embedded={true}
+                  />
+                  <SucursalSelector
+                    sucursales={sucursalesDisponibles}
+                    selectedSucursal={navSelectedSucursal}
+                    onSucursalChange={navSetSucursal}
+                    compact={true}
+                    embedded={true}
+                  />
+                </Box>
+              )}
             </Box>
           )}
 
@@ -521,7 +575,7 @@ function Navbar(props) {
         className="main-content-wrapper"
         sx={{ 
           flexGrow: 1, 
-          pt: { xs: 8, sm: 9 }, // Compensar altura del Navbar (48px/56px toolbar)
+          pt: { xs: 10, sm: 11 }, // Compensar altura aumentada del Navbar
           pb: { xs: 1, sm: 2, md: 3 },
           width: "100%", 
           minHeight: "100vh", 

@@ -29,7 +29,6 @@ import { toast } from "react-toastify";
 import DashboardLoading from "./components/DashboardLoading";
 import DashboardHeader from "./components/DashboardHeader";
 import DashboardFilters from "./components/DashboardFilters";
-import GlobalFiltersBar from "../../layout/GlobalFiltersBar";
 import DashboardSummaryCard from "./components/DashboardSummaryCard";
 import DashboardMainGrid from "./components/DashboardMainGrid";
 import DashboardNoDataCard from "./components/DashboardNoDataCard";
@@ -716,8 +715,6 @@ export default function DashboardSeguridadV2() {
       )}
 
       <DashboardHeader companyName={data?.companyName ?? '—'} period={data?.period} />
-
-      <GlobalFiltersBar compact={false} showSucursal={true} />
 
       <DashboardFilters
         selectedYear={selectedYear}
