@@ -474,8 +474,28 @@ class AutoSaveService {
         logger.debug('Error al obtener usuario del cache:', error);
       }
 
-      // Generar ID único para la auditoría offline
-      const auditoriaId = generateOfflineId();
+      // Reutilizar ID si ya existe un borrador offline para evitar duplicados
+      let auditoriaId = auditoriaData.id || auditoriaData.auditoriaId || null;
+      let existingAuditoria = null;
+
+      if (auditoriaId) {
+        existingAuditoria = await db.get('auditorias', auditoriaId);
+      } else {
+        const offlineData = await db.getAllFromIndex('auditorias', 'by-userId', userId);
+        const candidates = offlineData.filter(a =>
+          (a.status === 'auto_saved' || a.status === 'pending_sync') &&
+          !a.estadoCompletada &&
+          (!a.auditoriaGenerada || a.activeStep < 4)
+        );
+        if (candidates.length > 0) {
+          existingAuditoria = candidates.sort((a, b) => (b.updatedAt || 0) - (a.updatedAt || 0))[0];
+          auditoriaId = existingAuditoria.id;
+        }
+      }
+
+      if (!auditoriaId) {
+        auditoriaId = generateOfflineId();
+      }
 
       // Preparar datos para IndexedDB con información completa del usuario
       const filesDraftByQuestion = this.buildFilesDraftByQuestion(auditoriaData.imagenes || []);
@@ -494,10 +514,10 @@ class AutoSaveService {
         ownerId: userProfile?.ownerId || null,
         creadoPor: userProfile?.uid || userId,
         creadoPorEmail: userProfile?.email || 'usuario@ejemplo.com',
-        sessionId: this.generateSessionId(),
+        sessionId: existingAuditoria?.sessionId || this.generateSessionId(),
         lastModified: new Date(),
         autoSaved: savedToFirestore, // true = backup (ya está en Firestore), false = necesita sincronizarse
-        createdAt: Date.now(),
+        createdAt: existingAuditoria?.createdAt || Date.now(),
         updatedAt: Date.now(),
         // pending_sync: necesita llegar a Firestore | auto_saved: backup de datos ya en Firestore
         status: savedToFirestore ? 'auto_saved' : 'pending_sync',
@@ -514,6 +534,16 @@ class AutoSaveService {
       // Guardar auditoría en IndexedDB
       await db.put('auditorias', saveData);
 
+      logger.debug(`[SYNC DEBUG] tipo: CREATE_AUDITORIA | id: ${auditoriaId} | origen: autosave | action: save_offline`);
+
+      // Si reutilizamos un borrador existente, limpiar fotos previas para evitar duplicados
+      if (existingAuditoria) {
+        const fotosPrevias = await db.getAllFromIndex('fotos', 'by-auditoriaId', auditoriaId);
+        for (const foto of fotosPrevias) {
+          await db.delete('fotos', foto.id);
+        }
+      }
+
       // Procesar y guardar fotos si existen - IMPORTANTE: guardar imágenes reales
       if (auditoriaData.imagenes && auditoriaData.imagenes.length > 0) {
         await this.saveOfflineImages(auditoriaData.imagenes, auditoriaId, db);
@@ -522,7 +552,7 @@ class AutoSaveService {
       // Encolar para sincronización si los datos NO están ya en Firestore
       // Esto aplica tanto a guardados manuales como a autoguardados que quedaron offline
       if (!savedToFirestore) {
-        await syncQueueService.enqueueAuditoria(saveData, 1);
+        await syncQueueService.enqueueAuditoria(saveData, 1, { origin: 'autosave' });
         logger.debug('Auditoría encolada para sincronización con Firestore', { auditoriaId });
       } else {
         logger.debug('Auditoría ya en Firestore, guardada en IndexedDB como respaldo offline', { auditoriaId });
@@ -592,7 +622,7 @@ class AutoSaveService {
                 width: 0,
                 height: 0,
                 size: imagen.size,
-                createdAt: Date.now(),
+                createdAt: existingAuditoria?.createdAt || Date.now(),
                 originalName: imagen.name
               };
 
@@ -1033,3 +1063,8 @@ class AutoSaveService {
 }
 
 export default new AutoSaveService(); 
+
+
+
+
+

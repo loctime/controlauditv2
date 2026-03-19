@@ -451,7 +451,7 @@ class AuditoriaService {
         throw new Error('No se pudo inicializar la base de datos offline');
       }
 
-      const auditoriaId = generateOfflineId();
+      const auditoriaId = datosAuditoria.id || datosAuditoria.auditoriaId || generateOfflineId();
       const authData = {
         userId: userProfile?.uid || datosAuditoria.usuarioId,
         userEmail: userProfile?.email || datosAuditoria.usuarioEmail || 'usuario@ejemplo.com',
@@ -474,11 +474,19 @@ class AuditoriaService {
 
       await db.put('auditorias', saveData);
 
+      logger.debug(`[SYNC DEBUG] tipo: CREATE_AUDITORIA | id: ${auditoriaId} | origen: manual | action: save_offline`);
+
+      // Limpiar fotos previas si ya existía un borrador con este ID
+      const fotosPrevias = await db.getAllFromIndex('fotos', 'by-auditoriaId', auditoriaId);
+      for (const foto of fotosPrevias) {
+        await db.delete('fotos', foto.id);
+      }
+
       if (datosAuditoria.imagenes && datosAuditoria.imagenes.length > 0) {
         await this.guardarFotosOffline(datosAuditoria.imagenes, auditoriaId, db);
       }
 
-      await syncQueueService.enqueueAuditoria(saveData, 1);
+      await syncQueueService.enqueueAuditoria(saveData, 1, { origin: 'manual' });
       return auditoriaId;
     } catch (error) {
       logger.error('Error al guardar auditoria offline:', error);
@@ -627,6 +635,11 @@ class AuditoriaService {
 }
 
 export default AuditoriaService;
+
+
+
+
+
 
 
 

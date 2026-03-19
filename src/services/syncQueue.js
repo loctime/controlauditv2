@@ -7,6 +7,7 @@ import { getOfflineDatabase, generateOfflineId } from './offlineDatabase';
 class SyncQueueService {
   constructor() {
     this.isProcessing = false;
+    this.isProcessingQueue = false;
     this.retryIntervals = [10000, 30000, 60000, 120000, 300000]; // 10s, 30s, 1m, 2m, 5m
     this.maxRetries = 5;
     this.processingInterval = null;
@@ -37,9 +38,44 @@ class SyncQueueService {
   /**
    * Encolar auditoría para sincronización
    */
-  async enqueueAuditoria(auditoriaData, priority = 1) {
+  async enqueueAuditoria(auditoriaData, priority = 1, options = {}) {
     try {
       const db = await getOfflineDatabase();
+      const origin = options.origin || 'unknown';
+
+      if (!auditoriaData?.id) {
+        throw new Error('enqueueAuditoria requiere auditoriaData.id');
+      }
+
+      // Evitar encolar auditorÃ­as ya sincronizadas
+      if (auditoriaData.status === 'synced') {
+        logger.debug(`[SYNC DEBUG] tipo: CREATE_AUDITORIA | id: ${auditoriaData.id} | origen: ${origin} | action: skip_synced`);
+        return null;
+      }
+
+      // DeduplicaciÃ³n: si ya existe un item pendiente para esta auditorÃ­a, actualizarlo en lugar de crear otro
+      const existingItems = await db.getAll('syncQueue');
+      const existing = existingItems.find(item =>
+        item.type === 'CREATE_AUDITORIA' &&
+        item.auditoriaId === auditoriaData.id &&
+        item.status !== 'failed' &&
+        item.retries < this.maxRetries
+      );
+
+      if (existing) {
+        const updatedItem = {
+          ...existing,
+          payload: auditoriaData,
+          updatedAt: Date.now(),
+          nextRetry: Date.now(),
+          priority: Math.min(existing.priority || priority, priority)
+        };
+
+        await db.put('syncQueue', updatedItem);
+        logger.debug(`[SYNC DEBUG] tipo: CREATE_AUDITORIA | id: ${auditoriaData.id} | origen: ${origin} | action: dedup_update`);
+        this.notifyListeners('enqueued', { type: 'auditoria', id: updatedItem.id, deduped: true });
+        return updatedItem.id;
+      }
       const queueId = generateOfflineId();
       
       const queueItem = {
@@ -55,6 +91,7 @@ class SyncQueueService {
       };
 
       await db.add('syncQueue', queueItem);
+      logger.debug(`[SYNC DEBUG] tipo: CREATE_AUDITORIA | id: ${auditoriaData.id} | origen: ${origin} | action: enqueue | queueId: ${queueId}`);
       logger.debug('📝 Auditoría encolada para sincronización:', queueId);
       
       this.notifyListeners('enqueued', { type: 'auditoria', id: queueId });
@@ -93,6 +130,7 @@ class SyncQueueService {
 
       await db.add('syncQueue', queueItem);
       logger.debug('📸 Foto encolada para sincronización:', queueId);
+      logger.debug(`[SYNC DEBUG] tipo: UPLOAD_PHOTO | id: ${auditoriaId || 'n/a'} | origen: unknown | action: enqueue | queueId: ${queueId}`);
       
       this.notifyListeners('enqueued', { type: 'photo', id: queueId });
       
@@ -230,7 +268,14 @@ class SyncQueueService {
    * Procesar items de la cola
    */
   async processQueue() {
+    let acquired = false;
     try {
+      if (this.isProcessingQueue) {
+        logger.debug('[SYNC DEBUG] processQueue skipped | reason: already_running');
+        return;
+      }
+      this.isProcessingQueue = true;
+      acquired = true;
       const db = await getOfflineDatabase();
       const now = Date.now();
       
@@ -242,7 +287,8 @@ class SyncQueueService {
       );
 
       if (itemsToProcess.length === 0) {
-        logger.debug('📭 No hay items listos para procesar');
+        logger.debug('ðŸ“­ No hay items listos para procesar');
+        logger.debug('[SYNC DEBUG] processQueue end | processed: 0');
         return;
       }
 
@@ -255,6 +301,7 @@ class SyncQueueService {
       });
 
       logger.debug(`🔄 Procesando ${itemsToProcess.length} items de la cola`);
+      logger.debug(`[SYNC DEBUG] processQueue start | items_ready: ${itemsToProcess.length}`);
 
       for (const item of itemsToProcess) {
         try {
@@ -283,7 +330,12 @@ class SyncQueueService {
       }
 
     } catch (error) {
-      logger.error('❌ Error en procesamiento de cola:', error);
+      logger.error('âŒ Error en procesamiento de cola:', error);
+    } finally {
+      if (acquired) {
+        this.isProcessingQueue = false;
+        logger.debug('[SYNC DEBUG] processQueue end | processed: done');
+      }
     }
   }
 
@@ -532,6 +584,7 @@ class SyncQueueService {
     });
 
     logger.debug(`✅ Auditoría sincronizada: ${auditoriaId}`);
+    logger.debug(`[SYNC DEBUG] tipo: CREATE_AUDITORIA | id: ${auditoriaData.id} | origen: processQueue | action: synced`);
   }
 
   /**
@@ -707,3 +760,10 @@ class SyncQueueService {
 const syncQueueService = new SyncQueueService();
 
 export default syncQueueService;
+
+
+
+
+
+
+
