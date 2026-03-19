@@ -31,7 +31,7 @@ const normalizeFileRef = (value, defaults) => {
       shareToken: value.shareToken || null,
       name: value.name || value.nombre || 'archivo',
       mimeType: value.mimeType || value.tipo || 'application/octet-stream',
-      size: value.size || value.tamano || value["tamaño"] || 0,
+      size: value.size || value.tamano || value["tamaï¿½o"] || 0,
       module: 'auditorias',
       entityId: defaults.entityId,
       companyId: defaults.companyId,
@@ -216,14 +216,16 @@ class AuditoriaService {
 
   static async guardarAuditoria(datosAuditoria, userProfile) {
     if (!navigator.onLine) {
-      return await this.guardarAuditoriaOffline(datosAuditoria, userProfile);
+      const id = await this.guardarAuditoriaOffline(datosAuditoria, userProfile);
+      return { id, uploadFailures: [] };
     }
 
     try {
       return await this.guardarAuditoriaOnline(datosAuditoria, userProfile);
     } catch (error) {
       logger.error('Error en guardado online, fallback a offline:', error);
-      return await this.guardarAuditoriaOffline(datosAuditoria, userProfile);
+      const id = await this.guardarAuditoriaOffline(datosAuditoria, userProfile);
+      return { id, uploadFailures: [] };
     }
   }
 
@@ -384,6 +386,7 @@ class AuditoriaService {
       await updateDocWithAppId(docRef, {
         filesCount: flatFiles.length,
         filesUploadFailures: uploadFailures,
+        hasUploadFailures: uploadFailures.length > 0,
         schemaVersion: SCHEMA_VERSION
       });
 
@@ -430,7 +433,7 @@ class AuditoriaService {
         docRef.id
       );
 
-      return docRef.id;
+      return { id: docRef.id, uploadFailures };
     } catch (error) {
       logger.error('Error al guardar auditoria online:', error);
       throw error;

@@ -175,7 +175,7 @@ export default function PreguntasYSeccion({
 
   const handleDeleteImage = async (seccionIndex, preguntaIndex, fileIndex) => {
     const target = imagenes?.[seccionIndex]?.[preguntaIndex]?.[fileIndex] || null;
-    console.log('[AUDITORIA IMG] delete click', { seccionIndex, preguntaIndex, fileIndex });
+    logger.debug('[AUDITORIA IMG] delete click', { seccionIndex, preguntaIndex, fileIndex });
     const hasCanonicalRef =
       target &&
       typeof target === 'object' &&
@@ -211,7 +211,7 @@ export default function PreguntasYSeccion({
 
   const handleImageUploaded = (seccionIndex, preguntaIndex, filesSeleccionados = []) => {
     const validFiles = (filesSeleccionados || []).filter((f) => f instanceof File);
-    console.log('[AUDITORIA IMG] handleImageUploaded', {
+    logger.debug('[AUDITORIA IMG] handleImageUploaded', {
       seccionIndex,
       preguntaIndex,
       selectedCount: filesSeleccionados?.length || 0,

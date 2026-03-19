@@ -153,8 +153,8 @@ const BotonGenerarReporte = ({
       });
 
       // Usar el servicio centralizado para guardar
-      const auditoriaId = await AuditoriaService.guardarAuditoria(datosAuditoria, currentUserProfile);
-      
+      const { id: auditoriaId, uploadFailures } = await AuditoriaService.guardarAuditoria(datosAuditoria, currentUserProfile);
+
       // Limpiar autoguardado al completar exitosamente
       try {
         await autoSaveService.clearLocalStorage(currentUserProfile?.uid);
@@ -165,8 +165,15 @@ const BotonGenerarReporte = ({
       
       setGuardadoExitoso(true);
       const tipoUbicacion = sucursal && sucursal.trim() !== "" ? "Sucursal" : "Casa Central";
-      setMensaje(`✅ Auditoría de ${tipoUbicacion.toLowerCase()} guardada exitosamente con ID: ${auditoriaId}`);
-      setTipoMensaje("success");
+
+      if (uploadFailures && uploadFailures.length > 0) {
+        logger.warn('[ReporteImprimir] Auditoría guardada pero con imágenes que no pudieron subirse:', uploadFailures);
+        setMensaje(`⚠️ Auditoría guardada (ID: ${auditoriaId}), pero ${uploadFailures.length} imagen(es) no pudieron subirse. Podés reintentar desde Reportes.`);
+        setTipoMensaje("warning");
+      } else {
+        setMensaje(`✅ Auditoría de ${tipoUbicacion.toLowerCase()} guardada exitosamente con ID: ${auditoriaId}`);
+        setTipoMensaje("success");
+      }
       setMostrarMensaje(true);
       
       // Llamar callback de finalización

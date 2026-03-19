@@ -85,16 +85,9 @@ export default function PreguntaItem({
 
     if (!accepted.length) return;
     if (!onImageUploaded) {
-      console.log('[AUDITORIA IMG] onImageUploaded NO definido', { seccionIndex, preguntaIndex });
+      logger.warn('[AUDITORIA IMG] onImageUploaded NO definido', { seccionIndex, preguntaIndex });
       return;
     }
-
-    console.log('[AUDITORIA IMG] llamando onImageUploaded', {
-      seccionIndex,
-      preguntaIndex,
-      acceptedCount: accepted.length,
-      acceptedIsFile: accepted[0] instanceof File
-    });
 
     onImageUploaded(seccionIndex, preguntaIndex, accepted);
   };
