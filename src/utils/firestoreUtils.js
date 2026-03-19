@@ -1,7 +1,8 @@
 import logger from '@/utils/logger';
 // Utilidades para manejar datos de Firestore
 
-import { addDoc, Timestamp } from 'firebase/firestore';
+import { addDoc, collection, Timestamp } from 'firebase/firestore';
+import { db } from '@/firebaseControlFile';
 /**
  * Convierte arrays anidados a objetos planos para Firestore
  * @param {Array} arraysAnidados - Array de arrays (ej: respuestas, comentarios, imágenes)
@@ -116,8 +117,7 @@ export const reconstruirDatosDesdeFirestore = (datosFirestore) => {
 export const registrarLogOperario = async (userId, accion, detalles = {}, metadata = {}, logsCollectionRef) => {
   try {
     if (!logsCollectionRef) {
-      logger.error('registrarLogOperario: logsCollectionRef es requerido');
-      return;
+      logsCollectionRef = collection(db, 'logs_operarios');
     }
 
     // Obtener información del navegador
