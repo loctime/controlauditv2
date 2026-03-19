@@ -81,7 +81,7 @@ const getNombreAuditor = (reporte, userProfile) => {
 };
 
 const ReportesPage = () => {
-  const { userProfile, userEmpresas } = useAuth();
+  const { userProfile, userEmpresas, getAuditoriasCompartidas } = useAuth();
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
   const isSmallMobile = useMediaQuery(theme.breakpoints.down('xs'));
@@ -241,8 +241,9 @@ const ReportesPage = () => {
       setLoading(false);
       return;
     }
-    
+
     fetchReportes();
+    getAuditoriasCompartidas();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [userProfile?.uid]);
 
