@@ -81,7 +81,7 @@ const SuperdevSelector = () => {
       {/* Botón/Chip en navbar */}
       <Chip
         icon={selectedOwnerId ? <Home /> : <Person />}
-        label={selectedOwnerId ? "Mi Cuenta" : "Selector Owner"}
+        label={selectedOwnerId ? "Owner" : "Owner"}
         onClick={handleOpen}
         color={selectedOwnerId ? "secondary" : "primary"}
         variant="outlined"
@@ -89,6 +89,8 @@ const SuperdevSelector = () => {
           cursor: 'pointer',
           color: '#ffffff',
           borderColor: '#ffffff',
+          height: 24,
+          fontSize: '0.7rem',
           '&:hover': {
             backgroundColor: 'rgba(255,255,255,0.1)',
           },

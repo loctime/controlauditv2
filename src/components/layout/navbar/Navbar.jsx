@@ -226,16 +226,25 @@ function Navbar(props) {
       )}
       {user && !isBloqueado && empresasDisponibles.length > 0 && (
         <Box sx={{ p: 2, borderBottom: '1px solid rgba(255,255,255,0.1)', display: 'flex', flexDirection: 'column', gap: 1 }}>
-          <EmpresaSelector
-            empresas={empresasDisponibles}
-            selectedEmpresa={navSelectedEmpresa}
-            onEmpresaChange={navSetEmpresa}
-          />
-          <SucursalSelector
-            sucursales={sucursalesDisponibles}
-            selectedSucursal={navSelectedSucursal}
-            onSucursalChange={navSetSucursal}
-          />
+          {/* Solo mostrar selectores en móvil */}
+          {isMobile && (
+            <>
+              <EmpresaSelector
+                empresas={empresasDisponibles}
+                selectedEmpresa={navSelectedEmpresa}
+                onEmpresaChange={navSetEmpresa}
+                embedded={true}
+                compact={true}
+              />
+              <SucursalSelector
+                sucursales={sucursalesDisponibles}
+                selectedSucursal={navSelectedSucursal}
+                onSucursalChange={navSetSucursal}
+                embedded={true}
+                compact={true}
+              />
+            </>
+          )}
         </Box>
       )}
       {isBloqueado ? (
@@ -326,13 +335,13 @@ function Navbar(props) {
       >
         {/* Fila superior: Navegación principal */}
         <Toolbar sx={{
-          gap: { xs: 1, sm: 2 },
+          gap: { xs: 1, sm: 1.5 },
           display: "flex",
           justifyContent: { xs: "space-between", md: "center" },
           alignItems: "center",
-          minHeight: { xs: 72, sm: 80 },
+          minHeight: { xs: 56, sm: 64 },
           height: { xs: 'auto', sm: 'auto' },
-          py: { xs: 1.5, sm: 2 },
+          py: { xs: 0.5, sm: 1 },
           px: { xs: 1, sm: 1 },
           position: "relative",
           zIndex: 2,
@@ -346,10 +355,10 @@ function Navbar(props) {
           {!isBloqueado && (
             <Box sx={{ 
               display: { xs: 'none', md: 'flex' }, 
-              gap: 2.5, 
+              gap: 1, 
               alignItems: 'center',
               flex: 1,
-              flexWrap: 'wrap'
+              flexWrap: 'nowrap'
             }}>
               {renderGroupDropdown('gestion')}
               {renderGroupDropdown('empresas')}
@@ -359,9 +368,9 @@ function Navbar(props) {
               {empresasDisponibles.length > 0 && (
                 <Box sx={{ 
                   display: 'flex', 
-                  gap: 1.5, 
+                  gap: 0.5, 
                   alignItems: 'center',
-                  ml: 2,
+                  ml: 0.5,
                   order: 10
                 }}>
                   <EmpresaSelector
@@ -398,9 +407,9 @@ function Navbar(props) {
           <Box sx={{ 
             display: { xs: 'none', sm: 'flex' }, 
             alignItems: 'center', 
-            gap: 1,
+            gap: 0.25,
             position: 'absolute',
-            right: { xs: 8, sm: 60 }
+            right: { xs: 8, sm: 8 }
           }}>
             {/* Indicador offline */}
             {userProfile && (
@@ -426,16 +435,46 @@ function Navbar(props) {
             {/* Selector Superdev (solo visible para usuarios con permisos) */}
             <SuperdevSelector />
 
-            <IconButton onClick={toggleColorMode} color="inherit" aria-label="Alternar modo claro/oscuro">
-              {mode === 'dark' ? <Brightness7Icon /> : <Brightness4Icon />}
+            {/* Icono de tema (solo sol) */}
+            <IconButton 
+              onClick={toggleColorMode} 
+              color="inherit" 
+              aria-label="Alternar modo claro/oscuro"
+              size="small"
+              sx={{ 
+                width: 24,
+                height: 24,
+                mr: 0.25,
+                '& .MuiSvgIcon-root': {
+                  fontSize: '0.9rem'
+                }
+              }}
+            >
+              <Brightness7Icon />
             </IconButton>
-            <Switch
-              checked={mode === 'dark'}
-              onChange={toggleColorMode}
-              color="default"
-              inputProps={{ 'aria-label': 'switch modo claro/oscuro' }}
-              sx={{ my: 0 }}
-            />
+            
+            {/* Botón de menú hamburguesa */}
+            <IconButton
+              color="inherit"
+              aria-label="open drawer"
+              onClick={handleDrawerToggle}
+              size="small"
+              sx={{ 
+                width: 24,
+                height: 24,
+                '& .MuiSvgIcon-root': {
+                  fontSize: '0.9rem'
+                },
+                '&:focus': {
+                  outline: 'none'
+                },
+                '&:active': {
+                  backgroundColor: 'transparent'
+                }
+              }}
+            >
+              <MenuIcon />
+            </IconButton>
           </Box>
 
           {/* Controles del lado derecho - móvil */}
@@ -513,35 +552,6 @@ function Navbar(props) {
             </IconButton>
           </Box>
 
-          {/* Botón de menú hamburguesa para desktop */}
-          <Box sx={{ 
-            display: { xs: 'none', sm: 'flex' }, 
-            alignItems: 'center', 
-            gap: 1,
-            position: 'absolute',
-            right: 8
-          }}>
-            <IconButton
-              color="inherit"
-              aria-label="open drawer"
-              onClick={handleDrawerToggle}
-              sx={{ 
-                width: 40,
-                height: 40,
-                '& .MuiSvgIcon-root': {
-                  fontSize: '1.4rem'
-                },
-                '&:focus': {
-                  outline: 'none'
-                },
-                '&:active': {
-                  backgroundColor: 'transparent'
-                }
-              }}
-            >
-              <MenuIcon />
-            </IconButton>
-          </Box>
         </Toolbar>
       </AppBar>
       
@@ -575,7 +585,7 @@ function Navbar(props) {
         className="main-content-wrapper"
         sx={{ 
           flexGrow: 1, 
-          pt: { xs: 10, sm: 11 }, // Compensar altura aumentada del Navbar
+          pt: { xs: 8, sm: 9 }, // Compensar altura reducida del Navbar
           pb: { xs: 1, sm: 2, md: 3 },
           width: "100%", 
           minHeight: "100vh", 

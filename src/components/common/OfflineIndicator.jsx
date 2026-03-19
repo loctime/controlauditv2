@@ -199,7 +199,7 @@ const OfflineIndicator = ({ userProfile }) => {
     return {
       color: 'success',
       icon: <CloudDone />,
-      text: 'Sincronizado',
+      text: 'Sync',
       tooltip: 'Todos los datos están sincronizados'
     };
   };
@@ -241,6 +241,8 @@ const OfflineIndicator = ({ userProfile }) => {
             sx={{
               cursor: 'pointer',
               animation: hasPendingItems && !isProcessing ? 'pulseChip 2s infinite' : 'none',
+              height: 24,
+              fontSize: '0.7rem',
               '@keyframes pulseChip': {
                 '0%, 100%': {
                   opacity: 1

@@ -7,6 +7,7 @@ import {
   Typography,
   Chip
 } from "@mui/material";
+import { useTheme } from '@mui/material/styles';
 import BusinessIcon from "@mui/icons-material/Business";
 
 export default function EmpresaSelector({
@@ -33,6 +34,7 @@ export default function EmpresaSelector({
     );
   }
 
+  const theme = useTheme();
   const isNavbarMode = embedded || compact;
   const showLabel = !embedded;
 
@@ -42,11 +44,11 @@ export default function EmpresaSelector({
         display: "flex",
         alignItems: "center",
         gap: isNavbarMode ? 0.75 : 2,
-        backgroundColor: "white",
+        backgroundColor: isNavbarMode ? 'white' : (theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.05)'),
         padding: isNavbarMode ? "2px 8px" : "8px 12px",
-        borderRadius: isNavbarMode ? "6px" : "12px",
-        border: "1px solid #e5e7eb",
-        boxShadow: "0 1px 3px rgba(0,0,0,0.1)",
+        borderRadius: isNavbarMode ? "6px" : "8px",
+        border: isNavbarMode ? "1px solid #e5e7eb" : "1px solid rgba(255,255,255,0.2)",
+        boxShadow: isNavbarMode ? "0 1px 3px rgba(0,0,0,0.1)" : "none",
         height: isNavbarMode ? 30 : 32,
         minHeight: isNavbarMode ? 30 : 32,
         width: isNavbarMode ? { xs: '140px', sm: '160px', md: '180px' } : '100%',
