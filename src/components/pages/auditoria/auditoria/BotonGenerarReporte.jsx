@@ -5,6 +5,7 @@ import { Button, Box, Alert, Snackbar, CircularProgress } from "@mui/material";
 import { useAuth } from '@/components/context/AuthContext';
 import AuditoriaService from "../auditoriaService";
 import { buildReporteMetadata } from '../../../../services/useMetadataService';
+import { getOfflineDatabase } from '../../../../services/offlineDatabase';
 const BotonGenerarReporte = ({ 
   onClick, 
   deshabilitado, 
@@ -55,55 +56,10 @@ const BotonGenerarReporte = ({
       if (!currentUserProfile) {
         logger.debug('[BotonGenerarReporte] userProfile no disponible, buscando en cache...');
         try {
-          // Verificar si IndexedDB está disponible
-          if (!window.indexedDB) {
-            logger.warn('[BotonGenerarReporte] IndexedDB no está disponible');
-            throw new Error('IndexedDB no disponible');
-          }
-
-          const request = indexedDB.open('controlaudit_offline_v1', 2);
-          const cachedUser = await new Promise((resolve, reject) => {
-            request.onsuccess = function(event) {
-              const db = event.target.result;
-              
-              // Verificar si la object store 'settings' existe
-              if (!db.objectStoreNames.contains('settings')) {
-                logger.warn('[BotonGenerarReporte] Object store "settings" no existe');
-                resolve(null);
-                return;
-              }
-              
-              const transaction = db.transaction(['settings'], 'readonly');
-              const store = transaction.objectStore('settings');
-              
-              store.get('complete_user_cache').onsuccess = function(e) {
-                const cached = e.target.result;
-                if (cached && cached.value && cached.value.userProfile) {
-                  resolve(cached.value.userProfile);
-                } else {
-                  resolve(null);
-                }
-              };
-              
-              store.get('complete_user_cache').onerror = function(e) {
-                logger.error('[BotonGenerarReporte] Error al obtener cache:', e.target.error);
-                resolve(null);
-              };
-            };
-            
-            request.onerror = function(event) {
-              logger.error('[BotonGenerarReporte] Error al abrir IndexedDB:', event.target.error);
-              reject(event.target.error);
-            };
-            
-            request.onupgradeneeded = function(event) {
-              logger.debug('[BotonGenerarReporte] IndexedDB necesita actualización');
-              // No hacer nada aquí, solo para evitar errores
-            };
-          });
-          
-          if (cachedUser) {
-            currentUserProfile = cachedUser;
+          const db = await getOfflineDatabase();
+          const cached = await db.get('settings', 'complete_user_cache');
+          if (cached?.value?.userProfile) {
+            currentUserProfile = cached.value.userProfile;
             logger.debug('[BotonGenerarReporte] Usuario encontrado en cache:', {
               uid: currentUserProfile.uid,
               email: currentUserProfile.email,

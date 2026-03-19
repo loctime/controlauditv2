@@ -276,24 +276,9 @@ class AutoSaveService {
       // Obtener userProfile desde cache si no se proporciona
       if (!userProfile) {
         try {
-          const request = indexedDB.open('controlaudit_offline_v1', 3);
-          userProfile = await new Promise((resolve) => {
-            request.onsuccess = function(event) {
-              const db = event.target.result;
-              if (!db.objectStoreNames.contains('settings')) {
-                resolve(null);
-                return;
-              }
-              const transaction = db.transaction(['settings'], 'readonly');
-              const store = transaction.objectStore('settings');
-              store.get('complete_user_cache').onsuccess = function(e) {
-                const cached = e.target.result;
-                resolve(cached?.value?.userProfile || null);
-              };
-              store.get('complete_user_cache').onerror = () => resolve(null);
-            };
-            request.onerror = () => resolve(null);
-          });
+          const cacheDb = await getOfflineDatabase();
+          const cached = await cacheDb.get('settings', 'complete_user_cache');
+          userProfile = cached?.value?.userProfile || null;
         } catch (e) {
           logger.debug('No se pudo obtener userProfile del cache:', e);
         }
@@ -468,54 +453,10 @@ class AutoSaveService {
       // Obtener datos completos del usuario del cache
       let userProfile = null;
       try {
-        const request = indexedDB.open('controlaudit_offline_v1', 3);
-        const cachedUser = await new Promise((resolve, reject) => {
-          request.onsuccess = function(event) {
-            const db = event.target.result;
-            
-            if (!db.objectStoreNames.contains('settings')) {
-              logger.debug('Object store "settings" no existe');
-              resolve(null);
-              return;
-            }
-            
-            const transaction = db.transaction(['settings'], 'readonly');
-            const store = transaction.objectStore('settings');
-            
-            store.get('complete_user_cache').onsuccess = function(e) {
-              const cached = e.target.result;
-              if (cached && cached.value && cached.value.userProfile) {
-                resolve(cached.value.userProfile);
-              } else {
-                logger.debug('No hay userProfile en cache');
-                resolve(null);
-              }
-            };
-            
-            store.get('complete_user_cache').onerror = function(e) {
-              logger.debug('Error al obtener cache:', e.target.error);
-              resolve(null);
-            };
-          };
-          
-          request.onerror = function(event) {
-            logger.debug('Error al abrir IndexedDB:', event.target.error);
-            resolve(null);
-          };
-          
-          request.onupgradeneeded = function(event) {
-            const db = event.target.result;
-            logger.debug('Inicializando base de datos...');
-            
-            if (!db.objectStoreNames.contains('settings')) {
-              db.createObjectStore('settings', { keyPath: 'key' });
-              logger.debug('Object store "settings" creado');
-            }
-          };
-        });
-        
-        if (cachedUser) {
-          userProfile = cachedUser;
+        const cacheDb = await getOfflineDatabase();
+        const cached = await cacheDb.get('settings', 'complete_user_cache');
+        if (cached?.value?.userProfile) {
+          userProfile = cached.value.userProfile;
           logger.debug('Usuario encontrado en cache', {
             uid: userProfile.uid,
             email: userProfile.email,
