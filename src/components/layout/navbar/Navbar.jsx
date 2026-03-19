@@ -26,6 +26,8 @@ import { useAuth } from '@/components/context/AuthContext';
 import { useGlobalSelection } from '@/hooks/useGlobalSelection';
 import EmpresaSelector from '@/components/dashboard-seguridad/EmpresaSelector';
 import SucursalSelector from '@/components/dashboard-seguridad/SucursalSelector';
+import { Select, FormControl, Tooltip } from '@mui/material';
+import { CalendarToday, DateRange } from '@mui/icons-material';
 import { doc, getDoc } from 'firebase/firestore';
 import { dbAudit } from '../../../firebaseControlFile';
 import { firestoreRoutesCore } from '../../../core/firestore/firestoreRoutes.core';
@@ -361,6 +363,21 @@ function Navbar(props) {
               flexWrap: 'nowrap'
             }}>
               {renderGroupDropdown('gestion')}
+              <Link
+                to="/dashboard-seguridad"
+                style={{
+                  color: "#ffffff",
+                  textDecoration: "none",
+                  fontSize: "1.1rem",
+                  fontWeight: 600,
+                  padding: "10px 16px",
+                  lineHeight: 1.2,
+                  borderRadius: "6px",
+                  transition: "background-color 0.2s",
+                }}
+              >
+                Dashboard
+              </Link>
               {renderGroupDropdown('empresas')}
               {renderGroupDropdown('auditorias')}
               {renderGroupDropdown('higiene')}
