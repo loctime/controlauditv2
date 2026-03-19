@@ -22,17 +22,24 @@ const App = () => {
   const [hasLoadedOnce, setHasLoadedOnce] = useState(false);
   const [isInitialLoad, setIsInitialLoad] = useState(true);
 
-  // Disparar sincronización cuando vuelve el internet
+  // Solo procesar la cola offline en PWA (modo standalone). En web/desktop online
+  // no se ejecuta offline mode, por lo que no hay items legítimos que sincronizar.
+  const isPWA = () =>
+    window.matchMedia('(display-mode: standalone)').matches ||
+    window.navigator.standalone === true;
+
+  // Disparar sincronización cuando vuelve el internet (solo en PWA)
   useEffect(() => {
     const handleOnline = () => {
-      syncQueueService.processQueue();
+      if (isPWA()) syncQueueService.processQueue();
     };
     window.addEventListener('online', handleOnline);
     return () => window.removeEventListener('online', handleOnline);
   }, []);
 
-  // Reanudar procesamiento de cola si hay items pendientes al iniciar la app
+  // Reanudar procesamiento de cola si hay items pendientes al iniciar la app (solo en PWA)
   useEffect(() => {
+    if (!isPWA()) return;
     const resumeQueueIfNeeded = async () => {
       try {
         const stats = await syncQueueService.getQueueStats();

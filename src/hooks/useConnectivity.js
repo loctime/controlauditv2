@@ -66,6 +66,13 @@ export const useConnectivity = () => {
         return;
       }
 
+      // La sincronización automática solo aplica en PWA (modo offline real).
+      // En web/desktop online no hay items legítimos pendientes.
+      const isPWA =
+        window.matchMedia('(display-mode: standalone)').matches ||
+        window.navigator.standalone === true;
+      if (!isPWA) return;
+
       const now = Date.now();
       const DEBOUNCE_TIME = 10000; // 10 segundos entre intentos
       
