@@ -152,6 +152,16 @@ export const routesConfig = [
     icon: "School",
   },
   {
+    id: "dashboard-seguridad",
+    path: "/dashboard-seguridad",
+    label: "Dashboard",
+    roles: ["operario", "admin", "superdev"],
+    showInMenu: true,
+    section: "higiene",
+    order: 30,
+    icon: "Dashboard",
+  },
+  {
     id: "formulario",
     path: "/formulario",
     label: "Formularios",
