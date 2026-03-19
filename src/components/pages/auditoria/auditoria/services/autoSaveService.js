@@ -228,8 +228,9 @@ class AutoSaveService {
         if (this.isOnline && ownerId) {
           try {
             const autosaveRef = collection(dbAudit, ...firestoreRoutesCore.autosaves(ownerId));
-            const querySnapshot = await getDocs(autosaveRef);
-            
+            const autosaveQuery = query(autosaveRef, where('userId', '==', userId));
+            const querySnapshot = await getDocs(autosaveQuery);
+
             const deletePromises = [];
             querySnapshot.forEach((docSnapshot) => {
               const autosaveDocRef = doc(dbAudit, ...firestoreRoutesCore.autosave(ownerId, docSnapshot.id));
