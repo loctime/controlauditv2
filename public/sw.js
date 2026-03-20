@@ -147,9 +147,11 @@ self.addEventListener('activate', (event) => {
     caches.keys().then((cacheNames) => {
       return Promise.all(
         cacheNames.map((cacheName) => {
-          // Solo eliminar caches antiguos
-          if (cacheName !== STATIC_CACHE && cacheName !== DYNAMIC_CACHE) {
-            console.log('🗑️ Eliminando cache antiguo:', cacheName);
+          // Nunca borrar caches dinámicos (acumulan chunks JS/CSS entre versiones)
+          if (cacheName.startsWith('controlaudit-dynamic')) return;
+          // Solo borrar static caches de versiones anteriores
+          if (cacheName !== STATIC_CACHE) {
+            console.log('🗑️ Eliminando cache estático antiguo:', cacheName);
             return caches.delete(cacheName);
           }
         })

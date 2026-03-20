@@ -1,7 +1,8 @@
 {
   "permissions": {
     "allow": [
-      "Bash(xargs grep:*)"
+      "Bash(xargs grep:*)",
+      "Bash(dir \"C:\\\\Users\\\\User\\\\Desktop\\\\controlauditv2\\\\dist\\\\assets\")"
     ]
   }
 }
