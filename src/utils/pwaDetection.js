@@ -13,5 +13,7 @@ export const isMobileDevice = () => {
 };
 export const isPWAMobile = () => isPWAInstalled() && isMobileDevice();
 export const shouldEnableOffline = () => {
-  return isMobileDevice();
+  // Habilitar offline en móvil y también en PWA instalada de escritorio.
+  // Si solo se habilita en móvil, en desktop PWA no se recupera cache al iniciar sin conexión.
+  return isMobileDevice() || isPWAInstalled();
 };
