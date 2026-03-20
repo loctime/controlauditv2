@@ -21,6 +21,8 @@ import { useContextActions } from './hooks/useContextActions';
 import { useEmpresasQuery } from '../../hooks/queries/useEmpresasQuery';
 import { firestoreRoutesCore } from '../../core/firestore/firestoreRoutes.core';
 import { normalizeRole } from '../../utils/accessControl';
+import { getOfflineDatabase } from '../../services/offlineDatabase';
+import syncQueueService from '../../services/syncQueue';
 
 // Definimos y exportamos el contexto
 export const AuthContext = createContext();
@@ -51,6 +53,9 @@ const AuthContextComponent = ({ children }) => {
   
   // Control para activar listeners diferidos
   const [enableDeferredListeners, setEnableDeferredListeners] = useState(false);
+
+  // Evitar recuperar ítems fallidos más de una vez por sesión
+  const syncRecoveryDoneRef = useRef(false);
   
   // Restaurar selección desde localStorage al inicializar
   // IMPORTANTE: Esperar a que empresas y sucursales estén cargadas
@@ -479,7 +484,40 @@ const AuthContextComponent = ({ children }) => {
           
           setUserContext(context);
           logger.debug('[AUTH] ✅ Usuario autenticado:', context);
-          
+
+          // Recuperar ítems failed en syncQueue por errores de auth (una sola vez por sesión)
+          if (!syncRecoveryDoneRef.current) {
+            syncRecoveryDoneRef.current = true;
+            try {
+              const offlineDb = await getOfflineDatabase();
+              const allItems = await offlineDb.getAll('syncQueue');
+              const authFailedItems = allItems.filter(item =>
+                item.status === 'failed' &&
+                item.lastError &&
+                (item.lastError.includes('ownerId') ||
+                 item.lastError.includes('auth') ||
+                 item.lastError.includes('token') ||
+                 item.lastError.includes('autenticado') ||
+                 item.lastError.includes('Timeout'))
+              );
+              if (authFailedItems.length > 0) {
+                logger.debug(`[AUTH] 🔄 Recuperando ${authFailedItems.length} ítems failed por auth en syncQueue`);
+                for (const item of authFailedItems) {
+                  await offlineDb.put('syncQueue', {
+                    ...item,
+                    status: 'pending',
+                    retries: 0,
+                    lastError: null,
+                    nextRetry: Date.now()
+                  });
+                }
+                syncQueueService.processQueue(true);
+              }
+            } catch (recoveryError) {
+              logger.warn('[AUTH] ⚠️ Error recuperando syncQueue:', recoveryError);
+            }
+          }
+
           // Cargar datos desde cache primero (solo datos secundarios)
           if (enableOffline && loadUserFromCache) {
             try {
