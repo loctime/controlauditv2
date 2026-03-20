@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { Box, Container, Typography, Grid, CircularProgress } from '@mui/material';
 import { useDashboardData } from './hooks/useDashboardData';
 import DashboardToday from './components/DashboardToday';
@@ -7,6 +7,7 @@ import DashboardAlerts from './components/DashboardAlerts';
 import DashboardSummary from './components/DashboardSummary';
 import { shouldEnableOffline } from '../../../utils/pwaDetection';
 import CacheManager from '../../common/CacheManager';
+import { useChromePreload } from '../../../hooks/useChromePreload';
 
 /**
  * Dashboard principal orientado a la acción diaria
@@ -14,6 +15,18 @@ import CacheManager from '../../common/CacheManager';
  */
 const Dashboard = () => {
   const { todayTasks, blockedItems, alerts, summary, loading } = useDashboardData();
+  const { shouldPreload, isPreloading, startPreload } = useChromePreload();
+
+  useEffect(() => {
+    const hasPreloadedThisSession = sessionStorage.getItem('chrome_preload_done') === 'true';
+    const cacheTimestamp = localStorage.getItem('chrome_preload_timestamp');
+    const cacheAge = cacheTimestamp ? Date.now() - parseInt(cacheTimestamp) : Infinity;
+    const shouldPreloadAgain = cacheAge > 24 * 60 * 60 * 1000;
+
+    if (shouldPreload && !isPreloading && !hasPreloadedThisSession && shouldPreloadAgain) {
+      setTimeout(() => startPreload(), 3000);
+    }
+  }, [shouldPreload, isPreloading, startPreload]);
 
   if (loading) {
     return (
