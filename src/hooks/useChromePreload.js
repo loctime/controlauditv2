@@ -22,7 +22,7 @@ export const useChromePreload = () => {
     const start = Date.now();
     while (Date.now() - start < maxWaitMs) {
       try {
-        const cache = await caches.open('controlaudit-dynamic-v15');
+        const cache = await caches.open('controlaudit-dynamic-v16');
         const keys = await cache.keys();
         const jsChunks = keys.filter(r => r.url.includes('/assets/') && r.url.endsWith('.js'));
         if (jsChunks.length > previousCount) return jsChunks.length;
@@ -63,7 +63,7 @@ export const useChromePreload = () => {
       // Contar chunks antes de empezar
       let previousChunkCount = 0;
       try {
-        const cache = await caches.open('controlaudit-dynamic-v15');
+        const cache = await caches.open('controlaudit-dynamic-v16');
         const keys = await cache.keys();
         previousChunkCount = keys.filter(r => r.url.includes('/assets/') && r.url.endsWith('.js')).length;
       } catch(e) {}
