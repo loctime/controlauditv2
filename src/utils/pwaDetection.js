@@ -12,4 +12,6 @@ export const isMobileDevice = () => {
   return result;
 };
 export const isPWAMobile = () => isPWAInstalled() && isMobileDevice();
-export const shouldEnableOffline = () => isPWAMobile();
+export const shouldEnableOffline = () => {
+  return isMobileDevice();
+};

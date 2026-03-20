@@ -190,7 +190,7 @@ const Home = () => {
     const cacheAge = cacheTimestamp ? Date.now() - parseInt(cacheTimestamp) : Infinity;
     const cacheIsFresh = cacheAge < 60 * 60 * 1000; // 1 hora
     
-    if (shouldPreload && !isPreloading && !hasPreloadedThisSession && isPWAStandalone && userProfile && userEmpresas?.length > 0) {
+    if (shouldPreload && !isPreloading && !hasPreloadedThisSession && isPWAStandalone && userProfile) {
       // Si el cache es muy antiguo (más de 24 horas), permitir precarga nuevamente
       const shouldPreloadAgain = cacheAge > 24 * 60 * 60 * 1000; // 24 horas
       
@@ -204,6 +204,7 @@ const Home = () => {
             sessionStorage.setItem('chrome_preload_done', 'true');
             // Guardar timestamp del cache
             localStorage.setItem('chrome_preload_timestamp', Date.now().toString());
+            navigate('/tablero');
           });
         }, 3000);
         
