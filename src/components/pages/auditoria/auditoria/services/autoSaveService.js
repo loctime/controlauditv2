@@ -30,6 +30,12 @@ class AutoSaveService {
     });
   }
 
+  // Conectividad real al momento de operar (evita estados desfasados en PWA)
+  isCurrentlyOnline() {
+    const browserOnline = typeof navigator !== 'undefined' ? navigator.onLine : this.isOnline;
+    return this.isOnline && browserOnline;
+  }
+
   // Inicializar base de datos offline
   async initOfflineDatabase() {
     if (!this.offlineDb) {
@@ -225,7 +231,7 @@ class AutoSaveService {
         }
         
         // Limpiar Firestore si está online y hay ownerId
-        if (this.isOnline && ownerId) {
+        if (this.isCurrentlyOnline() && ownerId) {
           try {
             const autosaveRef = collection(dbAudit, ...firestoreRoutesCore.autosaves(ownerId));
             const autosaveQuery = query(autosaveRef, where('userId', '==', userId));
@@ -261,7 +267,7 @@ class AutoSaveService {
     
     try {
       // Verificar conectividad
-      if (this.isOnline) {
+      if (this.isCurrentlyOnline()) {
         return await this.saveToFirestore(userId, auditoriaData, userProfile);
       } else {
         return await this.saveOffline(userId, auditoriaData);
@@ -530,11 +536,12 @@ class AutoSaveService {
 
       // Encolar para sincronización solo si estamos offline y los datos no están en Firestore
       // Si hay conexión, no se encola: el próximo autoguardado irá directo a Firestore
-      if (!savedToFirestore && !this.isOnline) {
+      if (!savedToFirestore) {
         await syncQueueService.enqueueAuditoria(saveData, 1, { origin: 'autosave' });
-        logger.debug('Auditoría encolada para sincronización con Firestore', { auditoriaId });
-      } else if (!savedToFirestore) {
-        logger.debug('Online: autoguardado almacenado localmente sin encolar sync', { auditoriaId });
+        logger.debug('Auditoría encolada para sincronización con Firestore', { 
+          auditoriaId,
+          online: this.isCurrentlyOnline()
+        });
       } else {
         logger.debug('Auditoría ya en Firestore, guardada en IndexedDB como respaldo offline', { auditoriaId });
       }
