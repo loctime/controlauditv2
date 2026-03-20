@@ -67,7 +67,7 @@ const CacheManager = () => {
 
     setLoading(true);
     try {
-      await refreshCompleteCache();
+      await refreshCompleteCache(userProfile);
       await loadCacheStats();
       alert('Cache actualizado correctamente');
     } catch (error) {
