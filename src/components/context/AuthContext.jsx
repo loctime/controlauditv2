@@ -527,7 +527,22 @@ const AuthContextComponent = ({ children }) => {
           }
         } else {
           // Usuario no autenticado
+          const showDebug = (msg) => {
+            const el = document.getElementById('offline-debug');
+            if (el) el.innerHTML += '<br>' + msg;
+          };
+
+          const debugDiv = document.createElement('div');
+          debugDiv.id = 'offline-debug';
+          debugDiv.style = 'position:fixed;top:60px;left:0;right:0;background:rgba(0,0,0,0.85);color:#0f0;font-size:11px;padding:8px;z-index:99999;max-height:50vh;overflow:auto;';
+          debugDiv.innerHTML = 'OFFLINE DEBUG:';
+          document.body.appendChild(debugDiv);
+
           const wasLoggedIn = localStorage.getItem("isLogged") === "true";
+
+          showDebug('wasLoggedIn: ' + wasLoggedIn);
+          showDebug('enableOffline: ' + enableOffline);
+          showDebug('loadUserFromCache: ' + !!loadUserFromCache);
 
           if (!wasLoggedIn) {
             // Logout real: limpiar todo
@@ -543,7 +558,13 @@ const AuthContextComponent = ({ children }) => {
             // Firebase devuelve null pero el usuario estaba logueado = offline
             // No limpiar estado, cargar desde cache
             try {
+              showDebug('entrando a cache...');
               const cached = await loadUserFromCache();
+              showDebug('cached: ' + JSON.stringify(cached ? {
+                hasProfile: !!cached.userProfile,
+                empresas: cached.empresas?.length,
+                sucursales: cached.sucursales?.length
+              } : null));
               if (cached) {
                 setUserContext(cached.userProfile);
                 setUserEmpresas(cached.empresas || []);
