@@ -5,6 +5,8 @@ import DashboardToday from './components/DashboardToday';
 import DashboardBlocked from './components/DashboardBlocked';
 import DashboardAlerts from './components/DashboardAlerts';
 import DashboardSummary from './components/DashboardSummary';
+import { shouldEnableOffline } from '../../../utils/pwaDetection';
+import CacheManager from '../../common/CacheManager';
 
 /**
  * Dashboard principal orientado a la acción diaria
@@ -55,6 +57,8 @@ const Dashboard = () => {
           <DashboardAlerts alerts={alerts} />
         </Grid>
       </Grid>
+
+      {shouldEnableOffline() && <CacheManager />}
     </Container>
   );
 };

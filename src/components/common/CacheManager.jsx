@@ -46,9 +46,8 @@ const CacheManager = () => {
 
   // Cargar estadísticas del cache
   useEffect(() => {
-    if (userProfile?.uid) {
-      loadCacheStats();
-    }
+    if (!userProfile?.uid) return;
+    loadCacheStats();
   }, [userProfile?.uid]);
 
   const loadCacheStats = async () => {
