@@ -206,19 +206,23 @@ const OfflineIndicator = ({ userProfile }) => {
   };
 
   const indicatorState = getIndicatorState();
-  const hasPendingItems = queueStats && queueStats.total > 0;
+  const pendingCount = queueStats?.total || 0;
+  const failedCount = queueStats?.failed || 0;
+  const attentionCount = pendingCount + failedCount;
+  const hasPendingItems = pendingCount > 0;
+  const hasAttentionItems = attentionCount > 0;
 
   return (
     <>
       {/* Indicador principal */}
       <Tooltip title={indicatorState.tooltip}>
         <Badge 
-          badgeContent={hasPendingItems && !isProcessing ? queueStats.total : 0}
+          badgeContent={hasAttentionItems ? attentionCount : 0}
           color="error"
-          invisible={!hasPendingItems || isProcessing}
+          invisible={!hasAttentionItems}
           sx={{
             '& .MuiBadge-badge': {
-              animation: hasPendingItems && !isProcessing ? 'pulse 2s infinite' : 'none',
+              animation: hasAttentionItems && !isProcessing ? 'pulse 2s infinite' : 'none',
               '@keyframes pulse': {
                 '0%, 100%': {
                   opacity: 1,
@@ -241,7 +245,7 @@ const OfflineIndicator = ({ userProfile }) => {
             onClick={() => setShowDetails(true)}
             sx={{
               cursor: 'pointer',
-              animation: hasPendingItems && !isProcessing ? 'pulseChip 2s infinite' : 'none',
+              animation: hasAttentionItems && !isProcessing ? 'pulseChip 2s infinite' : 'none',
               height: 24,
               fontSize: '0.7rem',
               '@keyframes pulseChip': {

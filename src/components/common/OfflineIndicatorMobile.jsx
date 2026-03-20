@@ -150,22 +150,26 @@ const OfflineIndicatorMobile = ({ userProfile }) => {
   };
 
   const indicatorState = getIndicatorState();
-  const hasPendingItems = queueStats && queueStats.total > 0;
+  const pendingCount = queueStats?.total || 0;
+  const failedCount = queueStats?.failed || 0;
+  const attentionCount = pendingCount + failedCount;
+  const hasPendingItems = pendingCount > 0;
+  const hasAttentionItems = attentionCount > 0;
 
   return (
     <>
       <Tooltip title={indicatorState.tooltip}>
         <Badge 
-          badgeContent={hasPendingItems && !isProcessing ? queueStats.total : 0}
+          badgeContent={hasAttentionItems ? attentionCount : 0}
           color="error"
-          invisible={!hasPendingItems || isProcessing}
+          invisible={!hasAttentionItems}
           sx={{
             '& .MuiBadge-badge': {
               fontSize: '0.65rem',
               minWidth: '16px',
               height: '16px',
               padding: '0 4px',
-              animation: hasPendingItems && !isProcessing ? 'pulse 2s infinite' : 'none',
+              animation: hasAttentionItems && !isProcessing ? 'pulse 2s infinite' : 'none',
               '@keyframes pulse': {
                 '0%, 100%': {
                   opacity: 1,
@@ -188,8 +192,10 @@ const OfflineIndicatorMobile = ({ userProfile }) => {
                 ? 'Sincronizando datos...' 
                 : !isOnline 
                 ? 'Sin conexión a internet' 
-                : hasPendingItems 
-                ? `Sincronizar ${queueStats.total} items pendientes` 
+                : hasPendingItems
+                ? `Sincronizar ${pendingCount} items pendientes`
+                : failedCount > 0
+                ? `${failedCount} items fallidos en cola`
                 : 'Estado de sincronización - Todo sincronizado'
             }
             sx={{
@@ -198,7 +204,7 @@ const OfflineIndicatorMobile = ({ userProfile }) => {
               width: 24,
               height: 24,
               cursor: (isOnline || queueStats?.total) ? 'pointer' : 'default',
-              animation: hasPendingItems && !isProcessing ? 'pulseButton 2s infinite' : 'none',
+              animation: hasAttentionItems && !isProcessing ? 'pulseButton 2s infinite' : 'none',
               '@keyframes pulseButton': {
                 '0%, 100%': {
                   opacity: 1

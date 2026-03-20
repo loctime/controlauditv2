@@ -539,6 +539,23 @@ class SyncQueueService {
       displayName: auditoriaData.userDisplayName || auditoriaData.userEmail || 'Usuario',
       role: auditoriaData.userRole || 'operario'
     };
+
+    // Refuerzo: si por timing no obtuvimos ownerId, intentar de nuevo desde token actual.
+    if (!userProfile.ownerId) {
+      try {
+        const { auth } = await import('../firebaseControlFile');
+        const currentUser = auth.currentUser;
+        if (currentUser) {
+          const tokenResult = await currentUser.getIdTokenResult(false);
+          const ownerFromToken = tokenResult?.claims?.ownerId || currentUser.uid || null;
+          if (ownerFromToken) {
+            userProfile.ownerId = ownerFromToken;
+          }
+        }
+      } catch (ownerResolveError) {
+        logger.warn('[SyncQueue] No se pudo reforzar ownerId desde token:', ownerResolveError?.message || ownerResolveError);
+      }
+    }
     
     logger.debug('[SyncQueue] 📋 Usando userProfile para sincronización:', {
       uid: userProfile.uid,
@@ -559,6 +576,10 @@ class SyncQueueService {
     auditoriaData.creadoPor = auditoriaData.creadoPor || userProfile.uid;
     auditoriaData.creadoPorEmail = auditoriaData.creadoPorEmail || userProfile.email;
     auditoriaData.ownerId = auditoriaData.ownerId || userProfile.ownerId || tokenOwnerId || null;
+
+    if (!auditoriaData.ownerId || !userProfile.ownerId) {
+      throw new Error('No se pudo resolver ownerId para sincronizar auditoría');
+    }
 
     // Restaurar imágenes offline desde IndexedDB antes de sincronizar
     try {
