@@ -33,6 +33,7 @@ import {
   Grid,
   Stack,
 } from "@mui/material";
+import syncQueueService from '../../../../services/syncQueue';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import BusinessIcon from '@mui/icons-material/Business';
 import LocationOnIcon from '@mui/icons-material/LocationOn';
@@ -110,6 +111,7 @@ const ReportesPage = () => {
   const [openModal, setOpenModal] = useState(false);
   const [expandedAccordion, setExpandedAccordion] = useState(null);
   const [autoPrint, setAutoPrint] = useState(false);
+  const lastSyncReportsRefreshAtRef = useRef(0);
   
   // Cache para evitar recargas innecesarias
   const reportesCacheRef = useRef({});
@@ -182,7 +184,7 @@ const ReportesPage = () => {
   };
 
   // Fetch de reportes usando auditoriaService (owner-centric)
-  const fetchReportes = async () => {
+  const fetchReportes = async (forceRefresh = false) => {
     if (!userProfile?.ownerId) {
       setLoading(false);
       return;
@@ -191,7 +193,7 @@ const ReportesPage = () => {
     const ownerId = userProfile.ownerId;
     
     // Verificar cache antes de cargar
-    if (reportesCacheRef.current[ownerId] && lastOwnerIdRef.current === ownerId) {
+    if (!forceRefresh && reportesCacheRef.current[ownerId] && lastOwnerIdRef.current === ownerId) {
       logger.debug('[DEBUG] Usando datos cacheados para owner:', ownerId);
       setReportes(reportesCacheRef.current[ownerId]);
       setFilteredReportes(reportesCacheRef.current[ownerId]);
@@ -246,6 +248,34 @@ const ReportesPage = () => {
     getAuditoriasCompartidas();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [userProfile?.uid]);
+
+  // Refrescar reportes cuando la cola sincronice auditorías (evita que el usuario vea datos viejos)
+  useEffect(() => {
+    const removeListener = syncQueueService.addListener(async (event, data) => {
+      try {
+        if (event !== 'item_success') return;
+        const item = data?.item;
+        if (!item) return;
+
+        // Solo refrescar cuando el item es la auditoría creada/actualizada
+        if (item.type !== 'CREATE_AUDITORIA' && item.type !== 'UPDATE_AUDITORIA') return;
+
+        if (!userProfile?.ownerId) return;
+
+        // Forzar recarga para evitar que el cache local del componente tape cambios nuevos
+        // (pero throttlear para no disparar muchas queries seguidas)
+        const now = Date.now();
+        if (now - lastSyncReportsRefreshAtRef.current < 5000) return;
+        lastSyncReportsRefreshAtRef.current = now;
+        await fetchReportes(true);
+      } catch (e) {
+        // No romper la UI si el refresh falla por conectividad
+        logger.debug('[DEBUG] No se pudo refrescar reportes tras sync:', e?.message || e);
+      }
+    });
+
+    return removeListener;
+  }, [userProfile?.ownerId, userProfile?.uid]);
 
   useEffect(() => {
     logger.debug('[DEBUG] Aplicando filtros...');

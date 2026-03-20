@@ -24,14 +24,14 @@ const App = () => {
 
   // Solo procesar la cola offline en PWA (modo standalone). En web/desktop online
   // no se ejecuta offline mode, por lo que no hay items legítimos que sincronizar.
-  const isPWA = () =>
-    window.matchMedia('(display-mode: standalone)').matches ||
-    window.navigator.standalone === true;
+  // Nota: en escritorio Windows la detección de `standalone` puede fallar.
+  // Para evitar que la cola no se procese al reconectar, procesamos sin depender
+  // de `isPWA()` y dejamos que `syncQueueService.processQueue()` haga no-op si no hay items.
 
   // Disparar sincronización cuando vuelve el internet (solo en PWA)
   useEffect(() => {
     const handleOnline = () => {
-      if (isPWA()) syncQueueService.processQueue();
+      syncQueueService.processQueue();
     };
     window.addEventListener('online', handleOnline);
     return () => window.removeEventListener('online', handleOnline);
@@ -39,7 +39,6 @@ const App = () => {
 
   // Reanudar procesamiento de cola si hay items pendientes al iniciar la app (solo en PWA)
   useEffect(() => {
-    if (!isPWA()) return;
     const resumeQueueIfNeeded = async () => {
       try {
         const stats = await syncQueueService.getQueueStats();
@@ -52,6 +51,13 @@ const App = () => {
     };
     resumeQueueIfNeeded();
   }, []);
+
+  // Caso adicional: si el estado `isOnline` cambia pero el evento `online` no dispara,
+  // igualmente intentamos procesar la cola.
+  useEffect(() => {
+    if (!isOnline) return;
+    syncQueueService.processQueue();
+  }, [isOnline]);
 
   // Verificar si la app ya se cargó al menos una vez
   useEffect(() => {
