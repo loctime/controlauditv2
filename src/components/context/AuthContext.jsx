@@ -527,40 +527,32 @@ const AuthContextComponent = ({ children }) => {
           }
         } else {
           // Usuario no autenticado
-          setUser(null);
-          setIsLogged(false);
-          setUserContext(null);
-          setUserEmpresas([]);
-          setUserAuditorias([]);
-          setAuditoriasCompartidas([]);
-          localStorage.removeItem("userInfo");
-          localStorage.removeItem("isLogged");
-          
-          // Modo offline: cargar datos secundarios desde cache
           const wasLoggedIn = localStorage.getItem("isLogged") === "true";
-          if (wasLoggedIn && enableOffline && loadUserFromCache) {
+
+          if (!wasLoggedIn) {
+            // Logout real: limpiar todo
+            setUser(null);
+            setIsLogged(false);
+            setUserContext(null);
+            setUserEmpresas([]);
+            setUserAuditorias([]);
+            setAuditoriasCompartidas([]);
+            localStorage.removeItem("isLogged");
+            localStorage.removeItem("userInfo");
+          } else if (enableOffline && loadUserFromCache) {
+            // Firebase devuelve null pero el usuario estaba logueado = offline
+            // No limpiar estado, cargar desde cache
             try {
-              const cachedUser = await loadUserFromCache();
-              if (cachedUser) {
-                if (cachedUser.empresas?.length > 0) {
-                  setUserEmpresas(cachedUser.empresas);
-                  setLoadingEmpresas(false);
-                }
-                if (cachedUser.sucursales?.length > 0) {
-                  setUserSucursales(cachedUser.sucursales);
-                  setLoadingSucursales(false);
-                }
-                if (cachedUser.formularios?.length > 0) {
-                  setUserFormularios(cachedUser.formularios);
-                  setLoadingFormularios(false);
-                }
-                if (cachedUser.auditorias?.length > 0) {
-                  setUserAuditorias(cachedUser.auditorias);
-                }
-                setEnableDeferredListeners(true);
+              const cached = await loadUserFromCache();
+              if (cached) {
+                setUserContext(cached.userProfile);
+                setUserEmpresas(cached.empresas || []);
+                setUserSucursales(cached.sucursales || []);
+                setUserFormularios(cached.formularios || []);
+                setIsLogged(true);
               }
-            } catch (error) {
-              logger.error('Error cargando cache offline:', error);
+            } catch(e) {
+              logger.error('Error cargando cache offline:', e);
             }
           }
         }
