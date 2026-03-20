@@ -80,7 +80,7 @@ export const useChromePreload = () => {
         // Pausa mínima para que el componente termine de montar
         await new Promise(r => setTimeout(r, 500));
       }
-      navigate('/tablero');
+      navigate('/');
       if (progressText) progressText.textContent = '¡Listo para usar sin conexión!';
       localStorage.setItem('chrome_preload_timestamp', Date.now().toString());
       await new Promise(r => setTimeout(r, 1500));
