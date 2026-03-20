@@ -104,7 +104,8 @@ const OfflineIndicator = ({ userProfile }) => {
   const handleManualSync = async () => {
     try {
       setIsProcessing(true);
-      await syncQueueService.processQueue();
+      // Sync manual debe forzar procesamiento inmediato, aunque haya backoff pendiente.
+      await syncQueueService.processQueue(true);
     } catch (error) {
       logger.error('Error en sincronización manual:', error);
     } finally {

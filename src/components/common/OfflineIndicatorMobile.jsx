@@ -100,7 +100,8 @@ const OfflineIndicatorMobile = ({ userProfile }) => {
       setSnackbarSeverity('info');
       setShowSnackbar(true);
       
-      await syncQueueService.processQueue();
+      // Sync manual debe forzar procesamiento inmediato, aunque haya backoff pendiente.
+      await syncQueueService.processQueue(true);
       
       setSnackbarMessage('Sincronización completada');
       setSnackbarSeverity('success');

@@ -31,7 +31,8 @@ const App = () => {
   // Disparar sincronización cuando vuelve el internet (solo en PWA)
   useEffect(() => {
     const handleOnline = () => {
-      syncQueueService.processQueue();
+      // Al reconectar, forzamos un ciclo para no depender de backoff.
+      syncQueueService.processQueue(true);
     };
     window.addEventListener('online', handleOnline);
     return () => window.removeEventListener('online', handleOnline);
@@ -56,7 +57,7 @@ const App = () => {
   // igualmente intentamos procesar la cola.
   useEffect(() => {
     if (!isOnline) return;
-    syncQueueService.processQueue();
+    syncQueueService.processQueue(true);
   }, [isOnline]);
 
   // Verificar si la app ya se cargó al menos una vez

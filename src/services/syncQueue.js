@@ -267,7 +267,7 @@ class SyncQueueService {
   /**
    * Procesar items de la cola
    */
-  async processQueue() {
+  async processQueue(force = false) {
     let acquired = false;
     try {
       if (!navigator.onLine) {
@@ -284,13 +284,23 @@ class SyncQueueService {
 
       const db = await getOfflineDatabase();
       const now = Date.now();
-      
-      // Obtener items listos para procesar (ordenados por prioridad y fecha)
-      const itemsToProcess = await db.getAllFromIndex(
-        'syncQueue', 
-        'by-nextRetry', 
-        IDBKeyRange.upperBound(now)
-      );
+      let itemsToProcess = [];
+
+      if (force) {
+        // Modo forzado: procesar todo lo pendiente ignorando nextRetry (útil para botón manual de sync)
+        const allItems = await db.getAll('syncQueue');
+        itemsToProcess = allItems.filter(item => {
+          const isFailed = item.status === 'failed' || item.retries >= this.maxRetries;
+          return !isFailed;
+        });
+      } else {
+        // Modo normal: respetar backoff por nextRetry
+        itemsToProcess = await db.getAllFromIndex(
+          'syncQueue',
+          'by-nextRetry',
+          IDBKeyRange.upperBound(now)
+        );
+      }
 
       if (itemsToProcess.length === 0) {
         logger.debug('ðŸ“­ No hay items listos para procesar');
