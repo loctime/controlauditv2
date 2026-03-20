@@ -209,7 +209,6 @@ const Home = () => {
             // Guardar timestamp del cache
             localStorage.setItem('chrome_preload_timestamp', Date.now().toString());
             localStorage.setItem('chrome_preload_cache_version', OFFLINE_PRELOAD_CACHE_VERSION);
-            navigate('/tablero');
           });
         }, 3000);
         

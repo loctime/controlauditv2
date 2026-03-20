@@ -21,7 +21,7 @@ const RouteGuard = ({ roles = [], children }) => {
   }
 
   if (!hasAccess({ role, superdev: userProfile?.superdev }, roles)) {
-    return <Navigate to="/tablero" replace />;
+    return <Navigate to="/" replace />;
   }
 
   return children;

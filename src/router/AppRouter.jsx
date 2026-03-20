@@ -47,7 +47,7 @@ const AppRouter = () => {
         </Route>
       </Route>
 
-      <Route path="*" element={<Navigate to="/tablero" replace />} />
+      <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
   );
 };

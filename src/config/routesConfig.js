@@ -265,7 +265,7 @@ export const routesConfig = [
     path: "/dashboard",
     roles: ["operario", "admin", "superdev"],
     showInMenu: false,
-    redirectTo: "/tablero",
+    redirectTo: "/",
   },
   {
     id: "legacy-cliente-dashboard",
@@ -286,7 +286,7 @@ export const routesConfig = [
     path: "/operario-dashboard",
     roles: ["operario", "admin", "superdev"],
     showInMenu: false,
-    redirectTo: "/tablero",
+    redirectTo: "/",
   },
 ];
 
