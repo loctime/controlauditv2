@@ -527,22 +527,27 @@ const AuthContextComponent = ({ children }) => {
           }
         } else {
           // Usuario no autenticado
-          const showDebug = (msg) => {
-            const el = document.getElementById('offline-debug');
-            if (el) el.innerHTML += '<br>' + msg;
-          };
-
           const debugDiv = document.createElement('div');
           debugDiv.id = 'offline-debug';
-          debugDiv.style = 'position:fixed;top:60px;left:0;right:0;background:rgba(0,0,0,0.85);color:#0f0;font-size:11px;padding:8px;z-index:99999;max-height:50vh;overflow:auto;';
-          debugDiv.innerHTML = 'OFFLINE DEBUG:';
+          debugDiv.style = 'position:fixed;top:0;left:0;right:0;background:rgba(0,0,0,0.9);color:#0f0;font-size:11px;padding:8px;z-index:99999;max-height:60vh;overflow:auto;word-break:break-all;';
+          debugDiv.innerHTML = 'DEBUG:';
           document.body.appendChild(debugDiv);
+          const showDebug = (msg) => {
+            const el = document.getElementById('offline-debug');
+            if (el) el.innerHTML += '<br>' + new Date().toLocaleTimeString() + ' ' + msg;
+          };
 
           const wasLoggedIn = localStorage.getItem("isLogged") === "true";
 
+          showDebug('=== AUTH NULL ===');
+          showDebug('isLogged localStorage: ' + localStorage.getItem('isLogged'));
+          showDebug('isLogged_backup session: ' + sessionStorage.getItem('isLogged_backup'));
           showDebug('wasLoggedIn: ' + wasLoggedIn);
           showDebug('enableOffline: ' + enableOffline);
-          showDebug('loadUserFromCache: ' + !!loadUserFromCache);
+          showDebug('loadFromCache fn: ' + !!loadUserFromCache);
+          showDebug('pwaDebug: ' + JSON.stringify(window._pwaDebug || []));
+          showDebug('UA: ' + navigator.userAgent.substring(0, 60));
+          showDebug('standalone: ' + window.matchMedia('(display-mode: standalone)').matches);
 
           if (!wasLoggedIn) {
             // Logout real: limpiar todo
@@ -558,19 +563,22 @@ const AuthContextComponent = ({ children }) => {
             // Firebase devuelve null pero el usuario estaba logueado = offline
             // No limpiar estado, cargar desde cache
             try {
-              showDebug('entrando a cache...');
+              showDebug('>>> CARGANDO CACHE...');
               const cached = await loadUserFromCache();
-              showDebug('cached: ' + JSON.stringify(cached ? {
-                hasProfile: !!cached.userProfile,
-                empresas: cached.empresas?.length,
-                sucursales: cached.sucursales?.length
-              } : null));
+              showDebug('cached result: ' + JSON.stringify(cached ? {
+                perfil: !!cached.userProfile,
+                empresas: cached.empresas?.length || 0,
+                sucursales: cached.sucursales?.length || 0,
+                formularios: cached.formularios?.length || 0
+              } : 'NULL'));
               if (cached) {
                 setUserContext(cached.userProfile);
                 setUserEmpresas(cached.empresas || []);
                 setUserSucursales(cached.sucursales || []);
                 setUserFormularios(cached.formularios || []);
                 setIsLogged(true);
+              } else {
+                showDebug('>>> CACHE VACIO - sin datos offline');
               }
             } catch(e) {
               logger.error('Error cargando cache offline:', e);
