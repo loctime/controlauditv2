@@ -10,7 +10,7 @@ import {
 } from 'firebase/auth';
 import { toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
-import { getFirestore, collection } from 'firebase/firestore';
+import { initializeFirestore, persistentLocalCache, persistentMultipleTabManager, collection } from 'firebase/firestore';
 import { getStorage } from 'firebase/storage';
 
 // Configuración EXPLÍCITA para ControlAudit (controlstorage-eb796)
@@ -61,7 +61,11 @@ if (controlFileApp.options.projectId !== 'controlstorage-eb796') {
 // Exports: auth, db, storage para ControlAudit (usando controlstorage-eb796)
 export { controlFileApp };
 export const auth = getAuth(controlFileApp);
-const db = getFirestore(controlFileApp);
+const db = initializeFirestore(controlFileApp, {
+  localCache: persistentLocalCache({
+    tabManager: persistentMultipleTabManager()
+  })
+});
 export const dbAudit = db; // Alias para claridad
 export { db }; // Exportar db para compatibilidad con imports existentes
 export const storage = getStorage(controlFileApp);
