@@ -10,7 +10,7 @@ import AddCircleOutlineIcon from '@mui/icons-material/AddCircleOutline';
 import AssessmentIcon from '@mui/icons-material/Assessment';
 import ArrowForwardIcon from '@mui/icons-material/ArrowForward';
 import { useAuth } from '@/components/context/AuthContext';
-import { useChromePreload } from '@/hooks/useChromePreload';
+import { useChromePreload, OFFLINE_PRELOAD_CACHE_VERSION } from '@/hooks/useChromePreload';
 import { shouldEnableOffline } from '../../../utils/pwaDetection';
 const features = [
   { icon: <CheckCircleIcon color="success" />, text: 'Gestión completa de formularios' },
@@ -189,12 +189,16 @@ const Home = () => {
     const cacheTimestamp = localStorage.getItem('chrome_preload_timestamp');
     const cacheAge = cacheTimestamp ? Date.now() - parseInt(cacheTimestamp) : Infinity;
     const cacheIsFresh = cacheAge < 60 * 60 * 1000; // 1 hora
+
+    // Importante: si cambió el Service Worker / cache version, forzar precarga aunque el timestamp sea “reciente”.
+    const storedCacheVersion = localStorage.getItem('chrome_preload_cache_version');
+    const isCacheVersionCurrent = storedCacheVersion === OFFLINE_PRELOAD_CACHE_VERSION;
     
     if (shouldPreload && !isPreloading && !hasPreloadedThisSession && isPWAStandalone && userProfile) {
       // Si el cache es muy antiguo (más de 24 horas), permitir precarga nuevamente
       const shouldPreloadAgain = cacheAge > 24 * 60 * 60 * 1000; // 24 horas
       
-      if (!cacheIsFresh || shouldPreloadAgain) {
+      if (!cacheIsFresh || shouldPreloadAgain || !isCacheVersionCurrent) {
         logger.debug('🚀 [Chrome PWA] Detectado - Ejecutando precarga automática en 3 segundos...');
         
         const preloadTimer = setTimeout(() => {
@@ -204,6 +208,7 @@ const Home = () => {
             sessionStorage.setItem('chrome_preload_done', 'true');
             // Guardar timestamp del cache
             localStorage.setItem('chrome_preload_timestamp', Date.now().toString());
+            localStorage.setItem('chrome_preload_cache_version', OFFLINE_PRELOAD_CACHE_VERSION);
             navigate('/tablero');
           });
         }, 3000);
@@ -259,6 +264,8 @@ const Home = () => {
                     onClick={async () => {
                       sessionStorage.removeItem('chrome_preload_done');
                       await startPreload();
+                      localStorage.setItem('chrome_preload_timestamp', Date.now().toString());
+                      localStorage.setItem('chrome_preload_cache_version', OFFLINE_PRELOAD_CACHE_VERSION);
                       
                       // Solo guardar cache si estamos en móvil (modo offline habilitado)
                       if (shouldEnableOffline() && userProfile && userEmpresas?.length > 0) {
@@ -279,8 +286,7 @@ const Home = () => {
                             userSucursales || [],
                             userFormularios || []
                           );
-                          
-                          localStorage.setItem('chrome_preload_timestamp', Date.now().toString());
+
                           toast.success(`✅ Cache guardado: ${userEmpresas.length} empresas, ${userSucursales?.length || 0} sucursales, ${userFormularios?.length || 0} formularios`, {
                             autoClose: 5000,
                             position: 'top-center'

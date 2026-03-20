@@ -1,6 +1,9 @@
 import logger from '@/utils/logger';
 import { useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
+
+// Debe coincidir con la versión usada por el Service Worker para el cache dinámico.
+export const OFFLINE_PRELOAD_CACHE_VERSION = 'v16';
 export const useChromePreload = () => {
   const [isPreloading, setIsPreloading] = useState(false);
   const [currentPage, setCurrentPage] = useState('');
@@ -10,19 +13,24 @@ export const useChromePreload = () => {
   const isPWAStandalone = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone;
   const isChrome = navigator.userAgent.includes('Chrome') && !navigator.userAgent.includes('Edg');
   const shouldPreload = isPWAStandalone && isChrome;
+
+  const dynamicCacheName = `controlaudit-dynamic-${OFFLINE_PRELOAD_CACHE_VERSION}`;
   const pagesToPreload = [
     { path: '/establecimiento', name: 'Establecimientos' },
     { path: '/auditoria', name: 'Auditoría' },
     { path: '/editar', name: 'Formularios' },
     { path: '/reporte', name: 'Reportes' },
-    { path: '/perfil', name: 'Perfil' }
+    { path: '/perfil', name: 'Perfil' },
+    // Importante: `/tablero` es lazy-loaded; si no se precarga el chunk,
+    // al entrar offline puede quedar pantalla en blanco.
+    { path: '/tablero', name: 'Tablero' }
   ];
   // Espera hasta que el cache tenga al menos N chunks JS, o timeout
   const waitForCacheGrowth = async (previousCount, maxWaitMs = 8000) => {
     const start = Date.now();
     while (Date.now() - start < maxWaitMs) {
       try {
-        const cache = await caches.open('controlaudit-dynamic-v16');
+        const cache = await caches.open(dynamicCacheName);
         const keys = await cache.keys();
         const jsChunks = keys.filter(r => r.url.includes('/assets/') && r.url.endsWith('.js'));
         if (jsChunks.length > previousCount) return jsChunks.length;
@@ -63,7 +71,7 @@ export const useChromePreload = () => {
       // Contar chunks antes de empezar
       let previousChunkCount = 0;
       try {
-        const cache = await caches.open('controlaudit-dynamic-v16');
+        const cache = await caches.open(dynamicCacheName);
         const keys = await cache.keys();
         previousChunkCount = keys.filter(r => r.url.includes('/assets/') && r.url.endsWith('.js')).length;
       } catch(e) {}
@@ -83,6 +91,7 @@ export const useChromePreload = () => {
       navigate('/');
       if (progressText) progressText.textContent = '¡Listo para usar sin conexión!';
       localStorage.setItem('chrome_preload_timestamp', Date.now().toString());
+      localStorage.setItem('chrome_preload_cache_version', OFFLINE_PRELOAD_CACHE_VERSION);
       await new Promise(r => setTimeout(r, 1500));
     } catch (error) {
       logger.error('Error durante preload:', error);
