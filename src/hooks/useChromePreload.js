@@ -17,22 +17,6 @@ export const useChromePreload = () => {
     { path: '/reporte', name: 'Reportes' },
     { path: '/perfil', name: 'Perfil' }
   ];
-  // Espera hasta que un chunk JS esté en DYNAMIC_CACHE, con timeout máximo
-  const waitForChunkInCache = async (maxWaitMs = 8000) => {
-    const start = Date.now();
-    while (Date.now() - start < maxWaitMs) {
-      try {
-        const cache = await caches.open('controlaudit-dynamic-v15');
-        const keys = await cache.keys();
-        const jsChunks = keys.filter(r => r.url.includes('/assets/') && r.url.endsWith('.js'));
-        if (jsChunks.length > 0) return true;
-      } catch (e) {
-        // ignorar
-      }
-      await new Promise(r => setTimeout(r, 300));
-    }
-    return false;
-  };
   // Espera hasta que el cache tenga al menos N chunks JS, o timeout
   const waitForCacheGrowth = async (previousCount, maxWaitMs = 8000) => {
     const start = Date.now();
