@@ -95,11 +95,7 @@ class SyncQueueService {
       logger.debug('📝 Auditoría encolada para sincronización:', queueId);
       
       this.notifyListeners('enqueued', { type: 'auditoria', id: queueId });
-      
-      // Iniciar procesamiento si no está activo
-      if (!this.isProcessing) {
-        this.startProcessing();
-      }
+      // Procesamiento solo manual (via botón sync). No auto-iniciar aquí.
 
       return queueId;
     } catch (error) {
@@ -488,7 +484,7 @@ class SyncQueueService {
           setTimeout(() => {
             unsubscribe();
             reject(new Error('Timeout esperando autenticación'));
-          }, 1000);
+          }, 8000);
         });
       };
       

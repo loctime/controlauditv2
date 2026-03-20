@@ -28,37 +28,9 @@ const App = () => {
   // Para evitar que la cola no se procese al reconectar, procesamos sin depender
   // de `isPWA()` y dejamos que `syncQueueService.processQueue()` haga no-op si no hay items.
 
-  // Disparar sincronización cuando vuelve el internet (solo en PWA)
-  useEffect(() => {
-    const handleOnline = () => {
-      // Al reconectar, forzamos un ciclo para no depender de backoff.
-      syncQueueService.processQueue(true);
-    };
-    window.addEventListener('online', handleOnline);
-    return () => window.removeEventListener('online', handleOnline);
-  }, []);
-
-  // Reanudar procesamiento de cola si hay items pendientes al iniciar la app (solo en PWA)
-  useEffect(() => {
-    const resumeQueueIfNeeded = async () => {
-      try {
-        const stats = await syncQueueService.getQueueStats();
-        if (stats.total > 0) {
-          syncQueueService.startProcessing();
-        }
-      } catch (e) {
-        // Silencioso: si falla no afecta el resto de la app
-      }
-    };
-    resumeQueueIfNeeded();
-  }, []);
-
-  // Caso adicional: si el estado `isOnline` cambia pero el evento `online` no dispara,
-  // igualmente intentamos procesar la cola.
-  useEffect(() => {
-    if (!isOnline) return;
-    syncQueueService.processQueue(true);
-  }, [isOnline]);
+  // Sincronización manual únicamente: el usuario presiona el ícono en la navbar.
+  // No hay auto-procesamiento al iniciar ni al reconectar para evitar fallos
+  // por auth no resuelta. Los ítems quedan en cola como 'pending' hasta sync manual.
 
   // Verificar si la app ya se cargó al menos una vez
   useEffect(() => {

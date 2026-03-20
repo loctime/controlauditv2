@@ -345,7 +345,18 @@ const AuthContextComponent = ({ children }) => {
           localStorage.setItem("isLogged", JSON.stringify(true));
           
           // 1. Obtener custom claims del token (única fuente de verdad)
-          const tokenResult = await firebaseUser.getIdTokenResult(true);
+          // Intentar force-refresh online; si falla offline, usar token cacheado
+          let tokenResult;
+          try {
+            tokenResult = await firebaseUser.getIdTokenResult(true);
+          } catch (tokenRefreshError) {
+            if (!navigator.onLine) {
+              logger.warn('[AUTH] Token refresh falló offline, usando token cacheado:', tokenRefreshError.message);
+              tokenResult = await firebaseUser.getIdTokenResult(false);
+            } else {
+              throw tokenRefreshError;
+            }
+          }
           const tokenRole = tokenResult.claims.role;
           const tokenOwnerId = tokenResult.claims.ownerId; // NO usar fallback - debe venir del token
           const tokenAppId = tokenResult.claims.appId;

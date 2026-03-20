@@ -6,6 +6,7 @@ import { useAuth } from '@/components/context/AuthContext';
 import AuditoriaService from "../auditoriaService";
 import { buildReporteMetadata } from '../../../../services/useMetadataService';
 import autoSaveService from "../auditoria/services/autoSaveService";
+import { getOfflineDatabase } from '../../../../services/offlineDatabase';
 const BotonGenerarReporte = ({ 
   onClick, 
   deshabilitado, 
@@ -49,69 +50,25 @@ const BotonGenerarReporte = ({
       if (!currentUserProfile) {
         logger.debug('[ReporteImprimir] userProfile no disponible, buscando en cache...');
         try {
-          // Verificar si IndexedDB está disponible
-          if (!window.indexedDB) {
-            logger.warn('[ReporteImprimir] IndexedDB no está disponible');
-            throw new Error('IndexedDB no disponible');
-          }
-
-          const request = indexedDB.open('controlaudit_offline_v1', 2);
-          const cachedUser = await new Promise((resolve, reject) => {
-            request.onsuccess = function(event) {
-              const db = event.target.result;
-              
-              // Verificar si la object store 'settings' existe
-              if (!db.objectStoreNames.contains('settings')) {
-                logger.warn('[ReporteImprimir] Object store "settings" no existe');
-                resolve(null);
-                return;
-              }
-              
-              const transaction = db.transaction(['settings'], 'readonly');
-              const store = transaction.objectStore('settings');
-              
-              store.get('complete_user_cache').onsuccess = function(e) {
-                const cached = e.target.result;
-                if (cached && cached.value && cached.value.userProfile) {
-                  resolve(cached.value.userProfile);
-                } else {
-                  resolve(null);
-                }
-              };
-              
-              store.get('complete_user_cache').onerror = function(e) {
-                logger.error('[ReporteImprimir] Error al obtener cache:', e.target.error);
-                resolve(null);
-              };
-            };
-            
-            request.onerror = function(event) {
-              logger.error('[ReporteImprimir] Error al abrir IndexedDB:', event.target.error);
-              reject(event.target.error);
-            };
-            
-            request.onupgradeneeded = function(event) {
-              logger.debug('[ReporteImprimir] IndexedDB necesita actualización');
-              // .No hacer nada aquí, solo para evitar errores
-            };
-          });
-          
-          if (cachedUser) {
-            currentUserProfile = cachedUser;
+          const offlineDb = await getOfflineDatabase();
+          const cached = await offlineDb.get('settings', 'complete_user_cache');
+          if (cached?.value?.userProfile) {
+            currentUserProfile = cached.value.userProfile;
             logger.debug('[ReporteImprimir] Usuario encontrado en cache:', {
               uid: currentUserProfile.uid,
-              email: currentUserProfile.email,
-              displayName: currentUserProfile.displayName,
-              role: currentUserProfile.role,
-              ownerId: currentUserProfile.ownerId
+              ownerId: currentUserProfile.ownerId,
+              role: currentUserProfile.role
             });
           } else {
             logger.debug('[ReporteImprimir] No se encontró usuario en cache');
           }
         } catch (error) {
           logger.error('[ReporteImprimir] Error al obtener usuario del cache:', error);
-          // Continuar sin userProfile del cache
         }
+      }
+
+      if (!currentUserProfile?.ownerId) {
+        throw new Error('No se pudo obtener el perfil del usuario. Intentá cerrar sesión y volver a ingresar.');
       }
 
       // Asegurar que tenemos los datos de auth correctos
@@ -157,7 +114,7 @@ const BotonGenerarReporte = ({
 
       // Limpiar autoguardado al completar exitosamente
       try {
-        await autoSaveService.clearLocalStorage(currentUserProfile?.uid);
+        await autoSaveService.clearLocalStorage(currentUserProfile?.uid, currentUserProfile?.ownerId);
         logger.debug('🗑️ Autoguardado limpiado después de completar auditoría');
       } catch (cleanupError) {
         logger.warn('⚠️ Error al limpiar autoguardado:', cleanupError);
