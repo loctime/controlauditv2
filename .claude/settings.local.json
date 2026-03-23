@@ -2,7 +2,12 @@
   "permissions": {
     "allow": [
       "Bash(xargs grep:*)",
-      "Bash(dir \"C:\\\\Users\\\\User\\\\Desktop\\\\controlauditv2\\\\dist\\\\assets\")"
+      "Bash(dir \"C:\\\\Users\\\\User\\\\Desktop\\\\controlauditv2\\\\dist\\\\assets\")",
+      "Bash(mv scripts/migrate-sanabria-audit.js scripts/migration/)",
+      "Bash(mv scripts/migrate-ddd-audit.js scripts/migration/)",
+      "Bash(mv scripts/migrate-empleados.js scripts/migration/)",
+      "Bash(mv scripts/migrate-registros-asistencia.js scripts/migration/)",
+      "Bash(mv scripts/fix-firestore-structure.js scripts/migration/)"
     ]
   }
 }
