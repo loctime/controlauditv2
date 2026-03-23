@@ -576,27 +576,7 @@ const AuthContextComponent = ({ children }) => {
           }
         } else {
           // Usuario no autenticado
-          const debugDiv = document.createElement('div');
-          debugDiv.id = 'offline-debug';
-          debugDiv.style = 'position:fixed;top:0;left:0;right:0;background:rgba(0,0,0,0.9);color:#0f0;font-size:11px;padding:8px;z-index:99999;max-height:60vh;overflow:auto;word-break:break-all;';
-          debugDiv.innerHTML = 'DEBUG:';
-          document.body.appendChild(debugDiv);
-          const showDebug = (msg) => {
-            const el = document.getElementById('offline-debug');
-            if (el) el.innerHTML += '<br>' + new Date().toLocaleTimeString() + ' ' + msg;
-          };
-
           const wasLoggedIn = localStorage.getItem("isLogged") === "true";
-
-          showDebug('=== AUTH NULL ===');
-          showDebug('isLogged localStorage: ' + localStorage.getItem('isLogged'));
-          showDebug('isLogged_backup session: ' + sessionStorage.getItem('isLogged_backup'));
-          showDebug('wasLoggedIn: ' + wasLoggedIn);
-          showDebug('enableOffline: ' + enableOffline);
-          showDebug('loadFromCache fn: ' + !!loadUserFromCache);
-          showDebug('pwaDebug: ' + JSON.stringify(window._pwaDebug || []));
-          showDebug('UA: ' + navigator.userAgent.substring(0, 60));
-          showDebug('standalone: ' + window.matchMedia('(display-mode: standalone)').matches);
 
           if (!wasLoggedIn) {
             // Logout real: limpiar todo
