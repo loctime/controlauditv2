@@ -823,18 +823,32 @@ const AuditoriaRefactorizada = () => {
     }
   }, [location.state, empresas, sucursales, empresaSeleccionada, sucursalSeleccionada]);
 
-  // Salto automático al paso 2 si viene de la agenda
+  // Auto-seleccionar formulario cuando viene de agenda
   useEffect(() => {
     if (
-      location.state?.empresa &&
+      location.state?.formularioId &&
+      formularios.length > 0 &&
+      !formularioSeleccionadoId
+    ) {
+      const formulario = formularios.find(f => f.id === location.state.formularioId);
+      if (formulario) {
+        setFormularioSeleccionadoId(formulario.id);
+        logger.debug('[DEBUG Auditoria] Formulario auto-seleccionado por agenda:', formulario.nombre);
+      }
+    }
+  }, [location.state, formularios, formularioSeleccionadoId]);
+
+  // Salto automático al paso 2 (Preguntas) si viene de agenda con todo pre-cargado
+  useEffect(() => {
+    if (
       location.state?.formularioId &&
       empresaSeleccionada &&
       sucursalSeleccionada &&
       formularioSeleccionadoId &&
       activeStep === 0
     ) {
-      setActiveStep(1);
-      logger.debug('[DEBUG Auditoria] Salto automático al paso 2 por agenda');
+      setActiveStep(2);
+      logger.debug('[DEBUG Auditoria] Salto automático al paso Preguntas por agenda');
     }
   }, [location.state, empresaSeleccionada, sucursalSeleccionada, formularioSeleccionadoId, activeStep]);
 
