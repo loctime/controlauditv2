@@ -173,7 +173,7 @@ const AgendarAuditoriaDialog = ({ open, onClose, onSave, empresas, sucursales, f
                 >
                   <MenuItem value="">Casa Central</MenuItem>
                   {sucursales
-                    .filter(sucursal => !form.empresa || sucursal.empresa === form.empresa)
+                    .filter(sucursal => !form.empresaId || sucursal.empresaId === form.empresaId)
                     .map((sucursal) => (
                       <MenuItem key={sucursal.id} value={sucursal.nombre}>
                         {sucursal.nombre}
