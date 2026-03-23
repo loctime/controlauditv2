@@ -26,7 +26,9 @@ import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import Swal from 'sweetalert2';
 import { useAuth } from '@/components/context/AuthContext';
 import { reporteService } from "../../../../services/reporteService";
-import { db } from "../../../../firebaseControlFile";
+import { db, dbAudit } from "../../../../firebaseControlFile";
+import { collection, getDocs, query, where } from "firebase/firestore";
+import { firestoreRoutesCore } from "../../../../core/firestore/firestoreRoutes.core";
 
 // Hooks personalizados
 import { useAuditoriaState } from "./hooks/useAuditoriaState";
@@ -41,6 +43,7 @@ import AutoSaveAlert from "./components/AutoSaveAlert";
 import AuditoriaHeader from "./components/AuditoriaHeader";
 import AlertasFaltantes from "./components/AlertasFaltantes";
 import { createAuditoriaSteps } from "./components/AuditoriaSteps";
+import SugerenciaAgenda from "./components/SugerenciaAgenda";
 // import OfflineDebugLogs from "./components/OfflineDebugLogs"; // Comentado temporalmente para probar error en Edge PWA
 
 // Servicios
@@ -129,6 +132,9 @@ const AuditoriaRefactorizada = () => {
   const [cargandoDatosRespaldo, setCargandoDatosRespaldo] = useState(false);
   const [datosRespaldoCargados, setDatosRespaldoCargados] = useState(false);
 
+  // Estado para sugerencia de agendas pendientes (Etapa 2)
+  const [agendasPendientes, setAgendasPendientes] = useState([]);
+
   // Cargar datos de respaldo si no están disponibles (solo una vez)
   useEffect(() => {
     const cargarDatosRespaldo = async () => {
@@ -168,6 +174,39 @@ const AuditoriaRefactorizada = () => {
     const timer = setTimeout(cargarDatosRespaldo, 1000);
     return () => clearTimeout(timer);
   }, [userProfile, datosRespaldoCargados]);
+
+  // Cargar agendas pendientes asignadas al operario (Etapa 2)
+  useEffect(() => {
+    const cargarAgendasPendientes = async () => {
+      // Solo mostrar si NO viene de una agenda ya y el usuario está cargado
+      if (!userProfile?.uid || !userProfile?.ownerId || location.state?.auditoriaId) return;
+
+      try {
+        const ownerId = userProfile.ownerId;
+        const agendaRef = collection(dbAudit, ...firestoreRoutesCore.auditorias_agendadas(ownerId));
+        const q = query(
+          agendaRef,
+          where('estado', '==', 'agendada')
+        );
+        const snap = await getDocs(q);
+        const agendas = snap.docs
+          .map(d => ({ id: d.id, ...d.data() }))
+          .filter(a => {
+            // Filtrar por encargado asignado al usuario actual
+            const enc = a.encargado;
+            if (!enc) return false;
+            if (typeof enc === 'string') return enc === userProfile.uid;
+            if (typeof enc === 'object') return enc.id === userProfile.uid;
+            return false;
+          });
+        setAgendasPendientes(agendas);
+      } catch (error) {
+        logger.debug('[Auditoria] Error cargando agendas pendientes:', error);
+      }
+    };
+
+    cargarAgendasPendientes();
+  }, [userProfile?.uid, userProfile?.ownerId, location.state?.auditoriaId]);
 
   // Hook para manejar todo el estado
   const auditoriaState = useAuditoriaState();
@@ -708,12 +747,12 @@ const AuditoriaRefactorizada = () => {
     }
   }, [respuestas, handleGuardarRespuestas]);
 
-  // Función para marcar auditoría como completada
-  const marcarAuditoriaCompletada = async () => {
+  // Función para marcar auditoría como completada (Etapa 3)
+  const marcarAuditoriaCompletada = async (reporteId) => {
     try {
-      if (auditoriaIdAgenda) {
-        await reporteService.marcarAuditoriaCompletada(auditoriaIdAgenda);
-        log("Auditoría agendada (ID: %s) marcada como completada.", auditoriaIdAgenda);
+      if (auditoriaIdAgenda && userProfile?.ownerId) {
+        await reporteService.marcarAuditoriaCompletada(auditoriaIdAgenda, userProfile.ownerId, reporteId);
+        log("Auditoría agendada (ID: %s) marcada como completada. Reporte: %s", auditoriaIdAgenda, reporteId);
         setSnackbarMsg("Auditoría agendada marcada como completada.");
         setSnackbarType("success");
         setSnackbarOpen(true);
@@ -870,7 +909,7 @@ const AuditoriaRefactorizada = () => {
     handleGuardarAccionesRequeridas,
     handleSaveFirmaAuditor,
     handleSaveFirmaResponsable,
-    handleFinalizar: () => handleFinalizar(marcarAuditoriaCompletada),
+    handleFinalizar: (reporteId) => handleFinalizar(marcarAuditoriaCompletada, reporteId),
     setDatosReporte,
     
     // Funciones
@@ -885,7 +924,8 @@ const AuditoriaRefactorizada = () => {
     // IDs para carga de imágenes
     auditId,
     companyId,
-    ownerId
+    ownerId,
+    auditoriaIdAgenda
   }), [
     empresas,
     empresaSeleccionada,
@@ -923,7 +963,8 @@ const AuditoriaRefactorizada = () => {
     isMobile,
     auditId,
     companyId,
-    ownerId
+    ownerId,
+    auditoriaIdAgenda
   ]);
 
   // Scroll al top cuando se llega al paso de firmas (paso 3)
@@ -981,6 +1022,9 @@ const AuditoriaRefactorizada = () => {
         </Alert>
       )}
       
+      {/* Sugerencia de agendas pendientes (Etapa 2) */}
+      <SugerenciaAgenda agendas={agendasPendientes} />
+
       {/* Header con navegación y progreso */}
       <AuditoriaHeader
         navigate={navigate}

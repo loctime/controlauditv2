@@ -878,6 +878,31 @@ export const firestoreRoutesCore = {
     auditoriaId,
     'evidencias',
     evidenciaId
+  ],
+
+  /**
+   * Colección de auditorías agendadas del owner
+   * Path: apps/auditoria/owners/{ownerId}/auditorias_agendadas
+   */
+  auditorias_agendadas: (ownerId: string): string[] => [
+    'apps',
+    'auditoria',
+    'owners',
+    ownerId,
+    'auditorias_agendadas'
+  ],
+
+  /**
+   * Documento de auditoría agendada específica
+   * Path: apps/auditoria/owners/{ownerId}/auditorias_agendadas/{auditoriaId}
+   */
+  auditoria_agendada: (ownerId: string, auditoriaId: string): string[] => [
+    'apps',
+    'auditoria',
+    'owners',
+    ownerId,
+    'auditorias_agendadas',
+    auditoriaId
   ]
 };
 

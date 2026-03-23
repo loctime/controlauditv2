@@ -338,8 +338,13 @@ export const useClienteDashboard = () => {
     [auditorias]
   );
 
-  const auditoriasCompletadas = useMemo(() => 
-    auditorias.filter(aud => aud.estado === 'completada'), 
+  const auditoriasCompletadas = useMemo(() =>
+    auditorias.filter(aud => aud.estado === 'completada'),
+    [auditorias]
+  );
+
+  const auditoriasConReporteSinVincular = useMemo(() =>
+    auditorias.filter(aud => aud.reporteSinVincular && aud.estado === 'agendada'),
     [auditorias]
   );
 
@@ -405,6 +410,7 @@ export const useClienteDashboard = () => {
     loadingStates,
     auditoriasPendientes,
     auditoriasCompletadas,
+    auditoriasConReporteSinVincular,
     auditoriasDelDia,
     proximasAuditorias,
     handleAgendarAuditoria,

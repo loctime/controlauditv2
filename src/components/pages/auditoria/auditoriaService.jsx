@@ -433,6 +433,41 @@ class AuditoriaService {
         docRef.id
       );
 
+      // Etapa 4a: Si no hay vínculo con agenda, buscar coincidencias para aviso en /panel
+      if (!datosAuditoria.auditoriaIdAgenda) {
+        try {
+          const agendaRef = collection(dbAudit, ...firestoreRoutesCore.auditorias_agendadas(ownerId));
+          const agendaQuery = query(
+            agendaRef,
+            where('empresa', '==', datosAuditoria.empresa?.nombre || ''),
+            where('formulario', '==', datosAuditoria.formulario?.nombre || ''),
+            where('estado', '==', 'agendada')
+          );
+          const agendaSnap = await getDocs(agendaQuery);
+          const reporteFecha = new Date();
+          const updatePromises = [];
+          agendaSnap.docs.forEach(agendaDoc => {
+            const agendaFecha = new Date(agendaDoc.data().fecha);
+            const diffDias = Math.abs(reporteFecha - agendaFecha) / (1000 * 60 * 60 * 24);
+            if (diffDias <= 7) {
+              updatePromises.push(
+                updateDocWithAppId(agendaDoc.ref, {
+                  reporteSinVincular: docRef.id,
+                  fechaReporteSinVincular: serverTimestamp()
+                })
+              );
+            }
+          });
+          if (updatePromises.length > 0) {
+            await Promise.all(updatePromises);
+            logger.debug('[auditoriaService] Etapa 4: marcadas', updatePromises.length, 'agendas con reporte sin vincular:', docRef.id);
+          }
+        } catch (etapa4Error) {
+          // No bloquear el guardado principal si falla la detección
+          logger.warn('[auditoriaService] Etapa 4: error en detección de coincidencias:', etapa4Error);
+        }
+      }
+
       return { id: docRef.id, uploadFailures };
     } catch (error) {
       logger.error('Error al guardar auditoria online:', error);
