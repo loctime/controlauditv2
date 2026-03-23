@@ -367,8 +367,8 @@ export const useAuditoriaHandlers = ({
     log("Nueva auditoría iniciada - todos los estados reiniciados");
   }, [reiniciarAuditoria, navigate, log]);
 
-  const handleFinalizar = useCallback(async (marcarAuditoriaCompletada) => {
-    await marcarAuditoriaCompletada();
+  const handleFinalizar = useCallback(async (marcarAuditoriaCompletada, reporteId) => {
+    await marcarAuditoriaCompletada(reporteId);
     setAuditoriaGenerada(true);
   }, [setAuditoriaGenerada]);
 

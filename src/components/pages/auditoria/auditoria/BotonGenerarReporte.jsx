@@ -21,6 +21,7 @@ const BotonGenerarReporte = ({
   firmaAuditor,
   firmaResponsable,
   datosReporte = {},
+  auditoriaIdAgenda,
   onFinalizar
 }) => {
   const { user, userProfile } = useAuth();
@@ -90,6 +91,7 @@ const BotonGenerarReporte = ({
         firmaAuditor,
         firmaResponsable,
         datosReporte, // Incluir los datos adicionales del reporte
+        auditoriaIdAgenda, // Para Etapa 4a: detectar reporte sin vínculo
         fechaGuardado: new Date(),
       });
       logger.debug('🔍 [BotonGenerarReporte] Clasificaciones recibidas como prop:', clasificaciones);
@@ -125,9 +127,9 @@ const BotonGenerarReporte = ({
       }
       setMostrarMensaje(true);
       
-      // Llamar callback de finalización
+      // Llamar callback de finalización pasando el ID del reporte guardado
       if (onFinalizar) {
-        onFinalizar();
+        onFinalizar(auditoriaId);
       }
     } catch (error) {
       setGuardadoExitoso(false);
