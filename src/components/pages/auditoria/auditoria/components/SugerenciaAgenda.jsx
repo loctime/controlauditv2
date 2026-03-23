@@ -31,7 +31,7 @@ const SugerenciaAgenda = ({ agendas }) => {
       sx={{ mb: 2 }}
     >
       <AlertTitle>
-        Tenés {agendas.length === 1 ? 'una auditoría agendada' : `${agendas.length} auditorías agendadas`} pendiente{agendas.length > 1 ? 's' : ''}
+        {agendas.length === 1 ? 'Auditoría agendada próxima' : `${agendas.length} auditorías agendadas próximas`} (±7 días)
       </AlertTitle>
       <Stack spacing={1} mt={1}>
         {agendas.map((agenda) => (

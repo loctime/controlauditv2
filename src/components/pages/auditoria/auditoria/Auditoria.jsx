@@ -161,30 +161,33 @@ const AuditoriaRefactorizada = () => {
     return () => clearTimeout(timer);
   }, [userProfile, datosRespaldoCargados]);
 
-  // Cargar agendas pendientes asignadas al operario (Etapa 2)
+  // Cargar agendas pendientes próximas (±7 días) sin filtro de empresa/sucursal/encargado
   useEffect(() => {
     const cargarAgendasPendientes = async () => {
-      // Solo mostrar si NO viene de una agenda ya y el usuario está cargado
-      if (!userProfile?.uid || !userProfile?.ownerId || location.state?.auditoriaId) return;
+      if (!userProfile?.ownerId || location.state?.auditoriaId) return;
 
       try {
         const ownerId = userProfile.ownerId;
         const agendaRef = collection(dbAudit, ...firestoreRoutesCore.auditorias_agendadas(ownerId));
-        const q = query(
-          agendaRef,
-          where('estado', '==', 'agendada')
-        );
+        const q = query(agendaRef, where('estado', '==', 'agendada'));
         const snap = await getDocs(q);
+
+        const hoy = new Date();
+        hoy.setHours(0, 0, 0, 0);
+        const limite = new Date(hoy);
+        limite.setDate(hoy.getDate() + 7);
+        const desde = new Date(hoy);
+        desde.setDate(hoy.getDate() - 7);
+
         const agendas = snap.docs
           .map(d => ({ id: d.id, ...d.data() }))
           .filter(a => {
-            // Filtrar por encargado asignado al usuario actual
-            const enc = a.encargado;
-            if (!enc) return false;
-            if (typeof enc === 'string') return enc === userProfile.uid;
-            if (typeof enc === 'object') return enc.id === userProfile.uid;
-            return false;
-          });
+            if (!a.fecha) return false;
+            const fecha = new Date(a.fecha + 'T00:00:00');
+            return fecha >= desde && fecha <= limite;
+          })
+          .sort((a, b) => a.fecha.localeCompare(b.fecha));
+
         setAgendasPendientes(agendas);
       } catch (error) {
         logger.debug('[Auditoria] Error cargando agendas pendientes:', error);
@@ -192,7 +195,7 @@ const AuditoriaRefactorizada = () => {
     };
 
     cargarAgendasPendientes();
-  }, [userProfile?.uid, userProfile?.ownerId, location.state?.auditoriaId]);
+  }, [userProfile?.ownerId, location.state?.auditoriaId]);
 
   // Hook para manejar todo el estado
   const auditoriaState = useAuditoriaState();
