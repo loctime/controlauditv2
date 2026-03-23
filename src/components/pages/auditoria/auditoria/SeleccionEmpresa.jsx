@@ -11,47 +11,17 @@ import {
   useTheme,
   useMediaQuery,
   alpha,
-  Alert,
   CircularProgress
 } from "@mui/material";
 import BusinessIcon from '@mui/icons-material/Business';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import WarningIcon from '@mui/icons-material/Warning';
-import InfoIcon from '@mui/icons-material/Info';
 
 const SeleccionEmpresa = ({ empresas, empresaSeleccionada, onChange }) => {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
   const isSmallMobile = useMediaQuery(theme.breakpoints.down('xs'));
   const [empresaSeleccionadaLocal, setEmpresaSeleccionadaLocal] = useState(empresaSeleccionada);
-  const [debugInfo, setDebugInfo] = useState(null);
-
-  // Verificar cache disponible
-  useEffect(() => {
-    const checkCache = async () => {
-      try {
-        // Verificar localStorage
-        const localCache = localStorage.getItem('complete_user_cache');
-        if (localCache) {
-          const cacheData = JSON.parse(localCache);
-          setDebugInfo({
-            hasLocalStorage: true,
-            empresasInCache: cacheData.empresas?.length || 0,
-            userId: cacheData.userId
-          });
-        } else {
-          setDebugInfo({
-            hasLocalStorage: false,
-            empresasInCache: 0
-          });
-        }
-      } catch (e) {
-        setDebugInfo({ error: e.message });
-      }
-    };
-    checkCache();
-  }, [empresas]);
-
   const mobileBoxStyle = {
     mb: isMobile ? 0.25 : 1,
     p: isMobile ? 1 : 3,
@@ -332,41 +302,6 @@ const SeleccionEmpresa = ({ empresas, empresaSeleccionada, onChange }) => {
               Contacta a tu administrador para agregar empresas.
             </Typography>
             
-            {/* Debug info */}
-            {debugInfo && (
-              <Alert 
-                severity={debugInfo.hasLocalStorage && debugInfo.empresasInCache > 0 ? "info" : "warning"}
-                icon={<InfoIcon />}
-                sx={{ mt: 2 }}
-              >
-                <Typography variant="body2" fontWeight="bold">
-                  Debug Info:
-                </Typography>
-                <Typography variant="caption" component="div">
-                  • Empresas recibidas: {empresas.length}
-                </Typography>
-                {debugInfo.hasLocalStorage && (
-                  <Typography variant="caption" component="div">
-                    • Cache localStorage: {debugInfo.empresasInCache} empresas
-                  </Typography>
-                )}
-                {debugInfo.userId && (
-                  <Typography variant="caption" component="div">
-                    • UserId en cache: {debugInfo.userId}
-                  </Typography>
-                )}
-                {debugInfo.error && (
-                  <Typography variant="caption" color="error" component="div">
-                    • Error: {debugInfo.error}
-                  </Typography>
-                )}
-                {!navigator.onLine && (
-                  <Typography variant="caption" color="warning" component="div" sx={{ mt: 1 }}>
-                    ⚠️ Modo offline detectado
-                  </Typography>
-                )}
-              </Alert>
-            )}
           </Box>
         </>
       )}

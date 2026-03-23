@@ -994,34 +994,6 @@ const AuditoriaRefactorizada = () => {
         </Alert>
       )}
       
-      {/* Debug info - solo para supermax */}
-      {role === 'superdev' && (
-        <Alert severity="info" sx={{ mb: 2 }}>
-          <Typography variant="body2">
-            <strong>Debug Info:</strong>
-            <br />
-            🌐 Navegador: {navigator.userAgent.includes('Edg') ? 'Edge' : 'Chrome/Firefox'}
-            <br />
-            📊 Empresas: {userEmpresas?.length || 0}
-            <br />
-            🏢 Sucursales: {userSucursales?.length || 0}
-            <br />
-            📋 Formularios: {userFormularios?.length || 0}
-            <br />
-            👤 Usuario: {userProfile?.email || 'Sin usuario'}
-            <br />
-            💾 Cache localStorage: {localStorage.getItem('complete_user_cache') ? 'Disponible' : 'No disponible'}
-          </Typography>
-          <Button 
-            size="small" 
-            onClick={() => window.location.reload()} 
-            sx={{ mt: 1 }}
-          >
-            🔄 Recargar página
-          </Button>
-        </Alert>
-      )}
-      
       {/* Sugerencia de agendas pendientes (Etapa 2) */}
       <SugerenciaAgenda agendas={agendasPendientes} />
 
