@@ -102,7 +102,7 @@ const AgendarAuditoriaDialog = ({ open, onClose, onSave, empresas, sucursales, f
     const { name, value } = e.target;
     if (name === 'empresa') {
       const emp = empresas.find(emp => emp.nombre === value);
-      setForm(prev => ({ ...prev, empresa: value, empresaId: emp?.id || '' }));
+      setForm(prev => ({ ...prev, empresa: value, empresaId: emp?.id || '', sucursal: '' }));
     } else if (name === 'formulario') {
       const form_ = formularios.find(f => f.nombre === value);
       setForm(prev => ({ ...prev, formulario: value, formularioId: form_?.id || '' }));

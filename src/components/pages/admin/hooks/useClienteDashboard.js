@@ -54,7 +54,7 @@ export const useClienteDashboard = () => {
       const sucursalesRef = collection(dbAudit, ...firestoreRoutesCore.sucursales(ownerId));
       
       if (empresasData && empresasData.length > 0) {
-        const empresasIds = empresasData.map(emp => emp.nombre || emp.id);
+        const empresasIds = empresasData.map(emp => emp.id);
         // Firestore limita 'in' queries a 10 elementos, dividir en chunks si es necesario
         const chunkSize = 10;
         const empresasChunks = [];
