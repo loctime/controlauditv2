@@ -5,6 +5,7 @@ import { useNavigate } from "react-router-dom";
 import {
   Typography,
   Box,
+  Divider,
   Grid,
   Paper,
   Button,
@@ -34,6 +35,7 @@ import ResumenGeneral from "./components/ResumenGeneral";
 import HistorialAuditorias from "./HistorialAuditorias";
 import LoadingSkeleton from "./components/LoadingSkeleton";
 import PermissionAlert from "./components/PermissionAlert";
+import AuditoriaSinVincularCard from "./components/AuditoriaSinVincularCard";
 
 const ClienteDashboard = React.memo(() => {
   const { role, userProfile } = useAuth();
@@ -259,24 +261,14 @@ const ClienteDashboard = React.memo(() => {
       {auditoriasConReporteSinVincular.length > 0 && (
         <Alert severity="warning" sx={{ mb: 2 }}>
           <AlertTitle>Auditorías realizadas sin vincular a agenda</AlertTitle>
-          {auditoriasConReporteSinVincular.map(agenda => (
-            <Box key={agenda.id} display="flex" alignItems="center" justifyContent="space-between" flexWrap="wrap" gap={1} mb={0.5}>
-              <Typography variant="body2">
-                <strong>{agenda.empresa}</strong>
-                {agenda.sucursal ? ` — ${agenda.sucursal}` : ''}
-                {' · '}
-                {agenda.formulario}
-                {agenda.fecha ? ` · ${agenda.fecha}` : ''}
-              </Typography>
-              <Button
-                size="small"
-                variant="outlined"
-                color="warning"
-                onClick={() => handleCompletarAuditoria(agenda.id)}
-              >
-                Marcar completada
-              </Button>
-            </Box>
+          {auditoriasConReporteSinVincular.map((agenda, idx) => (
+            <React.Fragment key={agenda.id}>
+              {idx > 0 && <Divider sx={{ my: 1.5 }} />}
+              <AuditoriaSinVincularCard
+                agenda={agenda}
+                onCompletar={handleCompletarAuditoria}
+              />
+            </React.Fragment>
           ))}
         </Alert>
       )}
