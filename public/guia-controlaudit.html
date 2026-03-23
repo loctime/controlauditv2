@@ -1,0 +1,668 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Guía de Usuario — ControlAudit</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --blue: #2563eb;
+      --blue-light: #eff6ff;
+      --blue-mid: #bfdbfe;
+      --text: #1e293b;
+      --text-muted: #64748b;
+      --border: #e2e8f0;
+      --bg: #f8fafc;
+      --white: #ffffff;
+      --green: #16a34a;
+      --green-light: #f0fdf4;
+      --amber: #d97706;
+      --amber-light: #fffbeb;
+      --red: #dc2626;
+      --red-light: #fef2f2;
+      --purple: #7c3aed;
+      --purple-light: #f5f3ff;
+      --sidebar-width: 260px;
+    }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      color: var(--text);
+      background: var(--bg);
+      line-height: 1.6;
+      font-size: 16px;
+    }
+
+    .layout { display: flex; min-height: 100vh; }
+
+    .sidebar {
+      width: var(--sidebar-width);
+      background: var(--white);
+      border-right: 1px solid var(--border);
+      position: fixed;
+      top: 0; left: 0; bottom: 0;
+      overflow-y: auto;
+      z-index: 100;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .sidebar-logo {
+      padding: 20px 20px 16px;
+      border-bottom: 1px solid var(--border);
+    }
+    .sidebar-logo h1 { font-size: 18px; font-weight: 700; color: var(--blue); }
+    .sidebar-logo p { font-size: 12px; color: var(--text-muted); margin-top: 2px; }
+
+    .sidebar-nav { padding: 12px 0; flex: 1; }
+
+    .sidebar-section-label {
+      font-size: 10px; font-weight: 700; text-transform: uppercase;
+      letter-spacing: 0.8px; color: var(--text-muted); padding: 12px 20px 4px;
+    }
+
+    .sidebar-nav a {
+      display: flex; align-items: center; gap: 10px;
+      padding: 8px 20px; font-size: 13.5px; color: var(--text);
+      text-decoration: none; transition: background 0.15s, color 0.15s;
+    }
+    .sidebar-nav a:hover { background: var(--blue-light); color: var(--blue); }
+    .sidebar-nav a.active {
+      background: var(--blue-light); color: var(--blue);
+      font-weight: 600; border-right: 3px solid var(--blue);
+    }
+    .nav-icon { font-size: 16px; flex-shrink: 0; }
+
+    .sidebar-footer { padding: 16px 20px; border-top: 1px solid var(--border); font-size: 12px; color: var(--text-muted); }
+
+    .main { margin-left: var(--sidebar-width); flex: 1; min-width: 0; }
+
+    .top-banner {
+      background: linear-gradient(135deg, #1e40af 0%, #2563eb 50%, #3b82f6 100%);
+      padding: 48px 48px 40px; color: white;
+    }
+    .top-banner .badge {
+      display: inline-block; background: rgba(255,255,255,0.2);
+      color: white; font-size: 12px; font-weight: 600;
+      padding: 3px 10px; border-radius: 20px; margin-bottom: 12px;
+    }
+    .top-banner h1 { font-size: 36px; font-weight: 800; letter-spacing: -0.5px; margin-bottom: 10px; }
+    .top-banner p { font-size: 17px; opacity: 0.88; max-width: 560px; }
+    .top-banner .meta { margin-top: 20px; display: flex; gap: 20px; flex-wrap: wrap; }
+    .top-banner .meta-item { display: flex; align-items: center; gap: 6px; font-size: 13px; opacity: 0.8; }
+
+    .hero-modules {
+      display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+      gap: 14px; margin: 28px 0;
+    }
+    .hero-module {
+      background: rgba(255,255,255,0.12); border: 1px solid rgba(255,255,255,0.25);
+      border-radius: 12px; padding: 16px; text-decoration: none; color: white;
+      transition: background 0.15s; display: flex; flex-direction: column; gap: 8px;
+    }
+    .hero-module:hover { background: rgba(255,255,255,0.2); }
+    .hero-module .hm-icon { font-size: 26px; }
+    .hero-module .hm-title { font-size: 13px; font-weight: 600; }
+    .hero-module .hm-route { font-size: 11px; opacity: 0.7; font-family: monospace; }
+
+    .content { padding: 40px 48px; max-width: 900px; }
+
+    .section { margin-bottom: 72px; }
+
+    .section-header {
+      display: flex; align-items: center; gap: 14px;
+      margin-bottom: 28px; padding-bottom: 16px; border-bottom: 2px solid var(--border);
+    }
+    .section-icon {
+      width: 46px; height: 46px; border-radius: 12px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 22px; flex-shrink: 0;
+    }
+    .section-icon.blue { background: var(--blue-light); }
+    .section-icon.green { background: var(--green-light); }
+    .section-icon.amber { background: var(--amber-light); }
+    .section-icon.red { background: var(--red-light); }
+    .section-icon.purple { background: var(--purple-light); }
+
+    .section-title h2 { font-size: 24px; font-weight: 700; letter-spacing: -0.3px; }
+    .section-title .route-badge {
+      display: inline-block; background: var(--bg); border: 1px solid var(--border);
+      color: var(--text-muted); font-size: 12px; font-family: monospace;
+      padding: 2px 8px; border-radius: 6px; margin-top: 4px;
+    }
+
+    .intro-card {
+      background: var(--white); border: 1px solid var(--border);
+      border-radius: 12px; padding: 24px; margin-bottom: 28px;
+      font-size: 15px; line-height: 1.7;
+    }
+    .intro-card p { margin-bottom: 10px; }
+    .intro-card p:last-child { margin-bottom: 0; }
+
+    .steps { display: flex; flex-direction: column; gap: 14px; margin-bottom: 24px; }
+    .step {
+      display: flex; gap: 16px; background: var(--white);
+      border: 1px solid var(--border); border-radius: 10px; padding: 18px 20px;
+    }
+    .step-number {
+      width: 32px; height: 32px; background: var(--blue); color: white;
+      font-size: 14px; font-weight: 700; border-radius: 50%;
+      display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+    }
+    .step-body strong { display: block; font-size: 15px; margin-bottom: 4px; }
+    .step-body p { font-size: 14px; color: var(--text-muted); line-height: 1.6; }
+
+    .info-box {
+      border-radius: 10px; padding: 16px 20px; margin: 20px 0;
+      font-size: 14px; line-height: 1.6; display: flex; gap: 12px; align-items: flex-start;
+    }
+    .info-box.tip { background: var(--blue-light); border-left: 4px solid var(--blue); }
+    .info-box.warning { background: var(--amber-light); border-left: 4px solid var(--amber); }
+    .info-box.success { background: var(--green-light); border-left: 4px solid var(--green); }
+    .info-box.note { background: #f8fafc; border-left: 4px solid #94a3b8; }
+    .info-box .icon { font-size: 18px; flex-shrink: 0; }
+    .info-box .body strong { display: block; margin-bottom: 4px; }
+
+    .cards-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 16px; margin: 20px 0; }
+    .card { background: var(--white); border: 1px solid var(--border); border-radius: 10px; padding: 20px; }
+    .card .card-icon { font-size: 24px; margin-bottom: 10px; }
+    .card h4 { font-size: 15px; margin-bottom: 6px; }
+    .card p { font-size: 13.5px; color: var(--text-muted); line-height: 1.55; }
+
+    .table-wrap { overflow-x: auto; margin: 20px 0; }
+    table { width: 100%; border-collapse: collapse; font-size: 14px; background: var(--white); border-radius: 10px; overflow: hidden; border: 1px solid var(--border); }
+    thead { background: var(--bg); }
+    th { text-align: left; padding: 12px 16px; font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: var(--text-muted); border-bottom: 1px solid var(--border); }
+    td { padding: 12px 16px; border-bottom: 1px solid var(--border); vertical-align: top; line-height: 1.5; }
+    tr:last-child td { border-bottom: none; }
+    tr:hover td { background: var(--bg); }
+
+    .badge { display: inline-block; padding: 3px 8px; border-radius: 20px; font-size: 12px; font-weight: 600; }
+    .badge.green { background: var(--green-light); color: var(--green); }
+    .badge.amber { background: var(--amber-light); color: var(--amber); }
+    .badge.blue { background: var(--blue-light); color: var(--blue); }
+
+    .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin: 20px 0; }
+    .feature-box { background: var(--white); border: 1px solid var(--border); border-radius: 10px; padding: 20px; }
+    .feature-box h4 { font-size: 15px; margin-bottom: 10px; }
+    .feature-box ul { list-style: none; display: flex; flex-direction: column; gap: 7px; }
+    .feature-box ul li { font-size: 14px; color: var(--text-muted); display: flex; gap: 8px; }
+    .feature-box ul li::before { content: '✓'; color: var(--green); font-weight: 700; flex-shrink: 0; }
+
+    .flow { display: flex; align-items: center; flex-wrap: wrap; gap: 0; margin: 20px 0; }
+    .flow-step { background: var(--blue-light); border: 1px solid var(--blue-mid); border-radius: 8px; padding: 10px 16px; font-size: 13.5px; font-weight: 600; color: var(--blue); }
+    .flow-arrow { color: var(--blue); font-size: 20px; padding: 0 8px; }
+
+    .formula-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 14px; margin: 20px 0; }
+    .formula-card { background: var(--white); border: 1px solid var(--border); border-radius: 10px; padding: 18px; text-align: center; }
+    .formula-card .f-label { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: var(--text-muted); margin-bottom: 6px; }
+    .formula-card .f-name { font-size: 22px; font-weight: 800; color: var(--blue); margin-bottom: 8px; }
+    .formula-card .f-desc { font-size: 12.5px; color: var(--text-muted); line-height: 1.5; }
+
+    .status-flow { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin: 12px 0; }
+    .status-bubble { background: var(--white); border: 1px solid var(--border); border-radius: 20px; padding: 5px 14px; font-size: 13px; font-weight: 500; }
+    .status-bubble.done { background: var(--green-light); border-color: #86efac; color: var(--green); }
+    .status-bubble.active { background: var(--blue-light); border-color: var(--blue-mid); color: var(--blue); }
+    .status-bubble.warn { background: var(--amber-light); border-color: #fcd34d; color: var(--amber); }
+
+    .perm-check { color: #16a34a; font-size: 16px; }
+    .perm-cross { color: #dc2626; font-size: 16px; }
+
+    .divider { border: none; border-top: 1px solid var(--border); margin: 32px 0; }
+
+    section[id] { scroll-margin-top: 24px; }
+
+    @media (max-width: 768px) {
+      .sidebar { display: none; }
+      .main { margin-left: 0; }
+      .top-banner { padding: 32px 24px; }
+      .top-banner h1 { font-size: 26px; }
+      .content { padding: 28px 20px; }
+      .two-col { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+
+<div class="layout">
+
+  <!-- SIDEBAR -->
+  <aside class="sidebar">
+    <div class="sidebar-logo">
+      <h1>🛡️ ControlAudit</h1>
+      <p>Guía de usuario — Admin</p>
+    </div>
+    <nav class="sidebar-nav">
+      <div class="sidebar-section-label">Inicio</div>
+      <a href="#inicio"><span class="nav-icon">🏠</span> ¿Qué es ControlAudit?</a>
+      <div class="sidebar-section-label">Estructura</div>
+      <a href="#empresas"><span class="nav-icon">🏢</span> Empresas y sucursales</a>
+      <a href="#empleados"><span class="nav-icon">👥</span> Empleados</a>
+      <div class="sidebar-section-label">Formularios</div>
+      <a href="#formularios"><span class="nav-icon">📋</span> Formularios</a>
+      <div class="sidebar-section-label">Operaciones</div>
+      <a href="#auditorias"><span class="nav-icon">🔍</span> Auditorías</a>
+      <a href="#accidentes"><span class="nav-icon">⚠️</span> Accidentes e incidentes</a>
+      <a href="#capacitaciones"><span class="nav-icon">🎓</span> Capacitaciones</a>
+      <div class="sidebar-section-label">Análisis</div>
+      <a href="#dashboards"><span class="nav-icon">📊</span> Dashboards</a>
+      <a href="#calendario"><span class="nav-icon">📅</span> Calendario</a>
+      <div class="sidebar-section-label">Configuración</div>
+      <a href="#permisos"><span class="nav-icon">🔐</span> Permisos</a>
+    </nav>
+    <div class="sidebar-footer">Versión 2 · Marzo 2026</div>
+  </aside>
+
+  <!-- MAIN -->
+  <main class="main">
+
+    <div class="top-banner">
+      <div class="badge">GUÍA DE USUARIO</div>
+      <h1>ControlAudit</h1>
+      <p>Todo lo que necesitás saber para gestionar seguridad e higiene laboral desde la plataforma.</p>
+      <div class="hero-modules">
+        <a href="#empresas" class="hero-module"><span class="hm-icon">🏢</span><span class="hm-title">Empresas</span><span class="hm-route">/establecimiento</span></a>
+        <a href="#empleados" class="hero-module"><span class="hm-icon">👥</span><span class="hm-title">Empleados</span><span class="hm-route">/empleados</span></a>
+        <a href="#formularios" class="hero-module"><span class="hm-icon">📋</span><span class="hm-title">Formularios</span><span class="hm-route">/formulario</span></a>
+        <a href="#auditorias" class="hero-module"><span class="hm-icon">🔍</span><span class="hm-title">Auditorías</span><span class="hm-route">/auditoria</span></a>
+        <a href="#accidentes" class="hero-module"><span class="hm-icon">⚠️</span><span class="hm-title">Accidentes</span><span class="hm-route">/accidentes</span></a>
+        <a href="#capacitaciones" class="hero-module"><span class="hm-icon">🎓</span><span class="hm-title">Capacitaciones</span><span class="hm-route">/training</span></a>
+        <a href="#dashboards" class="hero-module"><span class="hm-icon">📊</span><span class="hm-title">Dashboards</span><span class="hm-route">/tablero</span></a>
+        <a href="#calendario" class="hero-module"><span class="hm-icon">📅</span><span class="hm-title">Calendario</span><span class="hm-route">/panel</span></a>
+        <a href="#permisos" class="hero-module"><span class="hm-icon">🔐</span><span class="hm-title">Permisos</span><span class="hm-route">Config.</span></a>
+      </div>
+      <div class="meta">
+        <div class="meta-item">📱 Funciona offline</div>
+        <div class="meta-item">☁️ Sincronización automática</div>
+        <div class="meta-item">📄 Reportes imprimibles</div>
+      </div>
+    </div>
+
+    <div class="content">
+
+      <!-- 1. QUÉ ES -->
+      <section id="inicio" class="section">
+        <div class="section-header">
+          <div class="section-icon blue">🛡️</div>
+          <div class="section-title"><h2>¿Qué es ControlAudit?</h2></div>
+        </div>
+        <div class="intro-card">
+          <p><strong>ControlAudit</strong> es una plataforma web de gestión de <strong>Seguridad, Higiene y Medio Ambiente laboral (HSE)</strong>. Permite realizar auditorías en campo, registrar accidentes, planificar capacitaciones y hacer seguimiento del cumplimiento normativo de tus clientes.</p>
+          <p>Está diseñada para trabajar <strong>con o sin internet</strong>: podés completar una auditoría sin señal y los datos se sincronizan automáticamente cuando volvés a conectarte.</p>
+        </div>
+        <div class="cards-grid">
+          <div class="card"><div class="card-icon">🏢</div><h4>Gestión de clientes</h4><p>Organizá tus clientes en empresas y sucursales. Todos los datos están asociados a una sucursal.</p></div>
+          <div class="card"><div class="card-icon">🔍</div><h4>Auditorías en campo</h4><p>Realizá auditorías con formularios personalizados. Funciona offline con autoguardado automático.</p></div>
+          <div class="card"><div class="card-icon">⚠️</div><h4>Accidentes e incidentes</h4><p>Registrá casos con evidencia fotográfica, días de reposo y seguimiento hasta el cierre.</p></div>
+          <div class="card"><div class="card-icon">🎓</div><h4>Capacitaciones</h4><p>Planificá el plan anual, registrá sesiones y hacé seguimiento del cumplimiento por empleado.</p></div>
+          <div class="card"><div class="card-icon">📊</div><h4>Indicadores HSE</h4><p>Dashboards con índices IF, IG e IA calculados en tiempo real sobre datos reales de accidentes.</p></div>
+          <div class="card"><div class="card-icon">📅</div><h4>Planificación</h4><p>Agendá auditorías en el calendario y gestioná tu plan de trabajo semanal/mensual.</p></div>
+        </div>
+        <div class="info-box tip">
+          <span class="icon">💡</span>
+          <div class="body"><strong>Tres niveles de acceso</strong><p>La plataforma tiene tres roles: <strong>Admin</strong> (vos, con acceso completo), <strong>Operario</strong> (acceso limitado, configurable) y <strong>Superdev</strong> (solo soporte técnico).</p></div>
+        </div>
+      </section>
+
+      <!-- 2. EMPRESAS -->
+      <section id="empresas" class="section">
+        <div class="section-header">
+          <div class="section-icon blue">🏢</div>
+          <div class="section-title"><h2>Empresas y sucursales</h2><span class="route-badge">/establecimiento</span></div>
+        </div>
+        <div class="intro-card">
+          <p>Acá organizás a tus <strong>clientes</strong>. Cada cliente es una <strong>empresa</strong> con una o varias <strong>sucursales</strong>. Todos los datos (empleados, auditorías, accidentes, capacitaciones) están vinculados a una sucursal específica.</p>
+        </div>
+        <h3 style="font-size:17px;margin-bottom:16px;">🏗️ Estructura jerárquica</h3>
+        <div class="flow" style="margin-bottom:28px;">
+          <div class="flow-step">🏢 Empresa</div><div class="flow-arrow">→</div>
+          <div class="flow-step">🏪 Sucursal</div><div class="flow-arrow">→</div>
+          <div class="flow-step">👥 Empleados</div><div class="flow-arrow">→</div>
+          <div class="flow-step">📋 Datos HSE</div>
+        </div>
+        <h3 style="font-size:17px;margin-bottom:16px;">➕ Crear una empresa</h3>
+        <div class="steps">
+          <div class="step"><div class="step-number">1</div><div class="step-body"><strong>Ir a Establecimientos</strong><p>Desde el menú, navegá a <code>/establecimiento</code>.</p></div></div>
+          <div class="step"><div class="step-number">2</div><div class="step-body"><strong>Hacer clic en "Nueva empresa"</strong><p>Completá nombre, CUIT y demás datos del cliente.</p></div></div>
+          <div class="step"><div class="step-number">3</div><div class="step-body"><strong>Guardar</strong><p>La empresa aparece en la lista. Ahora podés agregarle sucursales.</p></div></div>
+        </div>
+        <h3 style="font-size:17px;margin-bottom:16px;margin-top:28px;">➕ Agregar una sucursal</h3>
+        <div class="steps">
+          <div class="step"><div class="step-number">1</div><div class="step-body"><strong>Expandir la empresa</strong><p>Hacé clic en el nombre o ícono para desplegar la lista de sucursales.</p></div></div>
+          <div class="step"><div class="step-number">2</div><div class="step-body"><strong>Hacer clic en "Nueva sucursal"</strong><p>Completá nombre, dirección y datos de la sede.</p></div></div>
+          <div class="step"><div class="step-number">3</div><div class="step-body"><strong>Guardar</strong><p>La sucursal queda asociada a la empresa. Ya podés operar allí.</p></div></div>
+        </div>
+        <div class="info-box tip">
+          <span class="icon">📌</span>
+          <div class="body"><strong>Metas por sucursal</strong><p>Cada sucursal tiene metas mensuales y anuales de auditorías configurables. El progreso se muestra en el tablero operativo.</p></div>
+        </div>
+        <h3 style="font-size:17px;margin-bottom:16px;margin-top:28px;">📋 Tabs de una empresa</h3>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Tab</th><th>Qué muestra</th></tr></thead>
+            <tbody>
+              <tr><td><strong>Sucursales</strong></td><td>Lista expandible con estadísticas de avance</td></tr>
+              <tr><td><strong>Empleados</strong></td><td>Nómina consolidada de la empresa</td></tr>
+              <tr><td><strong>Capacitaciones</strong></td><td>Resumen del estado de capacitaciones</td></tr>
+              <tr><td><strong>Accidentes</strong></td><td>Últimos 3 casos registrados</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- 3. EMPLEADOS -->
+      <section id="empleados" class="section">
+        <div class="section-header">
+          <div class="section-icon green">👥</div>
+          <div class="section-title"><h2>Empleados</h2><span class="route-badge">/empleados</span></div>
+        </div>
+        <div class="intro-card">
+          <p>El módulo de empleados administra la <strong>nómina de personal</strong> de cada sucursal. Los empleados se vinculan a auditorías, capacitaciones y accidentes. Cada empleado pertenece a <strong>una sucursal específica</strong>.</p>
+        </div>
+        <h3 style="font-size:17px;margin-bottom:16px;">➕ Agregar un empleado</h3>
+        <div class="steps">
+          <div class="step"><div class="step-number">1</div><div class="step-body"><strong>Ir a Empleados</strong><p>Desde el menú, entrá a <code>/empleados</code> y seleccioná la sucursal.</p></div></div>
+          <div class="step"><div class="step-number">2</div><div class="step-body"><strong>Hacer clic en "Nuevo empleado"</strong><p>Completá nombre, DNI, email, cargo y tipo de contrato.</p></div></div>
+          <div class="step"><div class="step-number">3</div><div class="step-body"><strong>Guardar</strong><p>El empleado queda activo y disponible en todo el sistema.</p></div></div>
+        </div>
+        <h3 style="font-size:17px;margin-bottom:16px;margin-top:28px;">🟢 Estado activo / inactivo</h3>
+        <div class="info-box warning">
+          <span class="icon">⚠️</span>
+          <div class="body"><strong>El estado puede cambiar automáticamente</strong><p>Cuando registrás un accidente con <strong>días de reposo</strong>, el empleado pasa a <strong>inactivo</strong> de forma automática. Al cerrar el caso, vuelve a <strong>activo</strong>.</p></div>
+        </div>
+        <div class="two-col">
+          <div class="feature-box">
+            <h4>🟢 Activo</h4>
+            <ul><li>Estado normal de trabajo</li><li>Activado manualmente por el admin</li><li>Se cerró el caso de accidente con reposo</li></ul>
+          </div>
+          <div class="feature-box">
+            <h4>🔴 Inactivo</h4>
+            <ul><li>Marcado manualmente como inactivo</li><li>Tiene un accidente abierto con días de reposo</li></ul>
+          </div>
+        </div>
+        <div class="info-box note">
+          <span class="icon">📌</span>
+          <div class="body"><strong>¿Por qué está inactivo?</strong><p>La plataforma muestra el estado pero no explica la razón. Si un empleado aparece inactivo inesperadamente, revisá el módulo de accidentes.</p></div>
+        </div>
+      </section>
+
+      <!-- 4. FORMULARIOS -->
+      <section id="formularios" class="section">
+        <div class="section-header">
+          <div class="section-icon amber">📋</div>
+          <div class="section-title"><h2>Formularios</h2><span class="route-badge">/formulario</span></div>
+        </div>
+        <div class="intro-card">
+          <p>Los formularios son las <strong>planillas de preguntas</strong> que usás al hacer una auditoría. Podés crear los tuyos desde cero o copiar uno de la <strong>Galería Pública</strong> donde otros admins comparten sus plantillas.</p>
+        </div>
+        <div class="two-col">
+          <div class="feature-box">
+            <h4>✏️ Formularios propios</h4>
+            <ul><li>Los creás y editás vos</li><li>Organizados por secciones</li><li>Podés compartirlos públicamente</li><li>Editarlos no afecta a nadie más</li></ul>
+          </div>
+          <div class="feature-box">
+            <h4>🌐 Galería pública</h4>
+            <ul><li>Formularios de otros admins</li><li>Ves el contenido antes de copiar</li><li>Al copiar, obtenés tu propia versión</li><li>La copia es 100% independiente</li></ul>
+          </div>
+        </div>
+        <h3 style="font-size:17px;margin-bottom:16px;margin-top:28px;">📁 Copiar de la galería</h3>
+        <div class="steps">
+          <div class="step"><div class="step-number">1</div><div class="step-body"><strong>Ir a /formulario</strong><p>Vas a ver la biblioteca pública de formularios.</p></div></div>
+          <div class="step"><div class="step-number">2</div><div class="step-body"><strong>Buscar y filtrar</strong><p>Filtrá por más copiados, mejor valorados o cantidad de preguntas.</p></div></div>
+          <div class="step"><div class="step-number">3</div><div class="step-body"><strong>Expandir para ver el contenido</strong><p>Hacé clic para ver las secciones y preguntas antes de copiar.</p></div></div>
+          <div class="step"><div class="step-number">4</div><div class="step-body"><strong>Hacer clic en "Copiar"</strong><p>Se crea una copia independiente en tu cuenta. Editala libremente.</p></div></div>
+        </div>
+        <div class="info-box tip">
+          <span class="icon">⭐</span>
+          <div class="body"><strong>Sistema de calificación</strong><p>Podés calificar los formularios de otros admins del 1 al 5. No podés calificar los tuyos propios.</p></div>
+        </div>
+      </section>
+
+      <!-- 5. AUDITORÍAS -->
+      <section id="auditorias" class="section">
+        <div class="section-header">
+          <div class="section-icon blue">🔍</div>
+          <div class="section-title"><h2>Auditorías</h2><span class="route-badge">/auditoria · /editar · /reporte</span></div>
+        </div>
+        <div class="intro-card">
+          <p>Las auditorías permiten <strong>inspeccionar in situ</strong> una sucursal con un formulario de preguntas, registrar observaciones, adjuntar fotos y generar un <strong>reporte imprimible</strong>. Funcionan <strong>completamente offline</strong>.</p>
+        </div>
+        <h3 style="font-size:17px;margin-bottom:16px;">🔄 Flujo de una auditoría</h3>
+        <div class="flow" style="margin-bottom:24px;">
+          <div class="flow-step">📌 Empresa</div><div class="flow-arrow">→</div>
+          <div class="flow-step">🏪 Sucursal</div><div class="flow-arrow">→</div>
+          <div class="flow-step">📋 Formulario</div><div class="flow-arrow">→</div>
+          <div class="flow-step">✍️ Respuestas</div><div class="flow-arrow">→</div>
+          <div class="flow-step">📄 Reporte</div>
+        </div>
+        <div class="steps">
+          <div class="step"><div class="step-number">1</div><div class="step-body"><strong>Ir a Nueva Auditoría (/auditoria)</strong><p>Desde el menú o el botón de acceso rápido en el tablero.</p></div></div>
+          <div class="step"><div class="step-number">2</div><div class="step-body"><strong>Seleccionar empresa, sucursal y formulario</strong><p>Elegí a qué cliente y sede corresponde esta auditoría.</p></div></div>
+          <div class="step"><div class="step-number">3</div><div class="step-body"><strong>Completar las preguntas</strong><p>Respondé cada pregunta, agregá comentarios y adjuntá fotos como evidencia.</p></div></div>
+          <div class="step"><div class="step-number">4</div><div class="step-body"><strong>El sistema guarda automáticamente</strong><p>Cada cambio se guarda solo. Si cerrás por error, no perdés nada.</p></div></div>
+          <div class="step"><div class="step-number">5</div><div class="step-body"><strong>Finalizar y ver el reporte</strong><p>Se genera el reporte en /reporte. Podés imprimirlo o guardarlo como PDF desde el navegador.</p></div></div>
+        </div>
+        <div class="info-box success">
+          <span class="icon">✅</span>
+          <div class="body"><strong>Sin señal no hay problema</strong><p>Los datos se guardan en tu dispositivo y se suben automáticamente cuando hay internet. Las fotos también.</p></div>
+        </div>
+        <div class="cards-grid">
+          <div class="card"><div class="card-icon">💾</div><h4>Autoguardado doble</h4><p>Se guarda en la nube y en tu dispositivo. Si perdés internet, no perdés nada.</p></div>
+          <div class="card"><div class="card-icon">🔄</div><h4>Sync automático</h4><p>Al recuperar conexión, los datos pendientes se suben solos con reintentos automáticos.</p></div>
+          <div class="card"><div class="card-icon">📸</div><h4>Fotos offline</h4><p>Las fotos se guardan localmente y se suben solas cuando hay señal.</p></div>
+          <div class="card"><div class="card-icon">🛡️</div><h4>Protección de salida</h4><p>Si intentás salir con cambios sin guardar, la app te avisa antes de que pierdas datos.</p></div>
+        </div>
+      </section>
+
+      <!-- 6. ACCIDENTES -->
+      <section id="accidentes" class="section">
+        <div class="section-header">
+          <div class="section-icon red">⚠️</div>
+          <div class="section-title"><h2>Accidentes e incidentes</h2><span class="route-badge">/accidentes</span></div>
+        </div>
+        <div class="intro-card">
+          <p>Registrá y hacé seguimiento de <strong>accidentes</strong> (con lesionados) e <strong>incidentes</strong> (riesgo sin daño). Incluye evidencia fotográfica, días de reposo y seguimiento hasta el cierre del caso.</p>
+        </div>
+        <div class="two-col">
+          <div class="feature-box" style="border-top:3px solid var(--red)">
+            <h4>🚨 Accidente</h4>
+            <ul><li>Hay lesionados o daño físico</li><li>Puede generar días de reposo</li><li>Pasa al empleado a inactivo</li><li>Alimenta los índices IF, IG, IA</li></ul>
+          </div>
+          <div class="feature-box" style="border-top:3px solid var(--amber)">
+            <h4>⚡ Incidente</h4>
+            <ul><li>No hubo lesionados</li><li>No genera días de reposo</li><li>No cambia estado del empleado</li><li>Se registra para prevención</li></ul>
+          </div>
+        </div>
+        <h3 style="font-size:17px;margin-bottom:16px;margin-top:28px;">📝 Registrar un accidente</h3>
+        <div class="steps">
+          <div class="step"><div class="step-number">1</div><div class="step-body"><strong>Ir a /accidentes y hacer clic en "Nuevo accidente"</strong><p>Se abre el formulario de registro.</p></div></div>
+          <div class="step"><div class="step-number">2</div><div class="step-body"><strong>Completar fecha, descripción y empleados involucrados</strong><p>Podés agregar múltiples empleados al mismo caso.</p></div></div>
+          <div class="step"><div class="step-number">3</div><div class="step-body"><strong>Indicar si hay días de reposo</strong><p>Activá "Con reposo" para cada empleado afectado. El sistema lo marcará como <strong>inactivo</strong> automáticamente.</p></div></div>
+          <div class="step"><div class="step-number">4</div><div class="step-body"><strong>Cargar fotos (opcional)</strong><p>Adjuntá evidencia fotográfica. Límite: <strong>5 MB por imagen</strong>.</p></div></div>
+          <div class="step"><div class="step-number">5</div><div class="step-body"><strong>Guardar</strong><p>El caso queda en estado <span class="badge amber">Abierto</span>.</p></div></div>
+        </div>
+        <div class="info-box success">
+          <span class="icon">✅</span>
+          <div class="body"><strong>Al cerrar el caso, el empleado vuelve a activo</strong><p>El sistema calcula automáticamente los <strong>días perdidos</strong> (inicio de reposo → fecha de cierre) y reactiva al empleado.</p></div>
+        </div>
+        <h3 style="font-size:17px;margin-bottom:16px;margin-top:20px;">🔍 Filtros disponibles</h3>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Filtro</th><th>Opciones</th></tr></thead>
+            <tbody>
+              <tr><td><strong>Tipo</strong></td><td>Accidente · Incidente</td></tr>
+              <tr><td><strong>Estado</strong></td><td><span class="badge amber">Abierto</span> · <span class="badge green">Cerrado</span></td></tr>
+              <tr><td><strong>Período</strong></td><td>Rango de fechas (desde / hasta)</td></tr>
+              <tr><td><strong>Búsqueda</strong></td><td>Por descripción del caso</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- 7. CAPACITACIONES -->
+      <section id="capacitaciones" class="section">
+        <div class="section-header">
+          <div class="section-icon green">🎓</div>
+          <div class="section-title"><h2>Capacitaciones</h2><span class="route-badge">/training</span></div>
+        </div>
+        <div class="intro-card">
+          <p>Gestiona el <strong>ciclo completo de formación laboral</strong>: desde el plan anual hasta el registro de sesiones y el seguimiento de cumplimiento por empleado.</p>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Sección</th><th>Para qué sirve</th></tr></thead>
+            <tbody>
+              <tr><td><strong>🗓️ Sesiones</strong></td><td>Ver y crear sesiones de capacitación concretas</td></tr>
+              <tr><td><strong>👤 Por empleado</strong></td><td>Ficha con historial y cumplimiento de cada persona</td></tr>
+              <tr><td><strong>📋 Historial</strong></td><td>Registros de asistencia por período</td></tr>
+              <tr><td><strong>📊 Reportes</strong></td><td>KPIs operativos y reportes gerenciales</td></tr>
+              <tr><td><strong>✅ Cumplimiento</strong></td><td>Matriz por rol y riesgo, con exportación PDF/ZIP</td></tr>
+              <tr><td><strong>⚙️ Configuración</strong></td><td>Catálogo de tipos de capacitación y planes anuales</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <h3 style="font-size:17px;margin-bottom:16px;margin-top:28px;">🗺️ Configurar el plan anual</h3>
+        <div class="steps">
+          <div class="step"><div class="step-number">1</div><div class="step-body"><strong>Ir a Configuración en /training</strong><p>Solo visible para admins.</p></div></div>
+          <div class="step"><div class="step-number">2</div><div class="step-body"><strong>Definir el catálogo de tipos</strong><p>Creá los tipos de capacitación con su vigencia en meses (ej: "Primeros auxilios", 12 meses).</p></div></div>
+          <div class="step"><div class="step-number">3</div><div class="step-body"><strong>Crear el plan anual</strong><p>Creá un plan para la empresa y sucursal. Agregá los tipos y el sistema genera los meses planificados automáticamente.</p></div></div>
+          <div class="step"><div class="step-number">4</div><div class="step-body"><strong>Registrar sesiones y asistencia</strong><p>A medida que ocurren las capacitaciones, registralas con asistentes y cerrá la sesión.</p></div></div>
+        </div>
+        <h3 style="font-size:17px;margin-bottom:16px;margin-top:20px;">🔄 Estados de una sesión</h3>
+        <div class="status-flow">
+          <div class="status-bubble">📝 Borrador</div>
+          <span style="color:var(--text-muted);font-size:18px;padding:0 4px;">→</span>
+          <div class="status-bubble active">📅 Programada</div>
+          <span style="color:var(--text-muted);font-size:18px;padding:0 4px;">→</span>
+          <div class="status-bubble warn">⚡ En curso</div>
+          <span style="color:var(--text-muted);font-size:18px;padding:0 4px;">→</span>
+          <div class="status-bubble">⏳ Pend. cierre</div>
+          <span style="color:var(--text-muted);font-size:18px;padding:0 4px;">→</span>
+          <div class="status-bubble done">✅ Cerrada</div>
+        </div>
+      </section>
+
+      <!-- 8. DASHBOARDS -->
+      <section id="dashboards" class="section">
+        <div class="section-header">
+          <div class="section-icon purple">📊</div>
+          <div class="section-title"><h2>Dashboards</h2><span class="route-badge">/tablero · /dashboard-seguridad</span></div>
+        </div>
+        <div class="info-box warning">
+          <span class="icon">⚠️</span>
+          <div class="body"><strong>Hay dos dashboards distintos</strong><p><code>/tablero</code> es para saber <em>qué tengo que hacer hoy</em>. <code>/dashboard-seguridad</code> es para analizar <em>el desempeño en seguridad del período</em>.</p></div>
+        </div>
+        <h3 style="font-size:19px;margin-bottom:16px;margin-top:28px;">📋 /tablero — Tablero operativo diario</h3>
+        <div class="intro-card"><p>Responde: <strong>¿qué tengo que hacer hoy y dónde hay problemas?</strong> Muestra datos en <strong>tiempo real</strong>.</p></div>
+        <div class="cards-grid">
+          <div class="card"><div class="card-icon">🚨</div><h4>Alertas</h4><p>Alertas críticas que requieren atención inmediata.</p></div>
+          <div class="card"><div class="card-icon">☀️</div><h4>Tareas del día</h4><p>Auditorías programadas hoy y pendientes de acción.</p></div>
+          <div class="card"><div class="card-icon">🚧</div><h4>Items trabados</h4><p>Elementos pendientes de resolución.</p></div>
+          <div class="card"><div class="card-icon">🎯</div><h4>Metas del mes</h4><p>Progreso de metas de auditorías, capacitaciones y accidentabilidad.</p></div>
+        </div>
+        <hr class="divider"/>
+        <h3 style="font-size:19px;margin-bottom:16px;">🔬 /dashboard-seguridad — Índices HSE</h3>
+        <div class="intro-card"><p>Responde: <strong>¿cómo fue el desempeño en seguridad del período?</strong> Filtrá por <strong>sucursal</strong> y <strong>período (mes/año)</strong>.</p></div>
+        <div class="formula-grid">
+          <div class="formula-card"><div class="f-label">Índice</div><div class="f-name">IF</div><div class="f-desc"><strong>Frecuencia</strong><br/>Accidentes graves por millón de horas trabajadas</div></div>
+          <div class="formula-card"><div class="f-label">Índice</div><div class="f-name">IG</div><div class="f-desc"><strong>Gravedad</strong><br/>Días perdidos por millón de horas trabajadas</div></div>
+          <div class="formula-card"><div class="f-label">Índice</div><div class="f-name">IA</div><div class="f-desc"><strong>Accidentabilidad</strong><br/>IF + IG. Índice global de siniestralidad</div></div>
+          <div class="formula-card"><div class="f-label">Índice</div><div class="f-name">II</div><div class="f-desc"><strong>Incidencia</strong><br/>Accidentes por cada 1.000 trabajadores</div></div>
+        </div>
+        <div class="info-box note">
+          <span class="icon">📌</span>
+          <div class="body"><strong>Datos reales, no manuales</strong><p>Los índices se calculan con los datos de accidentes que ya cargaste: fechas, empleados involucrados, días de reposo y fechas de ingreso.</p></div>
+        </div>
+      </section>
+
+      <!-- 9. CALENDARIO -->
+      <section id="calendario" class="section">
+        <div class="section-header">
+          <div class="section-icon amber">📅</div>
+          <div class="section-title"><h2>Calendario de auditorías</h2><span class="route-badge">/panel</span></div>
+        </div>
+        <div class="intro-card"><p>Tu <strong>agenda de trabajo</strong>. Planificá auditorías con anticipación, asignándolas a empresas y sucursales, y hacé seguimiento de las completadas.</p></div>
+        <div class="steps">
+          <div class="step"><div class="step-number">1</div><div class="step-body"><strong>Ir a /panel</strong><p>Vas a ver el calendario del mes actual.</p></div></div>
+          <div class="step"><div class="step-number">2</div><div class="step-body"><strong>Hacer clic en "Agendar auditoría"</strong><p>Completá empresa, sucursal, formulario, fecha, hora y encargado.</p></div></div>
+          <div class="step"><div class="step-number">3</div><div class="step-body"><strong>Guardar</strong><p>La auditoría aparece en el calendario y en "Próximas auditorías".</p></div></div>
+        </div>
+        <div class="info-box warning">
+          <span class="icon">⚠️</span>
+          <div class="body"><strong>Agendar ≠ Realizar la auditoría</strong><p>Agendar en el calendario es solo <em>planificación</em>. Para registrar la auditoría real tenés que ir a <code>/auditoria</code> por separado. No se vinculan automáticamente.</p></div>
+        </div>
+      </section>
+
+      <!-- 10. PERMISOS -->
+      <section id="permisos" class="section">
+        <div class="section-header">
+          <div class="section-icon amber">🔐</div>
+          <div class="section-title"><h2>Permisos</h2></div>
+        </div>
+        <div class="intro-card"><p>Como admin podés configurar qué puede hacer cada <strong>operario</strong> de tu equipo, habilitando o deshabilitando permisos individualmente.</p></div>
+        <div class="two-col">
+          <div class="feature-box" style="border-top:3px solid var(--blue)">
+            <h4>👑 Admin (vos)</h4>
+            <ul><li>Acceso total a todos los módulos</li><li>Crear empresas y sucursales</li><li>Crear y eliminar auditorías</li><li>Agendar auditorías</li><li>Agregar usuarios</li><li>Compartir formularios</li><li>Configurar permisos de operarios</li></ul>
+          </div>
+          <div class="feature-box" style="border-top:3px solid #94a3b8">
+            <h4>👤 Operario</h4>
+            <ul><li>Sin permisos por defecto</li><li>El admin activa permiso por permiso</li><li>No ve opciones sin permiso</li></ul>
+          </div>
+        </div>
+        <h3 style="font-size:17px;margin-bottom:16px;margin-top:28px;">🔧 Permisos configurables</h3>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Permiso</th><th>Qué habilita</th><th>Admin</th><th>Operario</th></tr></thead>
+            <tbody>
+              <tr><td><strong>Crear empresas</strong></td><td>Dar de alta nuevas empresas</td><td class="perm-check">✅</td><td class="perm-cross">❌</td></tr>
+              <tr><td><strong>Crear sucursales</strong></td><td>Agregar sucursales a empresas</td><td class="perm-check">✅</td><td class="perm-cross">❌</td></tr>
+              <tr><td><strong>Crear auditorías</strong></td><td>Iniciar y completar auditorías</td><td class="perm-check">✅</td><td class="perm-cross">❌</td></tr>
+              <tr><td><strong>Agendar auditorías</strong></td><td>Programar en el calendario</td><td class="perm-check">✅</td><td class="perm-cross">❌</td></tr>
+              <tr><td><strong>Eliminar auditorías</strong></td><td>Borrar auditorías existentes</td><td class="perm-check">✅</td><td class="perm-cross">❌</td></tr>
+              <tr><td><strong>Compartir formularios</strong></td><td>Publicar en galería pública</td><td class="perm-check">✅</td><td class="perm-cross">❌</td></tr>
+              <tr><td><strong>Agregar usuarios</strong></td><td>Invitar nuevos usuarios</td><td class="perm-check">✅</td><td class="perm-cross">❌</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="info-box note">
+          <span class="icon">📌</span>
+          <div class="body"><strong>Los permisos son por persona</strong><p>No hay permisos por empresa ni sucursal. Si habilitás a un operario para crear auditorías, puede hacerlo en cualquier empresa del sistema.</p></div>
+        </div>
+      </section>
+
+      <!-- FOOTER -->
+      <hr style="border:none;border-top:1px solid var(--border);margin-top:24px;"/>
+      <div style="padding:24px 0 40px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px;">
+        <div>
+          <div style="font-size:14px;font-weight:700;">🛡️ ControlAudit</div>
+          <div style="font-size:12px;color:var(--text-muted);">Guía de usuario · Versión 2</div>
+        </div>
+        <div style="font-size:12px;color:var(--text-muted);">Generado el 23 de marzo de 2026</div>
+      </div>
+
+    </div><!-- /content -->
+  </main>
+</div>
+
+<script>
+  const sections = document.querySelectorAll('section[id]');
+  const navLinks = document.querySelectorAll('.sidebar-nav a');
+  function updateActive() {
+    let current = '';
+    sections.forEach(s => { if (s.getBoundingClientRect().top <= 80) current = s.id; });
+    navLinks.forEach(a => {
+      a.classList.remove('active');
+      if (a.getAttribute('href') === '#' + current) a.classList.add('active');
+    });
+  }
+  window.addEventListener('scroll', updateActive, { passive: true });
+  updateActive();
+</script>
+
+</body>
+</html>
