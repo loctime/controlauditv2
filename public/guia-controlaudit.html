@@ -1,3 +1,4 @@
+//public/guia-controlaudit.html
 <!DOCTYPE html>
 <html lang="es">
 <head>
@@ -365,9 +366,17 @@
         </div>
         <h3 style="font-size:17px;margin-bottom:16px;">➕ Agregar un empleado</h3>
         <div class="steps">
-          <div class="step"><div class="step-number">1</div><div class="step-body"><strong>Ir a Empleados</strong><p>Desde el menú, entrá a <code>/empleados</code> y seleccioná la sucursal.</p></div></div>
-          <div class="step"><div class="step-number">2</div><div class="step-body"><strong>Hacer clic en "Nuevo empleado"</strong><p>Completá nombre, DNI, email, cargo y tipo de contrato.</p></div></div>
+          <div class="step"><div class="step-number">1</div><div class="step-body"><strong>Ir a Empleados</strong><p>Desde el menú, entrá a <code>/empleados</code>. Seleccioná la empresa y la sucursal correspondiente.</p></div></div>
+          <div class="step"><div class="step-number">2</div><div class="step-body"><strong>Hacer clic en "Nuevo empleado"</strong><p>Completá nombre, DNI, email, cargo, área y tipo (operativo / administrativo).</p></div></div>
           <div class="step"><div class="step-number">3</div><div class="step-body"><strong>Guardar</strong><p>El empleado queda activo y disponible en todo el sistema.</p></div></div>
+        </div>
+        <div class="info-box tip">
+          <span class="icon">📥</span>
+          <div class="body"><strong>Importación masiva</strong><p>Si necesitás cargar muchos empleados a la vez, usá el botón <strong>"Importar"</strong> (ícono de nube con flecha) para subir un archivo con varios empleados de una sola vez.</p></div>
+        </div>
+        <div class="info-box note">
+          <span class="icon">👤</span>
+          <div class="body"><strong>Operarios: solo pueden ver, no editar</strong><p>Los operarios ven la lista de empleados pero <strong>no pueden editar ni eliminar</strong> ningún empleado. Los botones de edición y eliminación no están disponibles para ellos.</p></div>
         </div>
         <h3 style="font-size:17px;margin-bottom:16px;margin-top:28px;">🟢 Estado activo / inactivo</h3>
         <div class="info-box warning">
@@ -485,6 +494,10 @@
           <div class="step"><div class="step-number">4</div><div class="step-body"><strong>Cargar fotos (opcional)</strong><p>Adjuntá evidencia fotográfica. Límite: <strong>5 MB por imagen</strong>.</p></div></div>
           <div class="step"><div class="step-number">5</div><div class="step-body"><strong>Guardar</strong><p>El caso queda en estado <span class="badge amber">Abierto</span>.</p></div></div>
         </div>
+        <div class="info-box warning">
+          <span class="icon">💡</span>
+          <div class="body"><strong>Incidentes tienen testigos, no empleados involucrados</strong><p>Al registrar un <strong>incidente</strong>, el formulario pide <strong>testigos</strong> (personas que presenciaron el hecho), no empleados involucrados. Los accidentes sí usan el campo de empleados involucrados.</p></div>
+        </div>
         <div class="info-box success">
           <span class="icon">✅</span>
           <div class="body"><strong>Al cerrar el caso, el empleado vuelve a activo</strong><p>El sistema calcula automáticamente los <strong>días perdidos</strong> (inicio de reposo → fecha de cierre) y reactiva al empleado.</p></div>
@@ -494,12 +507,17 @@
           <table>
             <thead><tr><th>Filtro</th><th>Opciones</th></tr></thead>
             <tbody>
+              <tr><td><strong>Empresa / Sucursal</strong></td><td>Selectores para filtrar por cliente. La sucursal tiene opción "Todas".</td></tr>
               <tr><td><strong>Tipo</strong></td><td>Accidente · Incidente</td></tr>
               <tr><td><strong>Estado</strong></td><td><span class="badge amber">Abierto</span> · <span class="badge green">Cerrado</span></td></tr>
               <tr><td><strong>Período</strong></td><td>Rango de fechas (desde / hasta)</td></tr>
               <tr><td><strong>Búsqueda</strong></td><td>Por descripción del caso</td></tr>
             </tbody>
           </table>
+        </div>
+        <div class="info-box tip">
+          <span class="icon">📤</span>
+          <div class="body"><strong>Exportar registros</strong><p>Podés exportar la lista de accidentes e incidentes a <strong>Excel</strong> o <strong>PDF</strong> desde los botones de exportación en la parte superior de la página.</p></div>
         </div>
       </section>
 
@@ -516,12 +534,12 @@
           <table>
             <thead><tr><th>Sección</th><th>Para qué sirve</th></tr></thead>
             <tbody>
+              <tr><td><strong>📊 Reportes</strong></td><td>KPIs operativos y reportes gerenciales — es la sección que se abre por defecto</td></tr>
               <tr><td><strong>🗓️ Sesiones</strong></td><td>Ver y crear sesiones de capacitación concretas</td></tr>
-              <tr><td><strong>👤 Por empleado</strong></td><td>Ficha con historial y cumplimiento de cada persona</td></tr>
               <tr><td><strong>📋 Historial</strong></td><td>Registros de asistencia por período</td></tr>
-              <tr><td><strong>📊 Reportes</strong></td><td>KPIs operativos y reportes gerenciales</td></tr>
               <tr><td><strong>✅ Cumplimiento</strong></td><td>Matriz por rol y riesgo, con exportación PDF/ZIP</td></tr>
-              <tr><td><strong>⚙️ Configuración</strong></td><td>Catálogo de tipos de capacitación y planes anuales</td></tr>
+              <tr><td><strong>👥 Personas</strong></td><td>Ficha de cumplimiento e historial de capacitaciones por empleado</td></tr>
+              <tr><td><strong>⚙️ Configuración</strong></td><td>Catálogo de tipos + planes anuales — <em>solo visible para el admin</em></td></tr>
             </tbody>
           </table>
         </div>
@@ -585,12 +603,20 @@
           <div class="section-icon amber">📅</div>
           <div class="section-title"><h2>Calendario de auditorías</h2><span class="route-badge">/panel</span></div>
         </div>
-        <div class="intro-card"><p>Tu <strong>agenda de trabajo</strong>. Planificá auditorías con anticipación, asignándolas a empresas y sucursales, y hacé seguimiento de las completadas.</p></div>
+        <div class="intro-card"><p>Tu <strong>agenda de trabajo</strong>. Planificá auditorías con anticipación, asignándolas a empresas y sucursales, y hacé seguimiento de las completadas. El panel tiene dos pestañas: <strong>Calendario</strong> e <strong>Historial</strong>.</p></div>
+
+        <h3 style="font-size:17px;margin-bottom:16px;">📅 Pestaña Calendario</h3>
         <div class="steps">
-          <div class="step"><div class="step-number">1</div><div class="step-body"><strong>Ir a /panel</strong><p>Vas a ver el calendario del mes actual.</p></div></div>
-          <div class="step"><div class="step-number">2</div><div class="step-body"><strong>Hacer clic en "Agendar auditoría"</strong><p>Completá empresa, sucursal, formulario, fecha, hora y encargado.</p></div></div>
+          <div class="step"><div class="step-number">1</div><div class="step-body"><strong>Ir a /panel</strong><p>Se abre la pestaña Calendario con el mes actual.</p></div></div>
+          <div class="step"><div class="step-number">2</div><div class="step-body"><strong>Hacer clic en "Agendar auditoría"</strong><p>El botón solo aparece si tenés el permiso <strong>Agendar auditorías</strong> habilitado. Completá empresa, sucursal, formulario, fecha, hora y encargado.</p></div></div>
           <div class="step"><div class="step-number">3</div><div class="step-body"><strong>Guardar</strong><p>La auditoría aparece en el calendario y en "Próximas auditorías".</p></div></div>
         </div>
+
+        <h3 style="font-size:17px;margin-bottom:16px;margin-top:20px;">📋 Pestaña Historial</h3>
+        <div class="intro-card" style="margin-bottom:16px;">
+          <p>Muestra todas las auditorías que ya fueron <strong>completadas</strong>. Sirve para revisar el historial de trabajo realizado y tener un registro de lo que ya se auditó.</p>
+        </div>
+
         <div class="info-box warning">
           <span class="icon">⚠️</span>
           <div class="body"><strong>Agendar ≠ Realizar la auditoría</strong><p>Agendar en el calendario es solo <em>planificación</em>. Para registrar la auditoría real tenés que ir a <code>/auditoria</code> por separado. No se vinculan automáticamente.</p></div>
@@ -607,31 +633,35 @@
         <div class="two-col">
           <div class="feature-box" style="border-top:3px solid var(--blue)">
             <h4>👑 Admin (vos)</h4>
-            <ul><li>Acceso total a todos los módulos</li><li>Crear empresas y sucursales</li><li>Crear y eliminar auditorías</li><li>Agendar auditorías</li><li>Agregar usuarios</li><li>Compartir formularios</li><li>Configurar permisos de operarios</li></ul>
+            <ul><li>Acceso total a todos los módulos</li><li>Crear y editar empresas y sucursales</li><li>Crear y eliminar auditorías</li><li>Agendar auditorías</li><li>Agregar usuarios al equipo</li><li>Compartir formularios en la galería</li><li>Configurar permisos de operarios</li></ul>
           </div>
           <div class="feature-box" style="border-top:3px solid #94a3b8">
             <h4>👤 Operario</h4>
-            <ul><li>Sin permisos por defecto</li><li>El admin activa permiso por permiso</li><li>No ve opciones sin permiso</li></ul>
+            <ul><li>Todos los permisos en <strong>false</strong> por defecto</li><li>El admin activa permiso por permiso</li><li>Solo ve las empresas que el admin le asignó</li><li>No ve botones ni opciones sin permiso</li><li>No puede editar ni eliminar empleados</li></ul>
           </div>
         </div>
-        <h3 style="font-size:17px;margin-bottom:16px;margin-top:28px;">🔧 Permisos configurables</h3>
+        <div class="info-box warning">
+          <span class="icon">⚠️</span>
+          <div class="body"><strong>Operarios: acceso por empresa asignada</strong><p>Un operario <strong>no ve todas las empresas</strong> del sistema. Solo ve las que el admin le asignó explícitamente. Esto se gestiona desde el perfil del operario mediante el campo <strong>empresas permitidas</strong>.</p></div>
+        </div>
+        <h3 style="font-size:17px;margin-bottom:16px;margin-top:28px;">🔧 Permisos configurables para operarios</h3>
         <div class="table-wrap">
           <table>
-            <thead><tr><th>Permiso</th><th>Qué habilita</th><th>Admin</th><th>Operario</th></tr></thead>
+            <thead><tr><th>Permiso</th><th>Qué habilita</th><th>Admin</th><th>Operario (default)</th></tr></thead>
             <tbody>
-              <tr><td><strong>Crear empresas</strong></td><td>Dar de alta nuevas empresas</td><td class="perm-check">✅</td><td class="perm-cross">❌</td></tr>
+              <tr><td><strong>Crear empresas</strong></td><td>Dar de alta nuevas empresas — <em>exclusivo de admin, no se puede delegar</em></td><td class="perm-check">✅</td><td class="perm-cross">❌</td></tr>
               <tr><td><strong>Crear sucursales</strong></td><td>Agregar sucursales a empresas</td><td class="perm-check">✅</td><td class="perm-cross">❌</td></tr>
               <tr><td><strong>Crear auditorías</strong></td><td>Iniciar y completar auditorías</td><td class="perm-check">✅</td><td class="perm-cross">❌</td></tr>
-              <tr><td><strong>Agendar auditorías</strong></td><td>Programar en el calendario</td><td class="perm-check">✅</td><td class="perm-cross">❌</td></tr>
+              <tr><td><strong>Agendar auditorías</strong></td><td>Programar auditorías en el calendario /panel</td><td class="perm-check">✅</td><td class="perm-cross">❌</td></tr>
               <tr><td><strong>Eliminar auditorías</strong></td><td>Borrar auditorías existentes</td><td class="perm-check">✅</td><td class="perm-cross">❌</td></tr>
-              <tr><td><strong>Compartir formularios</strong></td><td>Publicar en galería pública</td><td class="perm-check">✅</td><td class="perm-cross">❌</td></tr>
-              <tr><td><strong>Agregar usuarios</strong></td><td>Invitar nuevos usuarios</td><td class="perm-check">✅</td><td class="perm-cross">❌</td></tr>
+              <tr><td><strong>Compartir formularios</strong></td><td>Publicar formularios en la galería pública</td><td class="perm-check">✅</td><td class="perm-cross">❌</td></tr>
+              <tr><td><strong>Agregar usuarios</strong></td><td>Invitar nuevos usuarios — <em>exclusivo de admin</em></td><td class="perm-check">✅</td><td class="perm-cross">❌</td></tr>
             </tbody>
           </table>
         </div>
         <div class="info-box note">
           <span class="icon">📌</span>
-          <div class="body"><strong>Los permisos son por persona</strong><p>No hay permisos por empresa ni sucursal. Si habilitás a un operario para crear auditorías, puede hacerlo en cualquier empresa del sistema.</p></div>
+          <div class="body"><strong>Dos permisos no son delegables</strong><p><strong>Crear empresas</strong> y <strong>Agregar usuarios</strong> son exclusivos del rol admin — aunque un operario tenga ese permiso activado, el sistema no lo permite. Los demás permisos sí son configurables individualmente.</p></div>
         </div>
       </section>
 
@@ -664,5 +694,28 @@
   updateActive();
 </script>
 
+
+<!--
+  PUNTOS NO VERIFICADOS EN ESTA REVISIÓN (marzo 2026):
+
+  1. AUDITORÍAS - autoSaveService.js: El agente indicó que el autoguardado usa localStorage,
+     pero la documentación técnica dice IndexedDB + Firestore. No se leyó el archivo completo.
+     Verificar cuál es el destino real del autoguardado.
+
+  2. AUDITORÍAS - Firma (signature): El código de Auditoria.jsx incluye un paso de firma
+     (firmas en el wizard). La guía no menciona este paso. Verificar si aplica para todos los
+     formularios o es opcional.
+
+  3. AUDITORÍAS - Validación previa: El código sugiere que "todas las preguntas deben responderse"
+     antes de finalizar. No se confirmó si aplica a todas las preguntas o solo las marcadas como
+     obligatorias.
+
+  4. FORMULARIOS - "Compartir en galería": No se verificó el flujo exacto de cómo un admin
+     publica su formulario en la galería pública (requiere permiso puedeCompartirFormularios).
+
+  5. EMPLEADOS - campos del formulario: Se confirmaron nombre, DNI, email, cargo, área y tipo.
+     No se verificó si hay campos adicionales (teléfono, fecha de ingreso, etc.)
+     en EmpleadoForm.jsx.
+-->
 </body>
 </html>
