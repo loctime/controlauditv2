@@ -109,20 +109,6 @@ const AuditoriaRefactorizada = () => {
   } = useAuth();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
 
-  // Verificar si el contexto está cargando
-  if (loading) {
-    return (
-      <Container maxWidth="xl" sx={{ py: 4, px: 2 }}>
-        <Box display="flex" flexDirection="column" alignItems="center" justifyContent="center" minHeight="50vh">
-          <LinearProgress sx={{ width: '100%', mb: 2 }} aria-label="Cargando datos de autenticación" />
-          <Typography variant="h6" color="text.secondary">
-            Cargando datos de autenticación...
-          </Typography>
-        </Box>
-      </Container>
-    );
-  }
-
   // Estados para autoguardado
   const [isSaving, setIsSaving] = useState(false);
   const [lastSaved, setLastSaved] = useState(null);
@@ -981,6 +967,20 @@ const AuditoriaRefactorizada = () => {
       }, 400);
     }
   }, [activeStep]);
+
+  // Verificar si el contexto está cargando — DEBE ir después de todos los hooks
+  if (loading) {
+    return (
+      <Container maxWidth="xl" sx={{ py: 4, px: 2 }}>
+        <Box display="flex" flexDirection="column" alignItems="center" justifyContent="center" minHeight="50vh">
+          <LinearProgress sx={{ width: '100%', mb: 2 }} aria-label="Cargando datos de autenticación" />
+          <Typography variant="h6" color="text.secondary">
+            Cargando datos de autenticación...
+          </Typography>
+        </Box>
+      </Container>
+    );
+  }
 
   return (
     <Container maxWidth={isMobile ? false : "xl"} sx={{ py: isMobile ? 1 : 4, px: isMobile ? 0 : 2 }}>
