@@ -27,6 +27,7 @@ const BotonGenerarReporte = ({
   const { user, userProfile } = useAuth();
   const [guardando, setGuardando] = useState(false);
   const [guardadoExitoso, setGuardadoExitoso] = useState(false);
+  const [auditoriaIdGuardada, setAuditoriaIdGuardada] = useState(null);
   const [mensaje, setMensaje] = useState("");
   const [tipoMensaje, setTipoMensaje] = useState("success");
   const [mostrarMensaje, setMostrarMensaje] = useState(false);
@@ -115,6 +116,7 @@ const BotonGenerarReporte = ({
       }
 
       setGuardadoExitoso(true);
+      setAuditoriaIdGuardada(auditoriaId);
       const tipoUbicacion = sucursal && sucursal.trim() !== "" ? "Sucursal" : "Casa Central";
 
       if (uploadFailures && uploadFailures.length > 0) {
@@ -164,7 +166,7 @@ const BotonGenerarReporte = ({
         <Button
           variant="contained"
           color="primary"
-          onClick={onFinalizar}
+          onClick={() => onFinalizar(auditoriaIdGuardada)}
           size="large"
         >
           Finalizar
