@@ -11,8 +11,10 @@ import ConfigurationScreen from './screens/ConfigurationScreen';
 import ReportsScreen from './screens/ReportsScreen';
 import ComplianceScreen from './screens/ComplianceScreen';
 import CalendarScreen from './screens/CalendarScreen';
+import MatrixScreen from './screens/MatrixScreen';
 
 const MODULE_TABS = [
+  { id: 'matriz', label: 'Matriz' },
   { id: 'reports', label: 'Reportes' },
   { id: 'sessions', label: 'Sesiones' },
   { id: 'historial', label: 'Historial' },
@@ -37,6 +39,8 @@ export default function TrainingModule() {
 
   const renderScreen = () => {
     switch (activeTab) {
+      case 'matriz':
+        return <MatrixScreen />;
       case 'dashboard':
         return (
           <DashboardScreen

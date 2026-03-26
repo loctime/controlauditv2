@@ -3,7 +3,7 @@ import { useSearchParams } from 'react-router-dom';
 
 // Tab default cuando no coincide con un tab permitido (evita mostrar un "Tablero"
 // que puede no existir si el tab se quitó).
-const DEFAULT_TAB = 'reports';
+const DEFAULT_TAB = 'matriz';
 // matrix oculto temporalmente; section=matrix se trata como catalog
 const CONFIG_SECTIONS = ['catalog', 'plans'];
 

@@ -7,7 +7,8 @@
       "Bash(mv scripts/migrate-ddd-audit.js scripts/migration/)",
       "Bash(mv scripts/migrate-empleados.js scripts/migration/)",
       "Bash(mv scripts/migrate-registros-asistencia.js scripts/migration/)",
-      "Bash(mv scripts/fix-firestore-structure.js scripts/migration/)"
+      "Bash(mv scripts/fix-firestore-structure.js scripts/migration/)",
+      "mcp__Claude_Preview__preview_start"
     ]
   }
 }
