@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import {
   Alert,
   Box,
@@ -12,6 +13,7 @@ import {
 } from '@mui/material';
 import RefreshIcon from '@mui/icons-material/Refresh';
 import SaveIcon from '@mui/icons-material/Save';
+import SettingsIcon from '@mui/icons-material/Settings';
 import IconButton from '@mui/material/IconButton';
 import Tooltip from '@mui/material/Tooltip';
 import { useAuth } from '@/components/context/AuthContext';
@@ -24,6 +26,7 @@ import SaveSessionModal from '../components/matrix/SaveSessionModal';
 import SessionViewDrawer from '../components/matrix/SessionViewDrawer';
 
 export default function MatrixScreen() {
+  const navigate = useNavigate();
   const { userProfile } = useAuth();
   const ownerId = userProfile?.ownerId;
 
@@ -32,6 +35,7 @@ export default function MatrixScreen() {
   const currentYear = new Date().getFullYear();
   const [year, setYear] = useState(currentYear);
 
+  const isHistorical = year < currentYear;
   const effectiveSucursalId = sucursalId === 'todas' ? null : sucursalId;
 
   const {
@@ -146,7 +150,24 @@ export default function MatrixScreen() {
             <RefreshIcon />
           </IconButton>
         </Tooltip>
+
+        <Box sx={{ ml: 'auto' }} />
+
+        <Tooltip title="Configuración - Catálogo">
+          <IconButton
+            size="small"
+            onClick={() => navigate('/training/config')}
+          >
+            <SettingsIcon />
+          </IconButton>
+        </Tooltip>
       </Stack>
+
+      {isHistorical && (
+        <Alert severity="info" sx={{ mb: 2 }}>
+          📅 Estás viendo datos del año anterior. No se pueden realizar cambios.
+        </Alert>
+      )}
 
       {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
 
@@ -161,15 +182,15 @@ export default function MatrixScreen() {
           columnsByMonth={columnsByMonth}
           rows={rows}
           pendingChanges={changes}
-          onPendingChange={handlePendingChange}
-          onCellClick={handleCellClick}
-          onAddToMonth={handleAddToMonth}
+          onPendingChange={isHistorical ? undefined : handlePendingChange}
+          onCellClick={isHistorical ? undefined : handleCellClick}
+          onAddToMonth={isHistorical ? undefined : handleAddToMonth}
           loading={loading}
         />
       )}
 
       {/* Floating save button */}
-      {hasPendingChanges && (
+      {hasPendingChanges && !isHistorical && (
         <Box
           sx={{
             position: 'fixed',
