@@ -39,6 +39,13 @@ function getVisibleItems(cols, isExpanded) {
   return { visible: cols.slice(0, 2), hidden: cols.length - 2 };
 }
 
+function getMonthColumnCount(cols, isExpanded) {
+  const { visible, hidden } = getVisibleItems(cols, isExpanded);
+  // Siempre mostramos la columna "+" para agregar capacitación.
+  // Si hay ocultas, agregamos también una columna para expandir/contraer.
+  return visible.length + (hidden > 0 ? 2 : 1);
+}
+
 /**
  * Tabla principal de la matriz de capacitaciones.
  *
@@ -138,8 +145,8 @@ export default function TrainingMatrixTable({
 
               {months.map(month => {
                 const cols = columnsByMonth[month] || [];
-                // colspan = number of trainings + 1 (for the "+" cell)
-                const colSpan = cols.length + 1;
+                const isExpanded = expandedCells.has(`_${month}`);
+                const colSpan = getMonthColumnCount(cols, isExpanded);
                 return (
                   <TableCell
                     key={month}
@@ -217,8 +224,8 @@ export default function TrainingMatrixTable({
                       </Tooltip>
                     </TableCell>
                   )),
-                  // Expand/collapse button (or add button if no hidden items)
-                  hidden > 0 ? (
+                  // Expand/collapse button (solo en encabezado del mes)
+                  hidden > 0 && (
                     <TableCell
                       key={`expand-${month}`}
                       align="center"
@@ -238,52 +245,29 @@ export default function TrainingMatrixTable({
                         {isExpanded ? '−' : `+${hidden}`}
                       </Button>
                     </TableCell>
-                  ) : (
-                    <TableCell
-                      key={`add-${month}`}
-                      align="center"
-                      sx={{
-                        bgcolor: '#fafafa',
-                        borderLeft: '1px solid #e8e8e8',
-                        minWidth: 36,
-                        p: 0
-                      }}
-                    >
-                      <Tooltip title="Agregar capacitación a este mes">
-                        <IconButton
-                          size="small"
-                          onClick={() => onAddToMonth(month)}
-                          sx={{ color: '#42a5f5', p: 0.5 }}
-                        >
-                          <AddIcon fontSize="small" />
-                        </IconButton>
-                      </Tooltip>
-                    </TableCell>
                   ),
-                  // Add button (always shown at the end)
-                  hidden > 0 && (
-                    <TableCell
-                      key={`add-${month}`}
-                      align="center"
-                      sx={{
-                        bgcolor: '#fafafa',
-                        borderLeft: '1px solid #e8e8e8',
-                        borderRight: '2px solid #90caf9',
-                        minWidth: 36,
-                        p: 0
-                      }}
-                    >
-                      <Tooltip title="Agregar capacitación a este mes">
-                        <IconButton
-                          size="small"
-                          onClick={() => onAddToMonth(month)}
-                          sx={{ color: '#42a5f5', p: 0.5 }}
-                        >
-                          <AddIcon fontSize="small" />
-                        </IconButton>
-                      </Tooltip>
-                    </TableCell>
-                  ),
+                  // Add button (siempre visible al final del mes)
+                  <TableCell
+                    key={`add-${month}`}
+                    align="center"
+                    sx={{
+                      bgcolor: '#fafafa',
+                      borderLeft: '1px solid #e8e8e8',
+                      borderRight: '2px solid #90caf9',
+                      minWidth: 36,
+                      p: 0
+                    }}
+                  >
+                    <Tooltip title="Agregar capacitación a este mes">
+                      <IconButton
+                        size="small"
+                        onClick={() => onAddToMonth(month)}
+                        sx={{ color: '#42a5f5', p: 0.5 }}
+                      >
+                        <AddIcon fontSize="small" />
+                      </IconButton>
+                    </Tooltip>
+                  </TableCell>,
                 ].filter(Boolean);
               })}
 
@@ -295,7 +279,13 @@ export default function TrainingMatrixTable({
             {rows.length === 0 ? (
               <TableRow>
                 <TableCell
-                  colSpan={months.reduce((acc, m) => acc + (columnsByMonth[m]?.length || 0) + 1, 0) + 2}
+                  colSpan={
+                    months.reduce((acc, m) => {
+                      const cols = columnsByMonth[m] || [];
+                      const isExpanded = expandedCells.has(`_${m}`);
+                      return acc + getMonthColumnCount(cols, isExpanded);
+                    }, 0) + 2
+                  }
                   align="center"
                   sx={{ py: 4, color: 'text.secondary' }}
                 >
@@ -331,8 +321,7 @@ export default function TrainingMatrixTable({
                   {/* Cells per month */}
                   {months.map(month => {
                     const cols = columnsByMonth[month] || [];
-                    const key = `${row.empleadoId}_${month}`;
-                    const isExpanded = expandedCells.has(key);
+                    const isExpanded = expandedCells.has(`_${month}`);
                     const { visible, hidden } = getVisibleItems(cols, isExpanded);
 
                     return [
@@ -356,37 +345,19 @@ export default function TrainingMatrixTable({
                           />
                         </TableCell>
                       )),
-                      // Expand/collapse button or spacer
-                      hidden > 0 ? (
+                      // Espaciadores para columnas de control del encabezado (expand + add)
+                      ...(hidden > 0 ? [0, 1] : [0]).map((_, idx) => (
                         <TableCell
-                          key={`expand-${month}`}
-                          align="center"
-                          sx={{
-                            p: 0,
-                            borderLeft: '1px solid #e8e8e8',
-                            minWidth: 50
-                          }}
-                        >
-                          <Button
-                            size="small"
-                            onClick={() => onToggleExpand(row.empleadoId, month)}
-                            sx={{ fontSize: '0.7rem', minWidth: 'auto', p: '2px 4px', width: '100%' }}
-                          >
-                            {isExpanded ? '−' : `+${hidden}`}
-                          </Button>
-                        </TableCell>
-                      ) : (
-                        <TableCell
-                          key={`spacer-${month}-${row.empleadoId}`}
+                          key={`spacer-${month}-${row.empleadoId}-${idx}`}
                           sx={{
                             borderLeft: '1px solid #e8e8e8',
-                            borderRight: '2px solid #90caf9',
-                            minWidth: 36,
+                            borderRight: idx === (hidden > 0 ? 1 : 0) ? '2px solid #90caf9' : undefined,
+                            minWidth: idx === 0 && hidden > 0 ? 50 : 36,
                             p: 0
                           }}
                         />
-                      ),
-                    ].filter(Boolean);
+                      )),
+                    ];
                   })}
 
                   {/* % Completo */}
