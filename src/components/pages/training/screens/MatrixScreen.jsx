@@ -49,7 +49,8 @@ export default function MatrixScreen() {
   } = useTrainingMatrix({
     ownerId,
     sucursalId: effectiveSucursalId,
-    year
+    year,
+    companyId: selectedEmpresa !== 'todas' ? selectedEmpresa : undefined
   });
 
   const {

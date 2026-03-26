@@ -42,7 +42,7 @@ function getEmployeeName(emp) {
 /**
  * Hook que carga y computa la matriz de capacitaciones para una sucursal y año.
  *
- * @param {{ ownerId: string, sucursalId: string, year: number }} params
+ * @param {{ ownerId: string, sucursalId: string, year: number, companyId?: string }} params
  * @returns {{
  *   columnsByMonth: Object,
  *   rows: Array,
@@ -54,7 +54,7 @@ function getEmployeeName(emp) {
  *   refresh: () => void
  * }}
  */
-export function useTrainingMatrix({ ownerId, sucursalId, year }) {
+export function useTrainingMatrix({ ownerId, sucursalId, year, companyId }) {
   const [empleados, setEmpleados] = useState([]);
   const [plan, setPlan] = useState(null);
   const [planItems, setPlanItems] = useState([]);
@@ -82,8 +82,26 @@ export function useTrainingMatrix({ ownerId, sucursalId, year }) {
       const newCatalogMap = {};
       (catalogItems || []).forEach(item => { newCatalogMap[item.id] = item; });
 
-      const activePlan = (plans || [])[0] || null;
+      let activePlan = (plans || [])[0] || null;
 
+      // Si no existe plan anual, crear uno automáticamente
+      if (!activePlan) {
+        try {
+          const createdPlan = await trainingPlanService.createPlan(ownerId, {
+            companyId: companyId || undefined,
+            branchId: sucursalId,
+            year: Number(year),
+            status: 'draft',
+            notes: 'Plan anual auto-creado'
+          });
+          activePlan = createdPlan || null;
+        } catch (err) {
+          console.error('Error creando plan anual:', err);
+          // Si falla la creación, continuar sin plan
+        }
+      }
+
+      // Si aún no hay plan, retornar con empleados pero sin datos de matriz
       if (!activePlan) {
         setEmpleados(emps || []);
         setPlan(null);
@@ -150,7 +168,7 @@ export function useTrainingMatrix({ ownerId, sucursalId, year }) {
     } finally {
       setLoading(false);
     }
-  }, [ownerId, sucursalId, year]);
+  }, [ownerId, sucursalId, year, companyId]);
 
   useEffect(() => { load(); }, [load]);
 
