@@ -254,6 +254,7 @@ export default function MatrixScreen() {
           loading={loading}
           expandedCells={expandedCells}
           onToggleExpand={toggleExpandCell}
+          onAddFirstItem={!isHistorical ? () => handleAddToMonth(1) : undefined}
         />
       )}
 
