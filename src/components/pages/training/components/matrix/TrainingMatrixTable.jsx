@@ -57,7 +57,9 @@ function getMonthColumnCount(cols, isExpanded) {
  *   loading: boolean,
  *   noPlanMessage?: string,
  *   expandedCells?: Set<string>,  // Set of `${empleadoId}_${month}`
- *   onToggleExpand?: (empleadoId: string, month: number) => void
+ *   onToggleExpand?: (empleadoId: string, month: number) => void,
+ *   onEmployeeClick?: (empleadoId: string, empleadoNombre: string) => void,
+ *   onMonthClick?: (month: number) => void
  * }} props
  */
 export default function TrainingMatrixTable({
@@ -70,7 +72,9 @@ export default function TrainingMatrixTable({
   onAddToMonth,
   loading,
   expandedCells = new Set(),
-  onToggleExpand = () => {}
+  onToggleExpand = () => {},
+  onEmployeeClick,
+  onMonthClick
 }) {
   // Sorted month numbers that appear in the plan
   const months = Object.keys(columnsByMonth)
@@ -165,7 +169,23 @@ export default function TrainingMatrixTable({
                     }}
                   >
                     <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 0.5 }}>
-                      <span>{MONTH_NAMES[month]}</span>
+                      <Box
+                        component="button"
+                        type="button"
+                        onClick={() => onMonthClick?.(month)}
+                        disabled={!onMonthClick}
+                        sx={{
+                          cursor: onMonthClick ? 'pointer' : 'default',
+                          border: 'none',
+                          background: 'transparent',
+                          font: 'inherit',
+                          padding: 0,
+                          margin: 0,
+                          color: 'inherit'
+                        }}
+                      >
+                        {MONTH_NAMES[month]}
+                      </Box>
                       <Tooltip title="Agregar capacitación a este mes">
                         <IconButton
                           size="small"
@@ -295,7 +315,24 @@ export default function TrainingMatrixTable({
                     }}
                   >
                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75 }}>
-                      <span>{row.nombre}</span>
+                      <Box
+                        component="button"
+                        type="button"
+                        onClick={() => onEmployeeClick?.(row.empleadoId, row.nombre)}
+                        disabled={!onEmployeeClick}
+                        sx={{
+                          cursor: onEmployeeClick ? 'pointer' : 'default',
+                          border: 'none',
+                          background: 'transparent',
+                          font: 'inherit',
+                          padding: 0,
+                          margin: 0,
+                          color: 'inherit',
+                          textAlign: 'left'
+                        }}
+                      >
+                        {row.nombre}
+                      </Box>
                       <Chip
                         label={`${row.pct}%`}
                         size="small"

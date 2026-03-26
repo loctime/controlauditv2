@@ -28,6 +28,8 @@ import TrainingMatrixTable from '../components/matrix/TrainingMatrixTable';
 import AddPlanItemModal from '../components/matrix/AddPlanItemModal';
 import SaveSessionModal from '../components/matrix/SaveSessionModal';
 import SessionViewDrawer from '../components/matrix/SessionViewDrawer';
+import EmployeeTrainingDrawer from '../components/matrix/EmployeeTrainingDrawer';
+import MonthAttendanceDrawer from '../components/matrix/MonthAttendanceDrawer';
 
 export default function MatrixScreen() {
   const navigate = useNavigate();
@@ -56,6 +58,9 @@ export default function MatrixScreen() {
     columnsByMonth,
     rows,
     planId,
+    sessions,
+    attendanceMap,
+    catalogMap,
     loading,
     error,
     refresh
@@ -89,6 +94,19 @@ export default function MatrixScreen() {
     empleadoId: null,
     trainingTypeName: '',
     isTerminal: false
+  });
+
+  // Employee drawer state
+  const [employeeDrawerOpen, setEmployeeDrawerOpen] = useState(false);
+  const [employeeDrawerData, setEmployeeDrawerData] = useState({
+    empleadoId: null,
+    empleadoNombre: ''
+  });
+
+  // Month drawer state
+  const [monthDrawerOpen, setMonthDrawerOpen] = useState(false);
+  const [monthDrawerData, setMonthDrawerData] = useState({
+    month: null
   });
 
   // Expanded months per employee: Set of `${empleadoId}_${month}`
@@ -162,6 +180,16 @@ export default function MatrixScreen() {
       isTerminal: Boolean(cellData?.isTerminal)
     });
     setViewDrawerOpen(true);
+  }
+
+  function handleEmployeeClick(empleadoId, empleadoNombre) {
+    setEmployeeDrawerData({ empleadoId, empleadoNombre });
+    setEmployeeDrawerOpen(true);
+  }
+
+  function handleMonthClick(month) {
+    setMonthDrawerData({ month });
+    setMonthDrawerOpen(true);
   }
 
   // Year selector options - prepared for dynamic scaling if needed
@@ -334,6 +362,8 @@ export default function MatrixScreen() {
           loading={loading}
           expandedCells={expandedCells}
           onToggleExpand={toggleExpandCell}
+          onEmployeeClick={handleEmployeeClick}
+          onMonthClick={handleMonthClick}
         />
       )}
 
@@ -405,6 +435,27 @@ export default function MatrixScreen() {
         empleadoId={viewDrawerData.empleadoId}
         trainingTypeName={viewDrawerData.trainingTypeName}
         isTerminal={viewDrawerData.isTerminal}
+      />
+
+      {/* Employee training drawer */}
+      <EmployeeTrainingDrawer
+        open={employeeDrawerOpen}
+        onClose={() => setEmployeeDrawerOpen(false)}
+        empleadoId={employeeDrawerData.empleadoId}
+        empleadoNombre={employeeDrawerData.empleadoNombre}
+        year={year}
+        catalogMap={catalogMap}
+      />
+
+      {/* Month attendance drawer */}
+      <MonthAttendanceDrawer
+        open={monthDrawerOpen}
+        onClose={() => setMonthDrawerOpen(false)}
+        month={monthDrawerData.month}
+        year={year}
+        rows={rows}
+        sessions={sessions}
+        attendanceMap={attendanceMap}
       />
     </Box>
   );
