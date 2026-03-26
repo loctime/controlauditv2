@@ -234,61 +234,92 @@ export function useTrainingMatrix({ ownerId, sucursalId, year, companyId }) {
     return byKey;
   }, [sessions, planItems]);
 
-  // Compute state for a single (empleadoId, planItem) pair
-  // Returns: { estado: 'BLANK'|'RED'|'GREEN'|'GRAY', sessionIds: string[], isTerminal: boolean }
+  // Compute state for a single (empleadoId, planItem) pair.
+  // - estado representa el ULTIMO registro (color + editabilidad)
+  // - hasPresentAny/hasNotApplicableAny se usan para el % de cumplimiento
   const computeCellData = useCallback((empleadoId, planItem) => {
     const { planItemId, noAplicaEmployeeIds } = planItem;
 
-    // Plan item explícitamente no aplica para el empleado: terminal GRAY sin sesiones.
-    if (noAplicaEmployeeIds && noAplicaEmployeeIds.includes(empleadoId)) {
-      return { estado: CELL_STATE.GRAY, sessionIds: [], isTerminal: true };
-    }
-
     const sessionsForItem = sessionsByPlanItem[planItemId] || [];
-    if (!sessionsForItem.length) {
-      return { estado: CELL_STATE.BLANK, sessionIds: [], isTerminal: false };
-    }
+    const recordsBySession = sessionsForItem
+      .map((session) => {
+        const attendance = attendanceMap[session.id]?.[empleadoId];
+        if (!attendance) return null;
+        return { sessionId: session.id, attendance };
+      })
+      .filter(Boolean);
 
-    const records = [];
-    const sessionIds = [];
-
-    sessionsForItem.forEach((session) => {
-      const attendance = attendanceMap[session.id]?.[empleadoId];
-      if (!attendance) return;
-      records.push(attendance);
-      sessionIds.push(session.id);
-    });
-
-    // Sin registros → BLANK
-    if (!records.length) {
-      return { estado: CELL_STATE.BLANK, sessionIds: [], isTerminal: false };
-    }
-
-    // Si alguno PRESENT → GREEN (terminal)
-    const hasPresent = records.some((r) =>
-      r?.attendanceStatus === TRAINING_ATTENDANCE_STATUSES.PRESENT
+    const hasPresentAny = recordsBySession.some((r) =>
+      r.attendance?.attendanceStatus === TRAINING_ATTENDANCE_STATUSES.PRESENT
     );
-    if (hasPresent) {
-      return { estado: CELL_STATE.GREEN, sessionIds, isTerminal: true };
-    }
 
-    // Si alguno NOT_APPLICABLE → GRAY (terminal)
-    const hasNotApplicable = records.some((r) =>
-      r?.evaluationStatus === TRAINING_EVALUATION_STATUSES.NOT_APPLICABLE ||
-      r?.attendanceStatus === TRAINING_EVALUATION_STATUSES.NOT_APPLICABLE // compat por si alguien lo grabó mal
+    // NOT_APPLICABLE en esta matriz se considera solo cuando corresponde al caso "No aplica".
+    // Importante: los ausentes suelen guardar evaluationStatus=NOT_APPLICABLE, pero NO deberían volverse GRAY.
+    const hasNotApplicableAny = Boolean(
+      (noAplicaEmployeeIds && noAplicaEmployeeIds.includes(empleadoId)) ||
+      recordsBySession.some((r) => {
+        const a = r.attendance;
+        return (
+          a?.status === 'NOT_APPLICABLE' ||
+          (a?.attendanceStatus === TRAINING_ATTENDANCE_STATUSES.INVITED &&
+            a?.evaluationStatus === TRAINING_EVALUATION_STATUSES.NOT_APPLICABLE)
+        );
+      })
     );
-    if (hasNotApplicable) {
-      return { estado: CELL_STATE.GRAY, sessionIds, isTerminal: true };
+
+    // Sin registros → o BLANK o GRAY (plan no aplica)
+    if (!recordsBySession.length) {
+      if (noAplicaEmployeeIds && noAplicaEmployeeIds.includes(empleadoId)) {
+        return {
+          estado: CELL_STATE.GRAY,
+          sessionIds: [],
+          isTerminal: false,
+          hasPresentAny,
+          hasNotApplicableAny
+        };
+      }
+
+      return {
+        estado: CELL_STATE.BLANK,
+        sessionIds: [],
+        isTerminal: false,
+        hasPresentAny,
+        hasNotApplicableAny
+      };
     }
 
-    // Si todos (los registros explícitos) son no-present y alguno es ausencia → RED
-    const hasAbsent = records.some((r) => ABSENT_STATUSES.has(r?.attendanceStatus));
-    if (hasAbsent) {
-      return { estado: CELL_STATE.RED, sessionIds, isTerminal: false };
-    }
+    // El ULTIMO registro corresponde al primer elemento porque `sessions` viene ordenada desc.
+    const latest = recordsBySession[0].attendance;
 
-    // Invitado/reprogramado/etc sin “ausente” explícito → BLANK (no hay ausencias implícitas)
-    return { estado: CELL_STATE.BLANK, sessionIds, isTerminal: false };
+    const latestState = (() => {
+      if (latest?.attendanceStatus === TRAINING_ATTENDANCE_STATUSES.PRESENT) {
+        return CELL_STATE.GREEN;
+      }
+
+      if (
+        latest?.status === 'NOT_APPLICABLE' ||
+        (latest?.attendanceStatus === TRAINING_ATTENDANCE_STATUSES.INVITED &&
+          latest?.evaluationStatus === TRAINING_EVALUATION_STATUSES.NOT_APPLICABLE)
+      ) {
+        return CELL_STATE.GRAY;
+      }
+
+      if (ABSENT_STATUSES.has(latest?.attendanceStatus)) {
+        return CELL_STATE.RED;
+      }
+
+      return CELL_STATE.BLANK;
+    })();
+
+    return {
+      estado: latestState,
+      // Historial: todas las sesiones donde existe attendance para ese empleado/planItem
+      sessionIds: recordsBySession.map((r) => r.sessionId),
+      // Solo PRESENT bloquea edición (regla nueva)
+      isTerminal: latestState === CELL_STATE.GREEN,
+      hasPresentAny,
+      hasNotApplicableAny
+    };
   }, [sessionsByPlanItem, attendanceMap]);
 
   // Rows: one per employee, with cellMap per planItem
@@ -300,16 +331,12 @@ export function useTrainingMatrix({ ownerId, sucursalId, year, companyId }) {
         cellMap[planItem.planItemId] = computeCellData(emp.id, planItem);
       });
 
-      // % completo: count GREEN / (total - GRAY)
-      const relevant = allPlanItems.filter((pi) =>
-        cellMap[pi.planItemId]?.estado !== CELL_STATE.GRAY
-      );
-      const completed = relevant.filter((pi) =>
-        cellMap[pi.planItemId]?.estado === CELL_STATE.GREEN
-      ).length;
-      const pct = relevant.length > 0
-        ? Math.round((completed / relevant.length) * 100)
-        : 0;
+      // % completo:
+      // - Se considera cumplido si existe al menos un PRESENT para ese planItem (en su mes planificado),
+      //   no importa el último estado visual.
+      const relevant = allPlanItems.filter((pi) => !cellMap[pi.planItemId]?.hasNotApplicableAny);
+      const completed = relevant.filter((pi) => cellMap[pi.planItemId]?.hasPresentAny).length;
+      const pct = relevant.length > 0 ? Math.round((completed / relevant.length) * 100) : 0;
 
       return {
         empleadoId: emp.id,

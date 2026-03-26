@@ -77,18 +77,27 @@ export default function SessionViewDrawer({
 
   function resolveEmployeeStatus(attendance) {
     if (!attendance) return { label: 'Sin registro', color: '#9e9e9e', bg: '#f5f5f5' };
-    if (
+
+    // No aplica SOLO cuando corresponde al caso "No aplica".
+    // Importante: los ausentes pueden guardar evaluationStatus=NOT_APPLICABLE; eso NO debe transformarlos en GRAY/N/A.
+    const isNoAplica =
       attendance.status === 'NOT_APPLICABLE' ||
-      attendance.evaluationStatus === TRAINING_EVALUATION_STATUSES.NOT_APPLICABLE
-    ) {
+      (attendance.attendanceStatus === TRAINING_ATTENDANCE_STATUSES.INVITED &&
+        attendance.evaluationStatus === TRAINING_EVALUATION_STATUSES.NOT_APPLICABLE);
+
+    if (isNoAplica) {
       return { label: 'No aplica', color: '#616161', bg: '#eeeeee' };
     }
-    if (
+
+    const isPresente =
       attendance.attended === true ||
-      attendance.attendanceStatus === TRAINING_ATTENDANCE_STATUSES.PRESENT
-    ) {
+      attendance.attendanceStatus === TRAINING_ATTENDANCE_STATUSES.PRESENT;
+
+    if (isPresente) {
       return { label: 'Presente', color: '#2e7d32', bg: '#e8f5e9' };
     }
+
+    // Si no es presente ni no-aplica, tratamos como Ausente.
     return { label: 'Ausente', color: '#c62828', bg: '#ffebee' };
   }
 

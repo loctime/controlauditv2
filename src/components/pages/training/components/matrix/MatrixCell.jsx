@@ -35,14 +35,13 @@ export default function MatrixCell({ cellData, pendingState, onPendingChange, on
   const baseState = cellData?.estado ?? CELL_STATE.BLANK;
   const displayState = pendingState !== undefined ? pendingState : baseState;
   const isPending = pendingState !== undefined && pendingState !== baseState;
-  const isTerminal = cellData?.isTerminal === true;
   const hasSessions = (cellData?.sessionIds?.length || 0) > 0;
 
   const config = STATE_CONFIG[displayState] ?? STATE_CONFIG[CELL_STATE.BLANK];
 
-  // La editabilidad se define por el estado base guardado, no por el pending.
-  // Asi se puede cambiar varias veces antes de guardar.
-  const canEdit = (baseState === CELL_STATE.BLANK || baseState === CELL_STATE.RED) && !isTerminal;
+  // Regla nueva de editabilidad:
+  // Solo PRESENTE (GREEN) bloquea edición. AUSENTE/GRAY/BLANK siempre editables.
+  const canEdit = baseState !== CELL_STATE.GREEN;
   const canOpenDrawer = (displayState === CELL_STATE.GREEN || displayState === CELL_STATE.GRAY) && hasSessions;
 
   return (

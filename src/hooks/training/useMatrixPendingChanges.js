@@ -1,4 +1,5 @@
 import { useState, useCallback } from 'react';
+import { CELL_STATE } from './useTrainingMatrix';
 
 /**
  * Hook para gestionar cambios pendientes en la matriz de capacitaciones.
@@ -17,7 +18,8 @@ export function useMatrixPendingChanges() {
   const [changes, setChanges] = useState({});
 
   const setPendingChange = useCallback((empleadoId, planItemId, newState, cellData) => {
-    if (cellData?.isTerminal === true) {
+    // Regla nueva: solo el estado PRESENTE (GREEN) bloquea edición.
+    if (cellData?.estado === CELL_STATE.GREEN) {
       return;
     }
     const key = `${empleadoId}_${planItemId}`;
