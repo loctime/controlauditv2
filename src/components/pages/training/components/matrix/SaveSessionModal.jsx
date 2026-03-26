@@ -35,6 +35,21 @@ function nowTimeString() {
   return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
 }
 
+const MONTHS_ES = [
+  'Enero',
+  'Febrero',
+  'Marzo',
+  'Abril',
+  'Mayo',
+  'Junio',
+  'Julio',
+  'Agosto',
+  'Septiembre',
+  'Octubre',
+  'Noviembre',
+  'Diciembre'
+];
+
 /**
  * Modal para confirmar y guardar los cambios pendientes de la matriz.
  *
@@ -56,6 +71,8 @@ export default function SaveSessionModal({
   columnsByMonth = {},
   planId,
   sucursalId,
+  sucursalNombre,
+  empresaNombre,
   year,
   onSaved
 }) {
@@ -160,6 +177,13 @@ export default function SaveSessionModal({
 
         let evidenceIds = [];
         if (files.length > 0 && sessionId) {
+          // Resolver nombres legibles para carpetas (regla: nunca IDs internos)
+          const monthIndex = meta.plannedMonth ? meta.plannedMonth - 1 : scheduledDate.getMonth();
+          const monthLabel = MONTHS_ES[monthIndex] || 'Mes';
+          const contextEventName = `${meta.name || meta.trainingTypeId || 'Capacitación'} - ${monthLabel} ${year}`;
+          const companyName = empresaNombre || 'Empresa';
+          const branchName = sucursalNombre || 'Sucursal';
+
           const uploadResults = await Promise.allSettled(
             files.map((file) => uploadFileWithContext({
               file,
@@ -167,9 +191,9 @@ export default function SaveSessionModal({
               uploadedBy: instructorEmail,
               context: {
                 contextType: 'training_session',
-                contextEventId: sessionId,
-                companyId: userProfile?.companyId || null,
-                sucursalId,
+                contextEventId: contextEventName,
+                companyId: companyName,
+                sucursalId: branchName,
                 tipoArchivo: 'evidencia_capacitacion',
                 module: 'training',
                 entityId: sessionId

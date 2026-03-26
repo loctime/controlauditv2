@@ -623,13 +623,22 @@ export default function CreateTrainingSession({
           }
           try {
             console.info('[CreateTrainingSession] Subiendo archivo a almacenamiento:', file.name);
+            const companyName = companyById[form.companyId]?.nombre || 'Empresa';
+            const branchName = branchById[form.branchId]?.nombre || 'Sucursal';
+            const monthLabel = (() => {
+              const d = form.scheduledDate ? new Date(form.scheduledDate) : new Date();
+              const months = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
+              return months[d.getMonth()] || 'Mes';
+            })();
+            const contextEventName = `${trainingTypeName || form.trainingTypeId || 'Capacitación'} - ${monthLabel} ${new Date(form.scheduledDate || Date.now()).getFullYear()}`;
+
             const uploadResult = await uploadFileWithContext({
               file,
               context: {
                 contextType: 'capacitacion',
-                contextEventId: sessionId,
-                companyId: form.companyId,
-                sucursalId: form.branchId || undefined,
+                contextEventId: contextEventName,
+                companyId: companyName,
+                sucursalId: branchName,
                 tipoArchivo: 'evidencia',
                 capacitacionTipoId: form.trainingTypeId || undefined
               },

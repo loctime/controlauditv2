@@ -375,6 +375,8 @@ export default function MatrixScreen() {
         columnsByMonth={columnsByMonth}
         planId={planId}
         sucursalId={effectiveSucursalId}
+        sucursalNombre={sucursalesDisponibles.find((s) => s.id === effectiveSucursalId)?.nombre || 'Sucursal'}
+        empresaNombre={empresasDisponibles.find((e) => e.id === efectiveCompanyId)?.nombre || 'Empresa'}
         year={year}
         onSaved={() => {
           setSaveModalOpen(false);
