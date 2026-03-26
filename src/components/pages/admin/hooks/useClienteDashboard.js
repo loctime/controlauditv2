@@ -54,7 +54,7 @@ export const useClienteDashboard = () => {
       const sucursalesRef = collection(dbAudit, ...firestoreRoutesCore.sucursales(ownerId));
       
       if (empresasData && empresasData.length > 0) {
-        const empresasIds = empresasData.map(emp => emp.nombre || emp.id);
+        const empresasIds = empresasData.map(emp => emp.id);
         // Firestore limita 'in' queries a 10 elementos, dividir en chunks si es necesario
         const chunkSize = 10;
         const empresasChunks = [];
@@ -338,8 +338,13 @@ export const useClienteDashboard = () => {
     [auditorias]
   );
 
-  const auditoriasCompletadas = useMemo(() => 
-    auditorias.filter(aud => aud.estado === 'completada'), 
+  const auditoriasCompletadas = useMemo(() =>
+    auditorias.filter(aud => aud.estado === 'completada'),
+    [auditorias]
+  );
+
+  const auditoriasConReporteSinVincular = useMemo(() =>
+    auditorias.filter(aud => aud.reporteSinVincular && aud.estado === 'agendada'),
     [auditorias]
   );
 
@@ -405,6 +410,7 @@ export const useClienteDashboard = () => {
     loadingStates,
     auditoriasPendientes,
     auditoriasCompletadas,
+    auditoriasConReporteSinVincular,
     auditoriasDelDia,
     proximasAuditorias,
     handleAgendarAuditoria,

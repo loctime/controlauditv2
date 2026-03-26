@@ -13,11 +13,11 @@ import {
   Avatar,
   Chip
 } from "@mui/material";
-import { 
-  CalendarToday, 
-  Add, 
-  CheckCircle, 
-  Schedule, 
+import {
+  CalendarToday,
+  Add,
+  PlayArrow,
+  Schedule,
   LocationOn,
   Description,
   Delete,
@@ -209,20 +209,21 @@ const AuditoriasDelDia = ({
                       variant="contained"
                       color="success"
                       size="small"
-                      startIcon={<CheckCircle />}
+                      startIcon={<PlayArrow />}
                       onClick={() => {
                         navigate('/auditoria', {
                           state: {
                             empresa: auditoria.empresa,
+                            empresaId: auditoria.empresaId,
                             sucursal: auditoria.sucursal,
-                            formularioId: auditoria.formularioId, // Asegúrate de que este campo exista
+                            formularioId: auditoria.formularioId,
                             auditoriaId: auditoria.id,
                             fecha: auditoria.fecha
                           }
                         });
                       }}
                     >
-                      Completar
+                      Ir a completar
                     </Button>
                   )}
                   <IconButton

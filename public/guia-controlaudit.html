@@ -449,11 +449,15 @@
           <div class="flow-step">📄 Reporte</div>
         </div>
         <div class="steps">
-          <div class="step"><div class="step-number">1</div><div class="step-body"><strong>Ir a Nueva Auditoría (/auditoria)</strong><p>Desde el menú o el botón de acceso rápido en el tablero.</p></div></div>
-          <div class="step"><div class="step-number">2</div><div class="step-body"><strong>Seleccionar empresa, sucursal y formulario</strong><p>Elegí a qué cliente y sede corresponde esta auditoría.</p></div></div>
+          <div class="step"><div class="step-number">1</div><div class="step-body"><strong>Ir a Nueva Auditoría (/auditoria)</strong><p>Desde el menú, el botón de acceso rápido en el tablero, o clickeando "Completar" en una agenda del <code>/panel</code>.</p></div></div>
+          <div class="step"><div class="step-number">2</div><div class="step-body"><strong>Seleccionar empresa, sucursal y formulario</strong><p>Elegí a qué cliente y sede corresponde esta auditoría. Si venís desde el calendario, estos campos ya vienen <strong>pre-cargados y bloqueados</strong>.</p></div></div>
           <div class="step"><div class="step-number">3</div><div class="step-body"><strong>Completar las preguntas</strong><p>Respondé cada pregunta, agregá comentarios y adjuntá fotos como evidencia.</p></div></div>
           <div class="step"><div class="step-number">4</div><div class="step-body"><strong>El sistema guarda automáticamente</strong><p>Cada cambio se guarda solo. Si cerrás por error, no perdés nada.</p></div></div>
-          <div class="step"><div class="step-number">5</div><div class="step-body"><strong>Finalizar y ver el reporte</strong><p>Se genera el reporte en /reporte. Podés imprimirlo o guardarlo como PDF desde el navegador.</p></div></div>
+          <div class="step"><div class="step-number">5</div><div class="step-body"><strong>Finalizar y ver el reporte</strong><p>Se genera el reporte. Si la auditoría venía de una agenda, el calendario se cierra automáticamente en ese momento.</p></div></div>
+        </div>
+        <div class="info-box note">
+          <span class="icon">📌</span>
+          <div class="body"><strong>Auditorías agendadas pendientes</strong><p>Si entrás a <code>/auditoria</code> y tenés agendas pendientes asignadas a tu usuario, aparece un aviso en la parte superior con un botón "Iniciar" para cada una. Podés ignorarlo y crear una auditoría libre igual.</p></div>
         </div>
         <div class="info-box success">
           <span class="icon">✅</span>
@@ -546,8 +550,8 @@
         <h3 style="font-size:17px;margin-bottom:16px;margin-top:28px;">🗺️ Configurar el plan anual</h3>
         <div class="steps">
           <div class="step"><div class="step-number">1</div><div class="step-body"><strong>Ir a Configuración en /training</strong><p>Solo visible para admins.</p></div></div>
-          <div class="step"><div class="step-number">2</div><div class="step-body"><strong>Definir el catálogo de tipos</strong><p>Creá los tipos de capacitación con su vigencia en meses (ej: "Primeros auxilios", 12 meses).</p></div></div>
-          <div class="step"><div class="step-number">3</div><div class="step-body"><strong>Crear el plan anual</strong><p>Creá un plan para la empresa y sucursal. Agregá los tipos y el sistema genera los meses planificados automáticamente.</p></div></div>
+          <div class="step"><div class="step-number">2</div><div class="step-body"><strong>Definir el catálogo de tipos</strong><p>Creá los tipos de capacitación (ej: "Primeros auxilios"). Acá definís nombre, categoría, modalidad y si requiere evaluación — la vigencia se asigna más adelante, al agregar el tipo al plan.</p></div></div>
+          <div class="step"><div class="step-number">3</div><div class="step-body"><strong>Crear el plan anual</strong><p>Creá un plan para la empresa y sucursal. Al agregar cada tipo al plan definís la <strong>vigencia en meses</strong> (ej: 12 meses) y el mes de inicio — el sistema genera los meses planificados automáticamente.</p></div></div>
           <div class="step"><div class="step-number">4</div><div class="step-body"><strong>Registrar sesiones y asistencia</strong><p>A medida que ocurren las capacitaciones, registralas con asistentes y cerrá la sesión.</p></div></div>
         </div>
         <h3 style="font-size:17px;margin-bottom:16px;margin-top:20px;">🔄 Estados de una sesión</h3>
@@ -603,23 +607,35 @@
           <div class="section-icon amber">📅</div>
           <div class="section-title"><h2>Calendario de auditorías</h2><span class="route-badge">/panel</span></div>
         </div>
-        <div class="intro-card"><p>Tu <strong>agenda de trabajo</strong>. Planificá auditorías con anticipación, asignándolas a empresas y sucursales, y hacé seguimiento de las completadas. El panel tiene dos pestañas: <strong>Calendario</strong> e <strong>Historial</strong>.</p></div>
+        <div class="intro-card"><p>Tu <strong>agenda de trabajo</strong>. Planificá auditorías con anticipación, asignándolas a empresas, sucursales y encargados. El sistema vincula automáticamente la agenda con la auditoría real cuando el operario la completa. El panel tiene dos pestañas: <strong>Calendario</strong> e <strong>Historial</strong>.</p></div>
 
-        <h3 style="font-size:17px;margin-bottom:16px;">📅 Pestaña Calendario</h3>
+        <h3 style="font-size:17px;margin-bottom:16px;">📅 Pestaña Calendario — cómo agendar</h3>
         <div class="steps">
           <div class="step"><div class="step-number">1</div><div class="step-body"><strong>Ir a /panel</strong><p>Se abre la pestaña Calendario con el mes actual.</p></div></div>
-          <div class="step"><div class="step-number">2</div><div class="step-body"><strong>Hacer clic en "Agendar auditoría"</strong><p>El botón solo aparece si tenés el permiso <strong>Agendar auditorías</strong> habilitado. Completá empresa, sucursal, formulario, fecha, hora y encargado.</p></div></div>
-          <div class="step"><div class="step-number">3</div><div class="step-body"><strong>Guardar</strong><p>La auditoría aparece en el calendario y en "Próximas auditorías".</p></div></div>
+          <div class="step"><div class="step-number">2</div><div class="step-body"><strong>Hacer clic en "Agendar auditoría"</strong><p>El botón solo aparece si tenés el permiso <strong>Agendar auditorías</strong> habilitado. Completá empresa, sucursal, formulario, fecha, hora y encargado (operario asignado).</p></div></div>
+          <div class="step"><div class="step-number">3</div><div class="step-body"><strong>Guardar</strong><p>La auditoría queda registrada con todos los datos (incluido el ID del formulario) y aparece en el calendario y en "Próximas auditorías".</p></div></div>
+          <div class="step"><div class="step-number">4</div><div class="step-body"><strong>Iniciar la auditoría agendada</strong><p>Hacé clic en <strong>"Completar"</strong> sobre la agenda del día. El sistema abre <code>/auditoria</code> con empresa, sucursal y formulario pre-cargados y bloqueados. El operario solo completa las preguntas.</p></div></div>
+          <div class="step"><div class="step-number">5</div><div class="step-body"><strong>La agenda se cierra sola</strong><p>Al guardar el reporte, el sistema marca automáticamente la agenda como <strong>completada</strong> y guarda el vínculo al reporte generado. No hay que hacer nada manual.</p></div></div>
         </div>
 
-        <h3 style="font-size:17px;margin-bottom:16px;margin-top:20px;">📋 Pestaña Historial</h3>
+        <h3 style="font-size:17px;margin-bottom:16px;margin-top:24px;">👤 Experiencia del operario asignado</h3>
         <div class="intro-card" style="margin-bottom:16px;">
-          <p>Muestra todas las auditorías que ya fueron <strong>completadas</strong>. Sirve para revisar el historial de trabajo realizado y tener un registro de lo que ya se auditó.</p>
+          <p>Cuando un operario entra a <code>/auditoria</code> por su cuenta (sin clickear "Completar" desde el panel), el sistema detecta si tiene auditorías agendadas pendientes asignadas a él. Si las hay, aparece un <strong>aviso no bloqueante</strong> en la parte superior de la pantalla con la lista de agendas pendientes y un botón <strong>"Iniciar"</strong> para cada una. El operario puede ignorarlo y crear una auditoría libre igual.</p>
         </div>
 
-        <div class="info-box warning">
-          <span class="icon">⚠️</span>
-          <div class="body"><strong>Agendar ≠ Realizar la auditoría</strong><p>Agendar en el calendario es solo <em>planificación</em>. Para registrar la auditoría real tenés que ir a <code>/auditoria</code> por separado. No se vinculan automáticamente.</p></div>
+        <h3 style="font-size:17px;margin-bottom:16px;margin-top:24px;">🔔 Aviso de auditorías no vinculadas</h3>
+        <div class="intro-card" style="margin-bottom:16px;">
+          <p>Si un operario completa una auditoría por libre (sin usar el botón "Completar" de la agenda) y esa auditoría coincide con una agenda pendiente en empresa, formulario y fecha (±7 días), el sistema detecta la coincidencia automáticamente. En <code>/panel</code> aparece una <strong>alerta naranja</strong> informando la situación, con un botón para <strong>marcar la agenda como completada</strong> manualmente.</p>
+        </div>
+
+        <h3 style="font-size:17px;margin-bottom:16px;margin-top:24px;">📋 Pestaña Historial</h3>
+        <div class="intro-card" style="margin-bottom:16px;">
+          <p>Muestra todas las auditorías agendadas que ya fueron <strong>completadas</strong>. Sirve para revisar el historial de trabajo realizado y confirmar que la agenda se cerró correctamente.</p>
+        </div>
+
+        <div class="info-box tip">
+          <span class="icon">💡</span>
+          <div class="body"><strong>Flujo recomendado</strong><p>Admin agenda → operario ve el aviso en <code>/auditoria</code> o clickea "Completar" en el panel → completa las preguntas → guarda → la agenda se cierra sola. Todo el ciclo queda registrado y vinculado.</p></div>
         </div>
       </section>
 

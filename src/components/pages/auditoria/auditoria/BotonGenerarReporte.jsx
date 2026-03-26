@@ -21,11 +21,13 @@ const BotonGenerarReporte = ({
   firmaAuditor,
   firmaResponsable,
   datosReporte = {},
+  auditoriaIdAgenda,
   onFinalizar
 }) => {
   const { user, userProfile } = useAuth();
   const [guardando, setGuardando] = useState(false);
   const [guardadoExitoso, setGuardadoExitoso] = useState(false);
+  const [auditoriaIdGuardada, setAuditoriaIdGuardada] = useState(null);
   const [mensaje, setMensaje] = useState("");
   const [tipoMensaje, setTipoMensaje] = useState("success");
   const [mostrarMensaje, setMostrarMensaje] = useState(false);
@@ -90,6 +92,7 @@ const BotonGenerarReporte = ({
         firmaAuditor,
         firmaResponsable,
         datosReporte, // Incluir los datos adicionales del reporte
+        auditoriaIdAgenda, // Para Etapa 4a: detectar reporte sin vínculo
         fechaGuardado: new Date(),
       });
       logger.debug('🔍 [BotonGenerarReporte] Clasificaciones recibidas como prop:', clasificaciones);
@@ -113,6 +116,7 @@ const BotonGenerarReporte = ({
       }
 
       setGuardadoExitoso(true);
+      setAuditoriaIdGuardada(auditoriaId);
       const tipoUbicacion = sucursal && sucursal.trim() !== "" ? "Sucursal" : "Casa Central";
 
       if (uploadFailures && uploadFailures.length > 0) {
@@ -125,9 +129,9 @@ const BotonGenerarReporte = ({
       }
       setMostrarMensaje(true);
       
-      // Llamar callback de finalización
+      // Llamar callback de finalización pasando el ID del reporte guardado
       if (onFinalizar) {
-        onFinalizar();
+        onFinalizar(auditoriaId);
       }
     } catch (error) {
       setGuardadoExitoso(false);
@@ -162,7 +166,7 @@ const BotonGenerarReporte = ({
         <Button
           variant="contained"
           color="primary"
-          onClick={onFinalizar}
+          onClick={() => onFinalizar(auditoriaIdGuardada)}
           size="large"
         >
           Finalizar

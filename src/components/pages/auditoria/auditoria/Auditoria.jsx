@@ -26,7 +26,9 @@ import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import Swal from 'sweetalert2';
 import { useAuth } from '@/components/context/AuthContext';
 import { reporteService } from "../../../../services/reporteService";
-import { db } from "../../../../firebaseControlFile";
+import { db, dbAudit } from "../../../../firebaseControlFile";
+import { collection, getDocs, query, where } from "firebase/firestore";
+import { firestoreRoutesCore } from "../../../../core/firestore/firestoreRoutes.core";
 
 // Hooks personalizados
 import { useAuditoriaState } from "./hooks/useAuditoriaState";
@@ -41,6 +43,7 @@ import AutoSaveAlert from "./components/AutoSaveAlert";
 import AuditoriaHeader from "./components/AuditoriaHeader";
 import AlertasFaltantes from "./components/AlertasFaltantes";
 import { createAuditoriaSteps } from "./components/AuditoriaSteps";
+import SugerenciaAgenda from "./components/SugerenciaAgenda";
 // import OfflineDebugLogs from "./components/OfflineDebugLogs"; // Comentado temporalmente para probar error en Edge PWA
 
 // Servicios
@@ -106,20 +109,6 @@ const AuditoriaRefactorizada = () => {
   } = useAuth();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
 
-  // Verificar si el contexto está cargando
-  if (loading) {
-    return (
-      <Container maxWidth="xl" sx={{ py: 4, px: 2 }}>
-        <Box display="flex" flexDirection="column" alignItems="center" justifyContent="center" minHeight="50vh">
-          <LinearProgress sx={{ width: '100%', mb: 2 }} aria-label="Cargando datos de autenticación" />
-          <Typography variant="h6" color="text.secondary">
-            Cargando datos de autenticación...
-          </Typography>
-        </Box>
-      </Container>
-    );
-  }
-
   // Estados para autoguardado
   const [isSaving, setIsSaving] = useState(false);
   const [lastSaved, setLastSaved] = useState(null);
@@ -128,6 +117,9 @@ const AuditoriaRefactorizada = () => {
   // Estado para carga de datos de respaldo
   const [cargandoDatosRespaldo, setCargandoDatosRespaldo] = useState(false);
   const [datosRespaldoCargados, setDatosRespaldoCargados] = useState(false);
+
+  // Estado para sugerencia de agendas pendientes (Etapa 2)
+  const [agendasPendientes, setAgendasPendientes] = useState([]);
 
   // Cargar datos de respaldo si no están disponibles (solo una vez)
   useEffect(() => {
@@ -168,6 +160,42 @@ const AuditoriaRefactorizada = () => {
     const timer = setTimeout(cargarDatosRespaldo, 1000);
     return () => clearTimeout(timer);
   }, [userProfile, datosRespaldoCargados]);
+
+  // Cargar agendas pendientes próximas (±7 días) sin filtro de empresa/sucursal/encargado
+  useEffect(() => {
+    const cargarAgendasPendientes = async () => {
+      if (!userProfile?.ownerId || location.state?.auditoriaId) return;
+
+      try {
+        const ownerId = userProfile.ownerId;
+        const agendaRef = collection(dbAudit, ...firestoreRoutesCore.auditorias_agendadas(ownerId));
+        const q = query(agendaRef, where('estado', '==', 'agendada'));
+        const snap = await getDocs(q);
+
+        const hoy = new Date();
+        hoy.setHours(0, 0, 0, 0);
+        const limite = new Date(hoy);
+        limite.setDate(hoy.getDate() + 7);
+        const desde = new Date(hoy);
+        desde.setDate(hoy.getDate() - 7);
+
+        const agendas = snap.docs
+          .map(d => ({ id: d.id, ...d.data() }))
+          .filter(a => {
+            if (!a.fecha) return false;
+            const fecha = new Date(a.fecha + 'T00:00:00');
+            return fecha >= desde && fecha <= limite;
+          })
+          .sort((a, b) => a.fecha.localeCompare(b.fecha));
+
+        setAgendasPendientes(agendas);
+      } catch (error) {
+        logger.debug('[Auditoria] Error cargando agendas pendientes:', error);
+      }
+    };
+
+    cargarAgendasPendientes();
+  }, [userProfile?.ownerId, location.state?.auditoriaId]);
 
   // Hook para manejar todo el estado
   const auditoriaState = useAuditoriaState();
@@ -708,12 +736,12 @@ const AuditoriaRefactorizada = () => {
     }
   }, [respuestas, handleGuardarRespuestas]);
 
-  // Función para marcar auditoría como completada
-  const marcarAuditoriaCompletada = async () => {
+  // Función para marcar auditoría como completada (Etapa 3)
+  const marcarAuditoriaCompletada = async (reporteId) => {
     try {
-      if (auditoriaIdAgenda) {
-        await reporteService.marcarAuditoriaCompletada(auditoriaIdAgenda);
-        log("Auditoría agendada (ID: %s) marcada como completada.", auditoriaIdAgenda);
+      if (auditoriaIdAgenda && userProfile?.ownerId) {
+        await reporteService.marcarAuditoriaCompletada(auditoriaIdAgenda, userProfile.ownerId, reporteId);
+        log("Auditoría agendada (ID: %s) marcada como completada. Reporte: %s", auditoriaIdAgenda, reporteId);
         setSnackbarMsg("Auditoría agendada marcada como completada.");
         setSnackbarType("success");
         setSnackbarOpen(true);
@@ -798,18 +826,32 @@ const AuditoriaRefactorizada = () => {
     }
   }, [location.state, empresas, sucursales, empresaSeleccionada, sucursalSeleccionada]);
 
-  // Salto automático al paso 2 si viene de la agenda
+  // Auto-seleccionar formulario cuando viene de agenda
   useEffect(() => {
     if (
-      location.state?.empresa &&
+      location.state?.formularioId &&
+      formularios.length > 0 &&
+      !formularioSeleccionadoId
+    ) {
+      const formulario = formularios.find(f => f.id === location.state.formularioId);
+      if (formulario) {
+        setFormularioSeleccionadoId(formulario.id);
+        logger.debug('[DEBUG Auditoria] Formulario auto-seleccionado por agenda:', formulario.nombre);
+      }
+    }
+  }, [location.state, formularios, formularioSeleccionadoId]);
+
+  // Salto automático al paso 2 (Preguntas) si viene de agenda con todo pre-cargado
+  useEffect(() => {
+    if (
       location.state?.formularioId &&
       empresaSeleccionada &&
       sucursalSeleccionada &&
       formularioSeleccionadoId &&
       activeStep === 0
     ) {
-      setActiveStep(1);
-      logger.debug('[DEBUG Auditoria] Salto automático al paso 2 por agenda');
+      setActiveStep(2);
+      logger.debug('[DEBUG Auditoria] Salto automático al paso Preguntas por agenda');
     }
   }, [location.state, empresaSeleccionada, sucursalSeleccionada, formularioSeleccionadoId, activeStep]);
 
@@ -870,7 +912,7 @@ const AuditoriaRefactorizada = () => {
     handleGuardarAccionesRequeridas,
     handleSaveFirmaAuditor,
     handleSaveFirmaResponsable,
-    handleFinalizar: () => handleFinalizar(marcarAuditoriaCompletada),
+    handleFinalizar: (reporteId) => handleFinalizar(marcarAuditoriaCompletada, reporteId),
     setDatosReporte,
     
     // Funciones
@@ -885,7 +927,8 @@ const AuditoriaRefactorizada = () => {
     // IDs para carga de imágenes
     auditId,
     companyId,
-    ownerId
+    ownerId,
+    auditoriaIdAgenda
   }), [
     empresas,
     empresaSeleccionada,
@@ -923,7 +966,8 @@ const AuditoriaRefactorizada = () => {
     isMobile,
     auditId,
     companyId,
-    ownerId
+    ownerId,
+    auditoriaIdAgenda
   ]);
 
   // Scroll al top cuando se llega al paso de firmas (paso 3)
@@ -941,6 +985,20 @@ const AuditoriaRefactorizada = () => {
     }
   }, [activeStep]);
 
+  // Verificar si el contexto está cargando — DEBE ir después de todos los hooks
+  if (loading) {
+    return (
+      <Container maxWidth="xl" sx={{ py: 4, px: 2 }}>
+        <Box display="flex" flexDirection="column" alignItems="center" justifyContent="center" minHeight="50vh">
+          <LinearProgress sx={{ width: '100%', mb: 2 }} aria-label="Cargando datos de autenticación" />
+          <Typography variant="h6" color="text.secondary">
+            Cargando datos de autenticación...
+          </Typography>
+        </Box>
+      </Container>
+    );
+  }
+
   return (
     <Container maxWidth={isMobile ? false : "xl"} sx={{ py: isMobile ? 1 : 4, px: isMobile ? 0 : 2 }}>
       {/* Indicador de carga de datos de respaldo */}
@@ -953,34 +1011,23 @@ const AuditoriaRefactorizada = () => {
         </Alert>
       )}
       
-      {/* Debug info - solo para supermax */}
-      {role === 'superdev' && (
+      {/* Sugerencia de agendas pendientes (Etapa 2) */}
+      <SugerenciaAgenda agendas={agendasPendientes} />
+
+      {/* Banner de confirmación cuando viene de agenda */}
+      {location.state?.auditoriaId && empresaSeleccionada && (
         <Alert severity="info" sx={{ mb: 2 }}>
           <Typography variant="body2">
-            <strong>Debug Info:</strong>
-            <br />
-            🌐 Navegador: {navigator.userAgent.includes('Edg') ? 'Edge' : 'Chrome/Firefox'}
-            <br />
-            📊 Empresas: {userEmpresas?.length || 0}
-            <br />
-            🏢 Sucursales: {userSucursales?.length || 0}
-            <br />
-            📋 Formularios: {userFormularios?.length || 0}
-            <br />
-            👤 Usuario: {userProfile?.email || 'Sin usuario'}
-            <br />
-            💾 Cache localStorage: {localStorage.getItem('complete_user_cache') ? 'Disponible' : 'No disponible'}
+            <strong>Auditoría agendada:</strong>{' '}
+            {empresaSeleccionada.nombre || empresaSeleccionada}{' '}
+            {sucursalSeleccionada ? `· ${sucursalSeleccionada}` : ''}{' '}
+            {formularioSeleccionadoId && formularios.find(f => f.id === formularioSeleccionadoId)
+              ? `· ${formularios.find(f => f.id === formularioSeleccionadoId).nombre}`
+              : ''}
           </Typography>
-          <Button 
-            size="small" 
-            onClick={() => window.location.reload()} 
-            sx={{ mt: 1 }}
-          >
-            🔄 Recargar página
-          </Button>
         </Alert>
       )}
-      
+
       {/* Header con navegación y progreso */}
       <AuditoriaHeader
         navigate={navigate}

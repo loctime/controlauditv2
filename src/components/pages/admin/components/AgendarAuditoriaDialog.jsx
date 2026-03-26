@@ -29,12 +29,14 @@ const AgendarAuditoriaDialog = ({ open, onClose, onSave, empresas, sucursales, f
   const { userProfile } = useAuth();
   const [form, setForm] = useState({
     empresa: '',
+    empresaId: '',
     sucursal: '',
     formulario: '',
+    formularioId: '',
     fecha: '',
     hora: '',
     descripcion: '',
-    encargado: '' // Nuevo campo para el encargado
+    encargado: ''
   });
   const [usuariosOperarios, setUsuariosOperarios] = useState([]);
   const [cargandoUsuarios, setCargandoUsuarios] = useState(false);
@@ -97,7 +99,16 @@ const AgendarAuditoriaDialog = ({ open, onClose, onSave, empresas, sucursales, f
   }, [open, userProfile]);
 
   const handleChange = (e) => {
-    setForm({ ...form, [e.target.name]: e.target.value });
+    const { name, value } = e.target;
+    if (name === 'empresa') {
+      const emp = empresas.find(emp => emp.nombre === value);
+      setForm(prev => ({ ...prev, empresa: value, empresaId: emp?.id || '', sucursal: '' }));
+    } else if (name === 'formulario') {
+      const form_ = formularios.find(f => f.nombre === value);
+      setForm(prev => ({ ...prev, formulario: value, formularioId: form_?.id || '' }));
+    } else {
+      setForm(prev => ({ ...prev, [name]: value }));
+    }
   };
 
   const handleSubmit = (e) => {
@@ -107,7 +118,7 @@ const AgendarAuditoriaDialog = ({ open, onClose, onSave, empresas, sucursales, f
       return;
     }
     onSave(form);
-    setForm({ empresa: '', sucursal: '', formulario: '', fecha: '', hora: '', descripcion: '', encargado: '' });
+    setForm({ empresa: '', empresaId: '', sucursal: '', formulario: '', formularioId: '', fecha: '', hora: '', descripcion: '', encargado: '' });
   };
 
   // Función para obtener el nombre del usuario
@@ -162,7 +173,7 @@ const AgendarAuditoriaDialog = ({ open, onClose, onSave, empresas, sucursales, f
                 >
                   <MenuItem value="">Casa Central</MenuItem>
                   {sucursales
-                    .filter(sucursal => !form.empresa || sucursal.empresa === form.empresa)
+                    .filter(sucursal => !form.empresaId || sucursal.empresaId === form.empresaId)
                     .map((sucursal) => (
                       <MenuItem key={sucursal.id} value={sucursal.nombre}>
                         {sucursal.nombre}

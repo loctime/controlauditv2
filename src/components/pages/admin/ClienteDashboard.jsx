@@ -2,14 +2,17 @@
 // Dashboard para Clientes Administradores
 import React, { useState, useMemo, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
-import { 
-  Typography, 
-  Box, 
-  Grid, 
-  Paper, 
-  Button, 
+import {
+  Typography,
+  Box,
+  Divider,
+  Grid,
+  Paper,
+  Button,
   Tabs,
-  Tab
+  Tab,
+  Alert,
+  AlertTitle
 } from "@mui/material";
 import { 
   Add, 
@@ -32,6 +35,7 @@ import ResumenGeneral from "./components/ResumenGeneral";
 import HistorialAuditorias from "./HistorialAuditorias";
 import LoadingSkeleton from "./components/LoadingSkeleton";
 import PermissionAlert from "./components/PermissionAlert";
+import AuditoriaSinVincularCard from "./components/AuditoriaSinVincularCard";
 
 const ClienteDashboard = React.memo(() => {
   const { role, userProfile } = useAuth();
@@ -50,6 +54,7 @@ const ClienteDashboard = React.memo(() => {
     loading,
     auditoriasPendientes,
     auditoriasCompletadas,
+    auditoriasConReporteSinVincular,
     auditoriasDelDia,
     proximasAuditorias,
     handleAgendarAuditoria,
@@ -246,11 +251,27 @@ const ClienteDashboard = React.memo(() => {
       </Typography>
 
       {/* Alerta de permisos limitados */}
-      <PermissionAlert 
+      <PermissionAlert
         canAgendarAuditorias={canAgendarAuditorias}
         canCrearAuditorias={canCrearAuditorias}
         canCrearEmpresas={canCrearEmpresas}
       />
+
+      {/* Etapa 4: Aviso de auditorías realizadas sin vincular a agenda */}
+      {auditoriasConReporteSinVincular.length > 0 && (
+        <Alert severity="warning" sx={{ mb: 2 }}>
+          <AlertTitle>Auditorías realizadas sin vincular a agenda</AlertTitle>
+          {auditoriasConReporteSinVincular.map((agenda, idx) => (
+            <React.Fragment key={agenda.id}>
+              {idx > 0 && <Divider sx={{ my: 1.5 }} />}
+              <AuditoriaSinVincularCard
+                agenda={agenda}
+                onCompletar={handleCompletarAuditoria}
+              />
+            </React.Fragment>
+          ))}
+        </Alert>
+      )}
 
       {/* Pestañas */}
       <Paper elevation={2} sx={{ mb: 1 }}>

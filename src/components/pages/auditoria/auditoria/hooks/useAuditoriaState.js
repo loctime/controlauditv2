@@ -28,6 +28,15 @@ export const useAuditoriaState = () => {
   const [bloquearDatosAgenda, setBloquearDatosAgenda] = useState(!!location.state?.auditoriaId);
   const [openAlertaEdicion, setOpenAlertaEdicion] = useState(false);
   const [auditoriaIdAgenda, setAuditoriaIdAgenda] = useState(location.state?.auditoriaId || null);
+
+  // Sincronizar auditoriaIdAgenda si el usuario navega desde SugerenciaAgenda
+  // (el componente no se desmonta al navegar dentro de la misma ruta)
+  useEffect(() => {
+    if (location.state?.auditoriaId) {
+      setAuditoriaIdAgenda(location.state.auditoriaId);
+      setBloquearDatosAgenda(true);
+    }
+  }, [location.state?.auditoriaId]);
   
   // Estados de notificaciones
   const [snackbarMsg, setSnackbarMsg] = useState("");

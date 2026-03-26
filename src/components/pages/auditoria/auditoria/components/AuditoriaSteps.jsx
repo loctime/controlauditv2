@@ -83,7 +83,8 @@ export const createAuditoriaSteps = ({
   // IDs para carga de imágenes
   auditId,
   companyId,
-  ownerId
+  ownerId,
+  auditoriaIdAgenda
 }) => {
   return [
     {
@@ -285,6 +286,7 @@ export const createAuditoriaSteps = ({
               firmaAuditor={firmaAuditor}
               firmaResponsable={firmaResponsable}
               datosReporte={datosReporte}
+              auditoriaIdAgenda={auditoriaIdAgenda}
               onFinalizar={handleFinalizar}
             />
           </Box>
