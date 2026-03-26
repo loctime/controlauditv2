@@ -15,12 +15,14 @@ import {
 import RefreshIcon from '@mui/icons-material/Refresh';
 import SaveIcon from '@mui/icons-material/Save';
 import SettingsIcon from '@mui/icons-material/Settings';
+import AddIcon from '@mui/icons-material/Add';
 import IconButton from '@mui/material/IconButton';
 import Tooltip from '@mui/material/Tooltip';
 import { useAuth } from '@/components/context/AuthContext';
 import { useGlobalSelection } from '../../../../hooks/useGlobalSelection';
 import { useTrainingMatrix } from '../../../../hooks/training/useTrainingMatrix';
 import { useMatrixPendingChanges } from '../../../../hooks/training/useMatrixPendingChanges';
+import { trainingPlanService } from '../../../../services/training/trainingPlanService';
 import TrainingMatrixTable from '../components/matrix/TrainingMatrixTable';
 import AddPlanItemModal from '../components/matrix/AddPlanItemModal';
 import SaveSessionModal from '../components/matrix/SaveSessionModal';
@@ -79,6 +81,7 @@ export default function MatrixScreen() {
 
   // Expanded months per employee: Set of `${empleadoId}_${month}`
   const [expandedCells, setExpandedCells] = useState(new Set());
+  const [creatingPlan, setCreatingPlan] = useState(false);
 
   function toggleExpandCell(empleadoId, month) {
     const key = `${empleadoId}_${month}`;
@@ -110,6 +113,25 @@ export default function MatrixScreen() {
       isTerminal: Boolean(cellData?.isTerminal)
     });
     setViewDrawerOpen(true);
+  }
+
+  async function handleCreateAnnualPlan() {
+    if (!ownerId || !effectiveSucursalId) return;
+    setCreatingPlan(true);
+    try {
+      await trainingPlanService.createPlan(ownerId, {
+        companyId: selectedEmpresa !== 'todas' ? selectedEmpresa : undefined,
+        branchId: effectiveSucursalId,
+        year: Number(year),
+        status: 'draft'
+      });
+      // Refrescar la matriz para mostrar el plan creado
+      refresh();
+    } catch (error) {
+      console.error('Error creando plan anual:', error);
+    } finally {
+      setCreatingPlan(false);
+    }
   }
 
   // Year selector options - prepared for dynamic scaling if needed
@@ -243,7 +265,25 @@ export default function MatrixScreen() {
         </Box>
       )}
 
-      {effectiveSucursalId && (
+      {effectiveSucursalId && !planId && !loading && (
+        <Box sx={{ p: 4, textAlign: 'center' }}>
+          <Typography color="text.secondary" sx={{ mb: 3 }}>
+            No hay plan anual para esta sucursal. Crea uno para comenzar a cargar capacitaciones.
+          </Typography>
+          <Button
+            variant="contained"
+            color="primary"
+            size="large"
+            startIcon={<AddIcon />}
+            onClick={handleCreateAnnualPlan}
+            disabled={creatingPlan}
+          >
+            {creatingPlan ? 'Creando plan...' : 'Crear plan anual'}
+          </Button>
+        </Box>
+      )}
+
+      {effectiveSucursalId && planId && (
         <TrainingMatrixTable
           columnsByMonth={columnsByMonth}
           rows={rows}
@@ -254,7 +294,6 @@ export default function MatrixScreen() {
           loading={loading}
           expandedCells={expandedCells}
           onToggleExpand={toggleExpandCell}
-          onAddFirstItem={!isHistorical ? () => handleAddToMonth(1) : undefined}
         />
       )}
 
