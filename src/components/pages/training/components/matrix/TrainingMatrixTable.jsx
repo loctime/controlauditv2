@@ -50,6 +50,7 @@ function getMonthColumnCount(cols, isExpanded) {
  *   columnsByMonth: Object,
  *   rows: Array,
  *   pendingChanges: Object,   // { [empleadoId_planItemId]: { newState } }
+ *   activeColumnId: string|null,
  *   onPendingChange: (planItemId: string, empleadoId: string, newState: any) => void,
  *   onCellClick: (planItemId: string, empleadoId: string, sessionId: string|null, trainingTypeName: string) => void,
  *   onAddToMonth: (month: number) => void,
@@ -63,6 +64,7 @@ export default function TrainingMatrixTable({
   columnsByMonth,
   rows,
   pendingChanges = {},
+  activeColumnId = null,
   onPendingChange,
   onCellClick,
   onAddToMonth,
@@ -331,6 +333,7 @@ export default function TrainingMatrixTable({
                           <MatrixCell
                             cellData={row.cellMap[col.planItemId]}
                             pendingState={pendingChanges[`${row.empleadoId}_${col.planItemId}`]}
+                            isColumnLocked={activeColumnId !== null && col.planItemId !== activeColumnId}
                             onPendingChange={(newState) => onPendingChange(col.planItemId, row.empleadoId, newState, row.cellMap[col.planItemId])}
                             onSessionClick={() => onCellClick(col.planItemId, row.empleadoId, row.cellMap[col.planItemId], col.name)}
                           />

@@ -26,10 +26,11 @@ const SELECTOR_OPTIONS = [
  * Props:
  *   cellData      — { estado, sessionIds, isTerminal }
  *   pendingState  — cambio pendiente local (undefined si no hay)
+ *   isColumnLocked — si true, la columna está bloqueada (solo lectura visual)
  *   onPendingChange(newState) — callback al seleccionar opción en selector
  *   onSessionClick() — callback al click en celda guardada
  */
-export default function MatrixCell({ cellData, pendingState, onPendingChange, onSessionClick }) {
+export default function MatrixCell({ cellData, pendingState, isColumnLocked = false, onPendingChange, onSessionClick }) {
   const [hovered, setHovered] = useState(false);
 
   const baseState = cellData?.estado ?? CELL_STATE.BLANK;
@@ -44,11 +45,14 @@ export default function MatrixCell({ cellData, pendingState, onPendingChange, on
   const canEdit = baseState !== CELL_STATE.GREEN;
   const canOpenDrawer = (displayState === CELL_STATE.GREEN || displayState === CELL_STATE.GRAY) && hasSessions;
 
+  const effectiveCanEdit = !isColumnLocked && canEdit;
+  const effectiveCanOpenDrawer = !isColumnLocked && canOpenDrawer;
+
   return (
     <Box
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
-      onClick={canOpenDrawer ? onSessionClick : undefined}
+      onClick={effectiveCanOpenDrawer ? onSessionClick : undefined}
       sx={{
         position: 'relative',
         width: '100%',
@@ -61,11 +65,12 @@ export default function MatrixCell({ cellData, pendingState, onPendingChange, on
         outline: isPending ? '2px dashed #f59e0b' : 'none',
         outlineOffset: '-2px',
         transition: 'background-color 0.15s',
-        cursor: canOpenDrawer ? 'pointer' : (canEdit ? 'default' : 'not-allowed')
+        opacity: isColumnLocked ? 0.4 : 1,
+        cursor: isColumnLocked ? 'not-allowed' : (effectiveCanOpenDrawer ? 'pointer' : (canEdit ? 'default' : 'not-allowed'))
       }}
     >
       {/* Selector inline — solo si es pendiente o sin guardar */}
-      {hovered && canEdit && (
+      {hovered && effectiveCanEdit && (
         <Box
           sx={{
             position: 'absolute',
@@ -87,6 +92,7 @@ export default function MatrixCell({ cellData, pendingState, onPendingChange, on
                 size="small"
                 onClick={e => {
                   e.stopPropagation();
+                  if (isColumnLocked) return;
                   onPendingChange(opt.state);
                 }}
                 sx={{
@@ -109,6 +115,7 @@ export default function MatrixCell({ cellData, pendingState, onPendingChange, on
                 size="small"
                 onClick={e => {
                   e.stopPropagation();
+                  if (isColumnLocked) return;
                   // Volver al estado original guardado para eliminar el pendiente.
                   onPendingChange(baseState);
                 }}
@@ -144,7 +151,7 @@ export default function MatrixCell({ cellData, pendingState, onPendingChange, on
       )}
 
       {/* Tooltip para celdas guardadas */}
-      {canOpenDrawer && !hovered && (
+      {effectiveCanOpenDrawer && !hovered && (
         <Tooltip title="Ver sesiones">
           <Box sx={{ position: 'absolute', inset: 0 }} />
         </Tooltip>

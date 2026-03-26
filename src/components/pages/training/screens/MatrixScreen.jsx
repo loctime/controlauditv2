@@ -68,6 +68,7 @@ export default function MatrixScreen() {
 
   const {
     changes,
+    activeColumnId,
     setPendingChange,
     clearPendingChanges,
     pendingCount,
@@ -326,6 +327,7 @@ export default function MatrixScreen() {
           columnsByMonth={columnsByMonth}
           rows={rows}
           pendingChanges={changes}
+          activeColumnId={activeColumnId}
           onPendingChange={isHistorical ? undefined : handlePendingChange}
           onCellClick={isHistorical ? undefined : handleCellClick}
           onAddToMonth={isHistorical ? undefined : handleAddToMonth}

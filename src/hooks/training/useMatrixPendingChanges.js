@@ -15,47 +15,74 @@ import { CELL_STATE } from './useTrainingMatrix';
  * }}
  */
 export function useMatrixPendingChanges() {
-  const [changes, setChanges] = useState({});
+  const [state, setState] = useState({
+    changes: {},
+    activeColumnId: null
+  });
 
   const setPendingChange = useCallback((empleadoId, planItemId, newState, cellData) => {
-    // Regla nueva: solo el estado PRESENTE (GREEN) bloquea edición.
-    if (cellData?.estado === CELL_STATE.GREEN) {
-      return;
-    }
-    const key = `${empleadoId}_${planItemId}`;
-    const originalState = cellData?.estado ?? 'BLANK';
+    setState((prev) => {
+      // Regla nueva: solo el estado PRESENTE (GREEN) bloquea edición.
+      if (cellData?.estado === CELL_STATE.GREEN) {
+        return prev;
+      }
 
-    if (newState === originalState) {
-      // Volvió al estado original → no hay cambio pendiente real
-      setChanges(prev => {
-        const next = { ...prev };
-        delete next[key];
-        return next;
-      });
-    } else {
-      setChanges(prev => ({
-        ...prev,
-        [key]: newState
-      }));
-    }
+      // Bloqueo por columna activa: solo se aceptan cambios del planItemId activo.
+      if (prev.activeColumnId !== null && prev.activeColumnId !== planItemId) {
+        return prev;
+      }
+
+      const key = `${empleadoId}_${planItemId}`;
+      const originalState = cellData?.estado ?? CELL_STATE.BLANK;
+
+      const nextChanges = { ...prev.changes };
+
+      if (newState === originalState) {
+        // Volvió al estado original → no hay cambio pendiente real
+        delete nextChanges[key];
+      } else {
+        nextChanges[key] = newState;
+      }
+
+      const hasAnyChanges = Object.keys(nextChanges).length > 0;
+      const nextActiveColumnId = hasAnyChanges
+        ? (prev.activeColumnId ?? planItemId) // 1er cambio fija la columna
+        : null; // sin cambios → desbloquea
+
+      return {
+        changes: nextChanges,
+        activeColumnId: nextActiveColumnId
+      };
+    });
   }, []);
 
   const removePendingChange = useCallback((empleadoId, planItemId) => {
     const key = `${empleadoId}_${planItemId}`;
-    setChanges(prev => {
-      const next = { ...prev };
-      delete next[key];
-      return next;
+    setState((prev) => {
+      const nextChanges = { ...prev.changes };
+      delete nextChanges[key];
+
+      const hasAnyChanges = Object.keys(nextChanges).length > 0;
+      return {
+        changes: nextChanges,
+        activeColumnId: hasAnyChanges ? prev.activeColumnId : null
+      };
     });
   }, []);
 
-  const clearPendingChanges = useCallback(() => setChanges({}), []);
+  const clearPendingChanges = useCallback(() => {
+    setState({
+      changes: {},
+      activeColumnId: null
+    });
+  }, []);
 
-  const pendingCount = Object.keys(changes).length;
+  const pendingCount = Object.keys(state.changes).length;
   const hasPendingChanges = pendingCount > 0;
 
   return {
-    changes,
+    changes: state.changes,
+    activeColumnId: state.activeColumnId,
     setPendingChange,
     removePendingChange,
     clearPendingChanges,
