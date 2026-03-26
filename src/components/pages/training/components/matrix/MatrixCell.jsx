@@ -109,7 +109,8 @@ export default function MatrixCell({ cellData, pendingState, onPendingChange, on
                 size="small"
                 onClick={e => {
                   e.stopPropagation();
-                  onPendingChange(CELL_STATE.BLANK);
+                  // Volver al estado original guardado para eliminar el pendiente.
+                  onPendingChange(baseState);
                 }}
                 sx={{
                   width: 22,

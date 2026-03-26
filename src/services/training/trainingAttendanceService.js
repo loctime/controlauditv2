@@ -229,6 +229,16 @@ export const trainingAttendanceService = {
       resolvedEvaluationStatus = TRAINING_EVALUATION_STATUSES.PENDING;
     }
 
+    // Blindaje: "Ausente" NO debe persistirse como N/A.
+    // Si no llega evaluación explícita, para ausencias guardamos FAILED en vez de NOT_APPLICABLE.
+    const isAbsent =
+      payload.attendanceStatus === TRAINING_ATTENDANCE_STATUSES.JUSTIFIED_ABSENCE ||
+      payload.attendanceStatus === TRAINING_ATTENDANCE_STATUSES.UNJUSTIFIED_ABSENCE ||
+      payload.attendanceStatus === 'absent'; // compat legacy
+    if (isAbsent && evaluationStatusPayload == null) {
+      resolvedEvaluationStatus = TRAINING_EVALUATION_STATUSES.FAILED;
+    }
+
     // Vigencia: solo si está presente y (no requiere evaluación O aprobado)
     let computedValidFrom = payload.validFrom || null;
     let computedValidUntil = payload.validUntil || null;
