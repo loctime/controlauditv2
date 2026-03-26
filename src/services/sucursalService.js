@@ -12,7 +12,7 @@ import {
 import { dbAudit } from '../firebaseControlFile';
 import { firestoreRoutesCore } from '../core/firestore/firestoreRoutes.core';
 import { addDocWithAppId } from '../firebase/firestoreAppWriter';
-import { trainingCatalogService, trainingRequirementService } from './training';
+import { trainingCatalogService, trainingRequirementService, trainingPlanService } from './training';
 import { registrarAccionSistema, normalizeSucursal } from '../utils/firestoreUtils';
 
 async function autoSeedTrainingRulesForBranch({ ownerId, companyId, branchId }) {
@@ -138,6 +138,20 @@ export const sucursalService = {
       logger.debug('[sucursalService.crearSucursalCompleta] autoSeedTrainingRulesForBranch', seedResult);
     } catch (err) {
       logger.warn('[sucursalService.crearSucursalCompleta] auto-seed reglas falló', err);
+    }
+
+    // Side-effect: crear plan anual del año en curso para la sucursal nueva
+    try {
+      const currentYear = new Date().getFullYear();
+      await trainingPlanService.createPlan(ownerId, {
+        companyId: data.empresaId,
+        branchId: docRef.id,
+        year: currentYear,
+        status: 'draft'
+      });
+      logger.debug('[sucursalService.crearSucursalCompleta] plan anual creado', { year: currentYear });
+    } catch (err) {
+      logger.warn('[sucursalService.crearSucursalCompleta] creación plan anual falló', err);
     }
 
     return { id: docRef.id, seedResult };

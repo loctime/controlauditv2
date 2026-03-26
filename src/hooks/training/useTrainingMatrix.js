@@ -84,24 +84,19 @@ export function useTrainingMatrix({ ownerId, sucursalId, year, companyId }) {
 
       let activePlan = (plans || [])[0] || null;
 
-      // Si no existe plan anual, crear uno automáticamente
+      // Si no existe plan anual, crearlo automáticamente (silencioso)
       if (!activePlan) {
         try {
-          const createdPlan = await trainingPlanService.createPlan(ownerId, {
+          activePlan = await trainingPlanService.ensureAnnualPlan(ownerId, {
             companyId: companyId || undefined,
             branchId: sucursalId,
-            year: Number(year),
-            status: 'draft',
-            notes: 'Plan anual auto-creado'
+            year: Number(year)
           });
-          activePlan = createdPlan || null;
-        } catch (err) {
-          console.error('Error creando plan anual:', err);
-          // Si falla la creación, continuar sin plan
+        } catch {
+          // fallo silencioso, se muestra tabla vacía
         }
       }
 
-      // Si aún no hay plan, retornar con empleados pero sin datos de matriz
       if (!activePlan) {
         setEmpleados(emps || []);
         setPlan(null);

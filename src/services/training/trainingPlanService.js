@@ -299,5 +299,49 @@ export const trainingPlanService = {
     return { planId, createdItemIds, createdPlan };
   },
 
-  getPlanTrainingTypeConfig
+  getPlanTrainingTypeConfig,
+
+  /**
+   * Asegura que exista un plan anual para una sucursal y año dados.
+   * Si ya existe, no hace nada. Si no, lo crea.
+   */
+  async ensureAnnualPlan(ownerId, { companyId, branchId, year }) {
+    if (!ownerId || !branchId || !year) return null;
+    const existing = await this.listPlans(ownerId, { branchId, year: Number(year) });
+    if (existing?.length > 0) return existing[0];
+    return this.createPlan(ownerId, { companyId, branchId, year: Number(year), status: 'draft' });
+  },
+
+  /**
+   * Migración: crea planes anuales para todas las sucursales que no tengan uno.
+   * Ejecutar una sola vez por owner.
+   * @param {string} ownerId
+   * @param {Array<{id: string, empresaId: string}>} sucursales
+   * @param {number} year - año a garantizar (por defecto el año en curso)
+   */
+  async ensureAnnualPlansForAllBranches(ownerId, sucursales, year) {
+    const targetYear = year || new Date().getFullYear();
+    const results = { created: 0, skipped: 0, errors: 0 };
+
+    for (const sucursal of sucursales) {
+      try {
+        const existing = await this.listPlans(ownerId, { branchId: sucursal.id, year: targetYear });
+        if (existing?.length > 0) {
+          results.skipped += 1;
+          continue;
+        }
+        await this.createPlan(ownerId, {
+          companyId: sucursal.empresaId,
+          branchId: sucursal.id,
+          year: targetYear,
+          status: 'draft'
+        });
+        results.created += 1;
+      } catch {
+        results.errors += 1;
+      }
+    }
+
+    return results;
+  }
 };

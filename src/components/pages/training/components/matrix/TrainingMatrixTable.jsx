@@ -67,10 +67,8 @@ export default function TrainingMatrixTable({
   onCellClick,
   onAddToMonth,
   loading,
-  noPlanMessage,
   expandedCells = new Set(),
-  onToggleExpand = () => {},
-  onAddFirstItem
+  onToggleExpand = () => {}
 }) {
   // Sorted month numbers that appear in the plan
   const months = Object.keys(columnsByMonth)
@@ -85,22 +83,12 @@ export default function TrainingMatrixTable({
     );
   }
 
-  if (months.length === 0) {
+  if (months.length === 0 && !loading) {
     return (
       <Paper sx={{ p: 4, textAlign: 'center' }}>
-        <Typography color="text.secondary" sx={{ mb: 2 }}>
-          {noPlanMessage || 'No hay plan de capacitaciones para este período.'}
+        <Typography color="text.secondary">
+          No hay capacitaciones cargadas para este período. Usá el botón "+" en el mes correspondiente para agregar.
         </Typography>
-        {onAddFirstItem && (
-          <Button
-            variant="contained"
-            color="primary"
-            startIcon={<AddIcon />}
-            onClick={onAddFirstItem}
-          >
-            Agregar primera capacitación
-          </Button>
-        )}
       </Paper>
     );
   }
