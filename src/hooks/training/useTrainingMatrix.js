@@ -168,12 +168,17 @@ export function useTrainingMatrix({ ownerId, sucursalId, year, companyId }) {
   useEffect(() => { load(); }, [load]);
 
   // Columns grouped by month: { month: [{ planItemId, trainingTypeId, name, noAplicaEmployeeIds }] }
+  // Always include all 12 months even if empty
   const columnsByMonth = useMemo(() => {
     const result = {};
+    // Initialize all 12 months
+    for (let month = 1; month <= 12; month++) {
+      result[month] = [];
+    }
+    // Add existing plan items
     planItems.forEach(item => {
       const month = item.plannedMonth;
-      if (!month) return;
-      if (!result[month]) result[month] = [];
+      if (!month || !result[month]) return;
       result[month].push({
         planItemId: item.id,
         trainingTypeId: item.trainingTypeId,
