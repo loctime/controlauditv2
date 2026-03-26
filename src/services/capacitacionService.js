@@ -14,7 +14,27 @@ import { firestoreRoutesCore } from '../core/firestore/firestoreRoutes.core';
 import { registrarAccionSistema } from '../utils/firestoreUtils';
 import { addDocWithAppId, updateDocWithAppId, deleteDocWithAppId } from '../firebase/firestoreAppWriter';
 import { registrosAsistenciaService } from './registrosAsistenciaService';
-import { normalizarCapacitacionTipoId } from './controlFileB2Service';
+
+function capacitacionTipoIdToSlug(nombre) {
+  if (!nombre || typeof nombre !== 'string') {
+    throw new Error('Nombre de capacitación inválido para normalizar');
+  }
+
+  const normalizado = nombre
+    .toLowerCase()
+    .trim()
+    .replace(/[^a-z0-9\s-]/g, '') // Eliminar caracteres especiales
+    .replace(/\s+/g, '-') // Reemplazar espacios con guiones
+    .replace(/-+/g, '-') // Eliminar guiones múltiples
+    .replace(/^-|-$/g, ''); // Eliminar guiones al inicio/final
+
+  // Validar que el resultado no sea vacío
+  if (!normalizado || normalizado.length === 0) {
+    throw new Error(`No se pudo normalizar el nombre de capacitación "${nombre}" a un ID válido`);
+  }
+
+  return normalizado;
+}
 
 /**
  * Normaliza una capacitación unificando campos legacy
@@ -30,7 +50,7 @@ const normalizeCapacitacion = (doc) => {
   
   if (!tipoId && doc.data().nombre) {
     try {
-      tipoId = normalizarCapacitacionTipoId(doc.data().nombre);
+      tipoId = capacitacionTipoIdToSlug(doc.data().nombre);
     } catch (error) {
       // Documento legacy mal formado - mantener null sin romper
       logger.warn('⚠️ No se pudo normalizar capacitacionTipoId para documento legacy:', doc.id, error);
@@ -220,7 +240,7 @@ export const capacitacionService = {
           throw new Error('No se puede crear capacitación sin nombre. El nombre es requerido para generar capacitacionTipoId.');
         }
         // Lanzar error si no se puede normalizar (fallar temprano)
-        capacitacionTipoId = normalizarCapacitacionTipoId(capacitacionData.nombre);
+      capacitacionTipoId = capacitacionTipoIdToSlug(capacitacionData.nombre);
       }
 
       // Guardar en arquitectura multi-tenant

@@ -380,16 +380,10 @@ export async function uploadEvidence({
           customFields.tipoArchivo = tipoArchivo;
         }
         
-        // Fallback de seguridad: si no hay parentId resuelto, calcularlo
-        // (normalmente los wrappers legacy ya lo resuelven antes de llamar)
+        // Fallback de seguridad (legacy): si no hay parentId resuelto, ya no se soporta.
+        // En el nuevo sistema, el parentId debe resolverse previamente con resolveContextFolder().
         if (!resolvedParentId && sucursalId) {
-          resolvedParentId = await ensureCapacitacionFolder(
-            capacitacionTipoId,
-            auditId,
-            companyId,
-            sucursalId,
-            tipoArchivo as 'evidencia' | 'material' | 'certificado' | undefined
-          );
+          throw new Error('Modo legacy sin parentId no está soportado. Usar resolveContextFolder() antes de uploadEvidence()');
         }
       }
       
@@ -754,139 +748,7 @@ export async function createNavbarFolder(
   }
 }
 
-/**
- * Normaliza un nombre de capacitación a un ID de tipo válido para carpetas
- * Ej: "Uso de Matafuegos" -> "uso-de-matafuegos"
- * 
- * ⚠️ SINGLE SOURCE OF TRUTH - Esta es la ÚNICA función de normalización
- * 
- * ⚠️ Valida que el resultado nunca sea vacío
- * 
- * @param {string} nombre - Nombre de la capacitación
- * @returns {string} ID normalizado (nunca vacío)
- * @throws {Error} Si el nombre no puede normalizarse a un ID válido
- */
-export function normalizarCapacitacionTipoId(nombre: string): string {
-  if (!nombre || typeof nombre !== 'string') {
-    throw new Error('Nombre de capacitación inválido para normalizar');
-  }
-  
-  const normalizado = nombre
-    .toLowerCase()
-    .trim()
-    .replace(/[^a-z0-9\s-]/g, '') // Eliminar caracteres especiales
-    .replace(/\s+/g, '-') // Reemplazar espacios con guiones
-    .replace(/-+/g, '-') // Eliminar guiones múltiples
-    .replace(/^-|-$/g, ''); // Eliminar guiones al inicio/final
-  
-  // Validar que el resultado no sea vacío
-  if (!normalizado || normalizado.length === 0) {
-    throw new Error(`No se pudo normalizar el nombre de capacitación "${nombre}" a un ID válido`);
-  }
-  
-  return normalizado;
-}
-
-/**
- * Asegura la estructura completa de carpetas para una capacitación
- * Crea: ControlAudit/Capacitaciones/{capacitacionTipoId}/{capacitacionEventoId}/{companyId}/{sucursalId}/{tipoArchivo}/
- * 
- * ⚠️ ESTRICTO: Lanza error si cualquier nivel falla. No permite fallbacks silenciosos.
- * 
- * @param {string} capacitacionTipoId - ID del tipo de capacitación (ej: "uso-de-matafuegos")
- * @param {string} capacitacionEventoId - ID del evento específico de capacitación (cada vez que se dicta)
- * @param {string} companyId - ID de la empresa
- * @param {string} sucursalId - ID de la sucursal
- * @param {'evidencia' | 'material' | 'certificado'} tipoArchivo - Tipo de archivo (opcional, solo organizativo)
- * @returns {Promise<string>} ID de la carpeta final (NUNCA null)
- * @throws {Error} Si cualquier nivel de la jerarquía falla al crearse
- */
-export async function ensureCapacitacionFolder(
-  capacitacionTipoId: string,
-  capacitacionEventoId: string,
-  companyId: string,
-  sucursalId: string,
-  tipoArchivo?: 'evidencia' | 'material' | 'certificado'
-): Promise<string> {
-  // Validaciones de entrada
-  if (!capacitacionTipoId || !capacitacionEventoId || !companyId || !sucursalId) {
-    throw new Error('Faltan parámetros requeridos para crear estructura de carpetas de capacitación');
-  }
-
-  // 1. Carpeta principal ControlAudit
-  const mainFolderId = await ensureTaskbarFolder('ControlAudit');
-  if (!mainFolderId) {
-    throw new Error('No se pudo crear/obtener carpeta principal ControlAudit');
-  }
-  
-  // 2. Carpeta Capacitaciones
-  const capacitacionesFolderId = await ensureSubFolder('Capacitaciones', mainFolderId);
-  if (!capacitacionesFolderId) {
-    throw new Error('No se pudo crear carpeta Capacitaciones');
-  }
-  
-  // 3. Normalizar capacitacionTipoId
-  logger.debug(`[controlFileB2Service] 🔄 Normalizando capacitacionTipoId: "${capacitacionTipoId}"`);
-  const tipoIdNormalizado = normalizarCapacitacionTipoId(capacitacionTipoId);
-  if (!tipoIdNormalizado) {
-    throw new Error(`No se pudo normalizar capacitacionTipoId: ${capacitacionTipoId}`);
-  }
-  logger.debug(`[controlFileB2Service] ✅ CapacitacionTipoId normalizado: "${tipoIdNormalizado}"`);
-  
-  // 4. Carpeta por tipo de capacitación (reutilizable) - ESTE ES EL PASO CRÍTICO
-  logger.debug(`[controlFileB2Service] 📂 [PASO CRÍTICO] Creando carpeta tipo capacitación: "${tipoIdNormalizado}" dentro de Capacitaciones (${capacitacionesFolderId})`);
-  const tipoFolderId = await ensureSubFolder(tipoIdNormalizado, capacitacionesFolderId);
-  if (!tipoFolderId) {
-    throw new Error(`No se pudo crear carpeta tipo capacitación: ${tipoIdNormalizado}`);
-  }
-  // ⚠️ VALIDACIÓN CRÍTICA: Verificar que tipoFolderId NO sea igual a capacitacionesFolderId
-  if (tipoFolderId === capacitacionesFolderId) {
-    throw new Error(`ERROR CRÍTICO: tipoFolderId (${tipoFolderId}) es igual a capacitacionesFolderId. La carpeta por tipo NO se creó correctamente.`);
-  }
-  logger.debug(`[controlFileB2Service] ✅ Carpeta tipo capacitación creada: ${tipoFolderId} (diferente de Capacitaciones: ${capacitacionesFolderId})`);
-  
-  // 5. Carpeta por evento de capacitación (cada vez que se dicta)
-  const eventoFolderId = await ensureSubFolder(capacitacionEventoId, tipoFolderId);
-  if (!eventoFolderId) {
-    throw new Error(`No se pudo crear carpeta evento capacitación: ${capacitacionEventoId}`);
-  }
-  
-  // 6. Carpeta por empresa
-  const companyFolderId = await ensureSubFolder(companyId, eventoFolderId);
-  if (!companyFolderId) {
-    throw new Error(`No se pudo crear carpeta empresa: ${companyId}`);
-  }
-  
-  // 7. Carpeta por sucursal
-  const sucursalFolderId = await ensureSubFolder(sucursalId, companyFolderId);
-  if (!sucursalFolderId) {
-    throw new Error(`No se pudo crear carpeta sucursal: ${sucursalId}`);
-  }
-  
-  // 8. Subcarpeta por tipo de archivo (si se especifica, es OBLIGATORIA)
-  if (tipoArchivo) {
-    const tipoArchivoFolderId = await ensureSubFolder(tipoArchivo, sucursalFolderId);
-    if (!tipoArchivoFolderId) {
-      throw new Error(`No se pudo crear subcarpeta tipo archivo: ${tipoArchivo}`);
-    }
-    // ⚠️ VALIDACIÓN FINAL: Verificar que la carpeta retornada NO sea capacitacionesFolderId
-    if (tipoArchivoFolderId === capacitacionesFolderId) {
-      throw new Error(`ERROR CRÍTICO: La carpeta final (${tipoArchivoFolderId}) es igual a capacitacionesFolderId. La estructura completa NO se creó.`);
-    }
-    logger.debug(`[controlFileB2Service] ✅ Estructura completa creada: Capacitaciones/${tipoIdNormalizado}/${capacitacionEventoId}/${companyId}/${sucursalId}/${tipoArchivo}`);
-    logger.debug(`[controlFileB2Service] ✅ Carpeta final retornada: ${tipoArchivoFolderId} (NO es Capacitaciones: ${capacitacionesFolderId})`);
-    return tipoArchivoFolderId;
-  }
-  
-  // Si no se especifica tipoArchivo, retornar carpeta de sucursal
-  // ⚠️ VALIDACIÓN FINAL: Verificar que la carpeta retornada NO sea capacitacionesFolderId
-  if (sucursalFolderId === capacitacionesFolderId) {
-    throw new Error(`ERROR CRÍTICO: La carpeta final (${sucursalFolderId}) es igual a capacitacionesFolderId. La estructura completa NO se creó.`);
-  }
-  logger.debug(`[controlFileB2Service] ✅ Estructura creada: Capacitaciones/${tipoIdNormalizado}/${capacitacionEventoId}/${companyId}/${sucursalId}`);
-  logger.debug(`[controlFileB2Service] ✅ Carpeta final retornada: ${sucursalFolderId} (NO es Capacitaciones: ${capacitacionesFolderId})`);
-  return sucursalFolderId;
-}
+// Nota: carpetas legacy de capacitación removidas.
 
 
 export async function deleteFile(fileId: string): Promise<void> {

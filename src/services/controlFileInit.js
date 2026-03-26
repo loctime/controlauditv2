@@ -1,124 +1,19 @@
-import logger from '@/utils/logger';
 // src/services/controlFileInit.js
-// Inicialización de carpetas de ControlFile usando Backblaze B2 (flujo oficial)
-// ✅ Usa ensureTaskbarFolder() y ensureSubFolder() para evitar duplicados
+// Mantener el archivo para compatibilidad de imports.
+//
+// Con el sistema nuevo (Cambio 2/3), las carpetas se crean on-demand
+// desde resolveContextFolder() llamando al backend /api/folders/resolve.
 
-import {
-  ensureTaskbarFolder,
-  ensureSubFolder
-} from './controlFileB2Service';
-import { auth } from '../firebaseControlFile';
-
-const STORAGE_KEY = 'controlfile_folders';
-
-/**
- * Inicializa las carpetas principales de ControlFile
- * ✅ Verifica existencia antes de crear (idempotente)
- * ✅ Solo crea en TASKBAR, nunca en NAVBAR
- * @returns {Promise<Object>} Objeto con mainFolderId y subFolders
- */
 export const initializeControlFileFolders = async () => {
-  try {
-    const user = auth.currentUser;
-    if (!user) {
-      logger.warn('[controlFileInit] Usuario no autenticado');
-      return { mainFolderId: null, subFolders: {} };
-    }
-
-    // 1. Asegurar carpeta principal usando ensureTaskbarFolder (busca primero en TASKBAR, evita duplicados)
-    const mainFolderId = await ensureTaskbarFolder('ControlAudit');
-    
-    if (!mainFolderId) {
-      logger.warn('[controlFileInit] No se pudo crear/obtener carpeta principal');
-      return { mainFolderId: null, subFolders: {} };
-    }
-
-    // 2. Crear subcarpetas usando ensureSubFolder (verifica existencia antes de crear)
-    const subFolders = {};
-    // Carpetas legacy para compatibilidad
-    const legacyFolderNames = ['Auditorías', 'Accidentes', 'Empresas'];
-    // Nueva carpeta "Archivos" para el modelo de contexto de evento
-    const archivosFolderId = await ensureSubFolder('Archivos', mainFolderId);
-    if (archivosFolderId) {
-      subFolders['archivos'] = archivosFolderId;
-      logger.debug('[controlFileInit] ✅ Carpeta Archivos creada para nuevo modelo de contexto');
-    }
-    
-    // Mantener carpetas legacy para compatibilidad
-    for (const folderName of legacyFolderNames) {
-      // ensureSubFolder verifica existencia antes de crear
-      const folderId = await ensureSubFolder(folderName, mainFolderId);
-      if (folderId) {
-        const key = folderName.toLowerCase().replace('ías', 'ias').replace('es', '');
-        subFolders[key] = folderId;
-      }
-    }
-
-    // Guardar en cache
-    const folderData = {
-      mainFolderId,
-      subFolders
-    };
-    
-    try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(folderData));
-    } catch (e) {
-      logger.warn('[controlFileInit] Error al guardar en cache:', e);
-    }
-
-    logger.debug('[controlFileInit] ✅ Carpetas inicializadas (sin duplicados):', folderData);
-    return folderData;
-  } catch (error) {
-    logger.error('[controlFileInit] ❌ Error al inicializar carpetas:', error);
-    return { mainFolderId: null, subFolders: {} };
-  }
+  return { mainFolderId: null, subFolders: {} };
 };
 
-/**
- * Obtiene las carpetas de ControlFile (desde cache o creándolas si no existen)
- * @returns {Promise<Object>} Objeto con mainFolderId y subFolders
- */
 export const getControlFileFolders = async () => {
-  try {
-    // Intentar obtener desde cache primero
-    try {
-      const stored = localStorage.getItem(STORAGE_KEY);
-      if (stored) {
-        const folderData = JSON.parse(stored);
-        if (folderData.mainFolderId) {
-          logger.debug('[controlFileInit] ✅ Carpetas obtenidas desde cache');
-          return folderData;
-        }
-      }
-    } catch (e) {
-      logger.warn('[controlFileInit] Error al leer cache:', e);
-    }
-
-    // Si no hay cache válido, inicializar
-    return await initializeControlFileFolders();
-  } catch (error) {
-    logger.error('[controlFileInit] ❌ Error al obtener carpetas:', error);
-    return { mainFolderId: null, subFolders: { auditorias: null, accidentes: null, empresas: null } };
-  }
+  return { mainFolderId: null, subFolders: {} };
 };
 
-/**
- * Limpia el cache de carpetas
- */
-export const clearControlFileFolders = () => {
-  try {
-    localStorage.removeItem(STORAGE_KEY);
-    logger.debug('[controlFileInit] ✅ Cache limpiado');
-  } catch (e) {
-    logger.warn('[controlFileInit] Error al limpiar cache:', e);
-  }
-};
+export const clearControlFileFolders = () => {};
 
-/**
- * Fuerza la recreación de todas las carpetas
- * @returns {Promise<Object>} Objeto con mainFolderId y subFolders
- */
 export const forceRecreateFolders = async () => {
-  clearControlFileFolders();
-  return await initializeControlFileFolders();
+  return { mainFolderId: null, subFolders: {} };
 };

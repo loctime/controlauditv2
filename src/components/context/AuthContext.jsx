@@ -572,10 +572,8 @@ const AuthContextComponent = ({ children }) => {
             try {
               await new Promise(resolve => setTimeout(resolve, 1000));
               const { initializeControlFileFolders } = await import('../../services/controlFileInit');
-              const folders = await initializeControlFileFolders();
-              if (folders.mainFolderId) {
-                localStorage.setItem(initKey, 'true');
-              }
+              await initializeControlFileFolders();
+              localStorage.setItem(initKey, 'true');
             } catch (error) {
               logger.error('[AuthContext] Error inicializando ControlFile:', error);
             }
