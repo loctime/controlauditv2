@@ -2,19 +2,42 @@ import { buildOrderBy, buildWhere, createDocument, deleteDocument, getDocument, 
 
 export const trainingCatalogService = {
   async create(ownerId, payload) {
+    const name = payload?.name;
+    const requiresEvaluation = payload?.requiresEvaluation === true;
+    const requiresScore = requiresEvaluation && payload?.requiresScore === true;
+    const status = payload?.status || 'active';
+
     return createDocument(ownerId, 'trainingCatalog', {
-      ...payload,
-      status: payload.status || 'active',
-      version: payload.version || 1,
-      requiresEvaluation: payload.requiresEvaluation === true,
-      requiresScore: payload.requiresScore === true
+      name,
+      requiresEvaluation,
+      requiresScore,
+      status,
+      version: payload?.version || 1
     });
   },
 
   async update(ownerId, trainingTypeId, payload) {
-    const updatePayload = { ...payload };
-    if ('requiresEvaluation' in payload) updatePayload.requiresEvaluation = payload.requiresEvaluation === true;
-    if ('requiresScore' in payload) updatePayload.requiresScore = payload.requiresScore === true;
+    const updatePayload = {};
+
+    if ('name' in payload) updatePayload.name = payload?.name;
+    if ('status' in payload) updatePayload.status = payload?.status;
+
+    if ('requiresEvaluation' in payload) {
+      const nextRequiresEvaluation = payload?.requiresEvaluation === true;
+      updatePayload.requiresEvaluation = nextRequiresEvaluation;
+      if (!nextRequiresEvaluation) {
+        // Invariante: si no requiere evaluación, no requiere calificación.
+        updatePayload.requiresScore = false;
+      }
+    }
+
+    if ('requiresScore' in payload) {
+      // Solo se guarda como "true" cuando también requiere evaluación.
+      updatePayload.requiresScore = (payload?.requiresScore === true);
+    }
+
+    // Si se envía requiresScore=true pero requiresEvaluation no venía en payload,
+    // lo dejamos como está. La UI mantiene la consistencia enviando ambos.
     return updateDocument(ownerId, 'trainingCatalogItem', trainingTypeId, updatePayload);
   },
 
