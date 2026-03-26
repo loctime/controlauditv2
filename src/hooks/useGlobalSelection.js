@@ -63,19 +63,20 @@ export const useGlobalSelection = () => {
     return userSucursales?.filter(s => s.empresaId === empresaId) || [];
   }, [empresaId, isTodasEmpresas, userSucursales]);
 
-  // Si cambia la empresa y la sucursal seleccionada no pertenece a ella, resetear a "todas"
+  // Auto-seleccionar primera sucursal cuando la empresa cambia y la sucursal actual no es válida
   useEffect(() => {
-    if (!isTodasEmpresas && !isTodasSucursales) {
-      const sucursalValida = sucursalesDisponibles.find(s => s.id === sucursalId);
-      if (!sucursalValida) {
-        // Validar existencia antes de resetear
-        const rawSucursal = globalSelectedSucursal || 'todas';
-        if (rawSucursal !== 'todas') {
-          setGlobalSelectedSucursal('todas');
-        }
-      }
+    if (isTodasEmpresas) return;
+
+    const sucursalValida = sucursalesDisponibles.find(s => s.id === sucursalId);
+    if (sucursalValida) return; // La sucursal es válida, no hacer nada
+
+    // La sucursal no es válida, auto-seleccionar la primera disponible o 'todas'
+    if (sucursalesDisponibles.length > 0) {
+      setGlobalSelectedSucursal(sucursalesDisponibles[0].id);
+    } else if (sucursalId !== 'todas') {
+      setGlobalSelectedSucursal('todas');
     }
-  }, [empresaId, sucursalId, isTodasEmpresas, isTodasSucursales, sucursalesDisponibles, globalSelectedSucursal, setGlobalSelectedSucursal]);
+  }, [empresaId, sucursalId, isTodasEmpresas, sucursalesDisponibles, globalSelectedSucursal, setGlobalSelectedSucursal]);
 
   // Wrappers para setters: normalizar valores
   const setEmpresa = (id) => {

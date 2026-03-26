@@ -25,9 +25,8 @@ const MONTH_NAMES = [
 ];
 
 function pctColor(pct) {
-  if (pct >= 75) return '#66bb6a';
+  if (pct >= 80) return '#66bb6a';
   if (pct >= 50) return '#ffa726';
-  if (pct >= 25) return '#ef9a9a';
   return '#ef5350';
 }
 
@@ -206,25 +205,6 @@ export default function TrainingMatrixTable({
                   </TableCell>
                 );
               })}
-
-              {/* % Completo header */}
-              <TableCell
-                align="center"
-                sx={{
-                  fontWeight: 700,
-                  bgcolor: '#f5f5f5',
-                  borderLeft: '2px solid #e0e0e0',
-                  minWidth: 100,
-                  width: 100,
-                  maxWidth: 100,
-                  position: 'sticky',
-                  right: 0,
-                  zIndex: 6,
-                  boxShadow: '-2px 0 0 #e0e0e0'
-                }}
-              >
-                % COMPLETO
-              </TableCell>
             </TableRow>
 
             {/* Row 2: training name sub-headers */}
@@ -274,8 +254,6 @@ export default function TrainingMatrixTable({
                   
                 ].filter(Boolean);
               })}
-
-              <TableCell sx={{ bgcolor: '#fafafa', borderLeft: '2px solid #e0e0e0' }} />
             </TableRow>
           </TableHead>
 
@@ -288,7 +266,7 @@ export default function TrainingMatrixTable({
                       const cols = columnsByMonth[m] || [];
                       const isExpanded = expandedCells.has(`_${m}`);
                       return acc + getMonthColumnCount(cols, isExpanded);
-                    }, 0) + 2
+                    }, 0) + 1
                   }
                   align="center"
                   sx={{ py: 4, color: 'text.secondary' }}
@@ -302,7 +280,7 @@ export default function TrainingMatrixTable({
                   key={row.empleadoId}
                   sx={{ '&:hover': { bgcolor: '#f9f9f9' } }}
                 >
-                  {/* Employee name */}
+                  {/* Employee name with completion badge */}
                   <TableCell
                     sx={{
                       fontWeight: 500,
@@ -312,14 +290,24 @@ export default function TrainingMatrixTable({
                       left: 0,
                       bgcolor: 'white',
                       zIndex: 1,
-                      whiteSpace: 'nowrap',
-                      maxWidth: 180,
-                      overflow: 'hidden',
-                      textOverflow: 'ellipsis',
                       py: 0
                     }}
                   >
-                    {row.nombre}
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75 }}>
+                      <span>{row.nombre}</span>
+                      <Chip
+                        label={`${row.pct}%`}
+                        size="small"
+                        sx={{
+                          bgcolor: pctColor(row.pct),
+                          color: '#fff',
+                          fontWeight: 700,
+                          fontSize: '0.75rem',
+                          height: 24,
+                          minWidth: 48
+                        }}
+                      />
+                    </Box>
                   </TableCell>
 
                   {/* Cells per month */}
@@ -351,28 +339,6 @@ export default function TrainingMatrixTable({
                       )),
                     ];
                   })}
-
-                  {/* % Completo */}
-                  <TableCell
-                    align="center"
-                    sx={{
-                      borderLeft: '2px solid #e0e0e0',
-                      fontWeight: 700,
-                      fontSize: '0.82rem',
-                      color: pctColor(row.pct),
-                      bgcolor: `${pctColor(row.pct)}22`,
-                      py: 0,
-                      minWidth: 100,
-                      width: 100,
-                      maxWidth: 100,
-                      position: 'sticky',
-                      right: 0,
-                      zIndex: 5,
-                      boxShadow: '-2px 0 0 #e0e0e0'
-                    }}
-                  >
-                    {row.pct}%
-                  </TableCell>
                 </TableRow>
               ))
             )}
