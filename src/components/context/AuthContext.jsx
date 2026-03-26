@@ -83,8 +83,8 @@ const AuthContextComponent = ({ children }) => {
       if (savedEmpresa && savedEmpresa !== 'todas') {
         const existe = empresasDisponibles.find(e => e.id === savedEmpresa);
         empresaARestaurar = existe ? savedEmpresa : (empresasDisponibles.length > 0 ? empresasDisponibles[0].id : 'todas');
-      } else if (!savedEmpresa && empresasDisponibles.length > 0) {
-        // No hay guardado, auto-seleccionar primera empresa
+      } else if ((!savedEmpresa || savedEmpresa === 'todas') && empresasDisponibles.length > 0) {
+        // No hay guardado o está en 'todas', auto-seleccionar primera empresa
         empresaARestaurar = empresasDisponibles[0].id;
       }
 
