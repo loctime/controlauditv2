@@ -152,7 +152,7 @@ export const sucursalService = {
       if (!Number.isFinite(currentYear) || currentYear < 2000 || currentYear > 2100) {
         throw new Error(`Invalid year: ${currentYear}`);
       }
-      logger.info('[sucursalService.crearSucursalCompleta] 📋 iniciando auto-seed de plan anual', {
+      console.log('📋 [PLAN ANUAL] Iniciando auto-seed', {
         ownerId,
         branchId: docRef.id,
         companyId: data.empresaId,
@@ -164,19 +164,19 @@ export const sucursalService = {
         year: currentYear
       });
       if (!plan || !plan.id) {
-        logger.warn('[sucursalService.crearSucursalCompleta] ⚠️ plan anual NO se creó (resultado vacío)', {
+        console.warn('⚠️ [PLAN ANUAL] NO se creó (resultado vacío)', {
           branchId: docRef.id,
           planResult: plan
         });
       } else {
-        logger.info('[sucursalService.crearSucursalCompleta] ✅ plan anual asegurado exitosamente', {
+        console.log('✅ [PLAN ANUAL] Creado exitosamente', {
           planId: plan.id,
           year: currentYear,
           branchId: docRef.id
         });
       }
     } catch (err) {
-      logger.error('[sucursalService.crearSucursalCompleta] ❌ ERROR asegurando plan anual:', {
+      console.error('❌ [PLAN ANUAL] ERROR:', {
         error: err?.message || String(err),
         stack: err?.stack,
         branchId: docRef.id
