@@ -6,6 +6,7 @@ import {
   Button,
   FormControl,
   InputLabel,
+  LinearProgress,
   MenuItem,
   Select,
   Stack,
@@ -118,6 +119,13 @@ export default function MatrixScreen() {
     return years;
   }, [currentYear]);
 
+  // Calculate global compliance percentage
+  const globalCompliancePercentage = useMemo(() => {
+    if (!rows || rows.length === 0) return 0;
+    const sum = rows.reduce((acc, row) => acc + (row.pct || 0), 0);
+    return Math.round(sum / rows.length);
+  }, [rows]);
+
   // Existing trainingTypeIds for the selected month (to prevent duplicates)
   const existingTypeIdsForMonth = useMemo(() => {
     if (!addModalMonth) return [];
@@ -206,6 +214,32 @@ export default function MatrixScreen() {
         <Alert severity="info" sx={{ mb: 2 }}>
           Seleccioná una sucursal para ver la matriz de capacitaciones.
         </Alert>
+      )}
+
+      {effectiveSucursalId && !loading && rows.length > 0 && (
+        <Box sx={{ mb: 3, p: 2, bgcolor: '#f5f5f5', borderRadius: 1 }}>
+          <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 1 }}>
+            <Typography variant="body2" sx={{ fontWeight: 600, color: '#555' }}>
+              Cumplimiento General
+            </Typography>
+            <Typography variant="body2" sx={{ fontWeight: 700, color: '#333' }}>
+              {globalCompliancePercentage}%
+            </Typography>
+          </Box>
+          <LinearProgress
+            variant="determinate"
+            value={globalCompliancePercentage}
+            sx={{
+              height: 8,
+              borderRadius: 4,
+              bgcolor: '#e0e0e0',
+              '& .MuiLinearProgress-bar': {
+                borderRadius: 4,
+                backgroundColor: globalCompliancePercentage >= 80 ? '#66bb6a' : globalCompliancePercentage >= 50 ? '#ffa726' : '#ef5350'
+              }
+            }}
+          />
+        </Box>
       )}
 
       {effectiveSucursalId && (
