@@ -56,7 +56,7 @@ export default function SucursalSelector({
         )}
         <FormControl fullWidth size="small">
           <Select
-            value={sucursales?.length ? (selectedSucursal || 'todas') : 'no-sucursales'}
+            value={sucursales?.length ? (selectedSucursal === 'todas' || !selectedSucursal ? 'todas' : selectedSucursal) : 'no-sucursales'}
             onChange={(e) => onSucursalChange(e.target.value)}
             aria-label="Seleccionar sucursal"
             disabled={!sucursales || sucursales.length === 0}

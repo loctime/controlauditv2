@@ -47,75 +47,70 @@ const AuthContextComponent = ({ children }) => {
   // Estados globales de selección
   const [selectedEmpresa, setSelectedEmpresa] = useState('todas');
   const [selectedSucursal, setSelectedSucursal] = useState('todas');
-  
+
   // Estado para selectedOwnerId (solo para tu UID específico)
   const [selectedOwnerId, setSelectedOwnerId] = useState(null);
-  
+
   // Control para activar listeners diferidos
   const [enableDeferredListeners, setEnableDeferredListeners] = useState(false);
 
   // Evitar recuperar ítems fallidos más de una vez por sesión
   const syncRecoveryDoneRef = useRef(false);
-  
+
+  // Flag para saber si ya intentamos restaurar desde localStorage (evita múltiples restauraciones)
+  const restoredFromStorageRef = useRef(false);
+
   // Restaurar selección desde localStorage al inicializar
-  // IMPORTANTE: Esperar a que empresas y sucursales estén cargadas
+  // Ejecuta apenas tengamos datos, no espera a que TODO esté listo
   useEffect(() => {
     if (!isLogged || !userContext) return;
-    // Esperar a que los datos estén cargados
     if (loadingEmpresas || loadingSucursales) return;
-    
+
+    // Si ya restauramos, salir
+    if (restoredFromStorageRef.current) return;
+
     try {
       const savedEmpresa = localStorage.getItem('globalSelectedEmpresa');
       const savedSucursal = localStorage.getItem('globalSelectedSucursal');
-      
-      // Restaurar empresa: validar existencia antes de restaurar
-      if (savedEmpresa && savedEmpresa !== 'todas' && userEmpresas?.length > 0) {
-        const empresaValida = userEmpresas.find(e => e.id === savedEmpresa);
-        if (empresaValida) {
-          setSelectedEmpresa(savedEmpresa);
-        } else {
-          // ID inválido, fallback a "todas"
-          setSelectedEmpresa('todas');
-        }
-      } else if (!savedEmpresa || savedEmpresa === 'todas') {
-        // No hay valor guardado o es "todas", asegurar que esté en "todas"
-        if (selectedEmpresa !== 'todas') {
-          setSelectedEmpresa('todas');
+
+      const empresasDisponibles = userEmpresas?.length > 0 ? userEmpresas : [];
+      const sucursalesDisponibles = userSucursales?.length > 0 ? userSucursales : [];
+
+      let empresaARestaurar = 'todas';
+      let sucursalARestaurar = 'todas';
+
+      // Validar y restaurar empresa
+      if (savedEmpresa && savedEmpresa !== 'todas') {
+        const existe = empresasDisponibles.find(e => e.id === savedEmpresa);
+        if (existe) {
+          empresaARestaurar = savedEmpresa;
         }
       }
-      
-      // Restaurar sucursal: validar existencia y pertenencia a empresa
-      const empresaActual = savedEmpresa && savedEmpresa !== 'todas' ? savedEmpresa : selectedEmpresa;
-      if (savedSucursal && savedSucursal !== 'todas' && userSucursales?.length > 0) {
-        if (empresaActual && empresaActual !== 'todas') {
-          const sucursalValida = userSucursales.find(
-            s => s.id === savedSucursal && s.empresaId === empresaActual
-          );
-          if (sucursalValida) {
-            setSelectedSucursal(savedSucursal);
-          } else {
-            // Sucursal inválida o no pertenece a la empresa, fallback a "todas"
-            setSelectedSucursal('todas');
-          }
-        } else {
-          // No hay empresa seleccionada, fallback a "todas"
-          setSelectedSucursal('todas');
-        }
-      } else if (!savedSucursal || savedSucursal === 'todas') {
-        // No hay valor guardado o es "todas", asegurar que esté en "todas"
-        if (selectedSucursal !== 'todas') {
-          setSelectedSucursal('todas');
+
+      // Validar y restaurar sucursal (solo si la empresa es válida)
+      if (savedSucursal && savedSucursal !== 'todas' && empresaARestaurar !== 'todas') {
+        const existe = sucursalesDisponibles.find(
+          s => s.id === savedSucursal && s.empresaId === empresaARestaurar
+        );
+        if (existe) {
+          sucursalARestaurar = savedSucursal;
         }
       }
+
+      // Aplicar valores
+      if (empresaARestaurar !== selectedEmpresa) {
+        setSelectedEmpresa(empresaARestaurar);
+      }
+      if (sucursalARestaurar !== selectedSucursal) {
+        setSelectedSucursal(sucursalARestaurar);
+      }
+
+      // Marcar como restaurado
+      restoredFromStorageRef.current = true;
+      logger.debug('[AuthContext] ✅ Selecciones restauradas desde localStorage:', { empresaARestaurar, sucursalARestaurar });
     } catch (error) {
       logger.warn('[AuthContext] Error restaurando selección desde localStorage:', error);
-      // En caso de error, asegurar valores por defecto
-      if (selectedEmpresa !== 'todas') {
-        setSelectedEmpresa('todas');
-      }
-      if (selectedSucursal !== 'todas') {
-        setSelectedSucursal('todas');
-      }
+      restoredFromStorageRef.current = true;
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isLogged, userContext, userEmpresas, userSucursales, loadingEmpresas, loadingSucursales]);
@@ -646,6 +641,8 @@ const AuthContextComponent = ({ children }) => {
     setSelectedEmpresa('todas');
     setSelectedSucursal('todas');
     setSelectedOwnerId(null); // Limpiar selectedOwnerId al hacer logout
+    // IMPORTANTE: Resetear el flag de restauración para que funcione en próximos inicios de sesión
+    restoredFromStorageRef.current = false;
     localStorage.removeItem("userInfo");
     localStorage.removeItem("isLogged");
     localStorage.removeItem("globalSelectedEmpresa");
