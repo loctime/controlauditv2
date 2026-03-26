@@ -70,6 +70,20 @@ export default function MatrixScreen() {
   const [viewDrawerOpen, setViewDrawerOpen] = useState(false);
   const [viewDrawerData, setViewDrawerData] = useState({ sessionId: null, empleadoId: null, trainingTypeName: '' });
 
+  // Expanded months per employee: Set of `${empleadoId}_${month}`
+  const [expandedCells, setExpandedCells] = useState(new Set());
+
+  function toggleExpandCell(empleadoId, month) {
+    const key = `${empleadoId}_${month}`;
+    const newExpanded = new Set(expandedCells);
+    if (newExpanded.has(key)) {
+      newExpanded.delete(key);
+    } else {
+      newExpanded.add(key);
+    }
+    setExpandedCells(newExpanded);
+  }
+
   function handlePendingChange(planItemId, empleadoId, newState) {
     setPendingChange(empleadoId, planItemId, newState);
   }
@@ -85,7 +99,13 @@ export default function MatrixScreen() {
     setViewDrawerOpen(true);
   }
 
-  const yearOptions = [currentYear - 1, currentYear, currentYear + 1];
+  // Year selector options - prepared for dynamic scaling if needed
+  const yearOptions = useMemo(() => {
+    const years = [currentYear - 1, currentYear, currentYear + 1];
+    // Future: if system needs >3 years, group by period here
+    // if (years.length > 5) { groupByPeriod(years) }
+    return years;
+  }, [currentYear]);
 
   // Existing trainingTypeIds for the selected month (to prevent duplicates)
   const existingTypeIdsForMonth = useMemo(() => {
@@ -186,6 +206,8 @@ export default function MatrixScreen() {
           onCellClick={isHistorical ? undefined : handleCellClick}
           onAddToMonth={isHistorical ? undefined : handleAddToMonth}
           loading={loading}
+          expandedCells={expandedCells}
+          onToggleExpand={toggleExpandCell}
         />
       )}
 

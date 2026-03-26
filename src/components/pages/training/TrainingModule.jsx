@@ -18,7 +18,7 @@ export default function TrainingModule() {
   }
 
   return (
-    <Container maxWidth="xl" sx={{ pt: 1, pb: 3 }}>
+    <Container maxWidth="xl" sx={{ pt: 10, pb: 3 }}>
       <MatrixScreen />
     </Container>
   );

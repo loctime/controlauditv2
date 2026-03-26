@@ -1,5 +1,6 @@
 import {
   Box,
+  Button,
   Chip,
   CircularProgress,
   IconButton,
@@ -15,6 +16,7 @@ import {
 } from '@mui/material';
 import AddIcon from '@mui/icons-material/Add';
 import MatrixCell from './MatrixCell';
+import TrainingMonthCarousel from './TrainingMonthCarousel';
 import { CELL_STATE } from '../../../../../hooks/training/useTrainingMatrix';
 
 const MONTH_NAMES = [
@@ -29,6 +31,14 @@ function pctColor(pct) {
   return '#ef5350';
 }
 
+// Helper to determine which training items to show (max 2, or all if expanded)
+function getVisibleItems(cols, isExpanded) {
+  if (isExpanded || cols.length <= 2) {
+    return { visible: cols, hidden: 0 };
+  }
+  return { visible: cols.slice(0, 2), hidden: cols.length - 2 };
+}
+
 /**
  * Tabla principal de la matriz de capacitaciones.
  *
@@ -40,7 +50,9 @@ function pctColor(pct) {
  *   onCellClick: (planItemId: string, empleadoId: string, sessionId: string|null, trainingTypeName: string) => void,
  *   onAddToMonth: (month: number) => void,
  *   loading: boolean,
- *   noPlanMessage?: string
+ *   noPlanMessage?: string,
+ *   expandedCells?: Set<string>,  // Set of `${empleadoId}_${month}`
+ *   onToggleExpand?: (empleadoId: string, month: number) => void
  * }} props
  */
 export default function TrainingMatrixTable({
@@ -51,7 +63,9 @@ export default function TrainingMatrixTable({
   onCellClick,
   onAddToMonth,
   loading,
-  noPlanMessage
+  noPlanMessage,
+  expandedCells = new Set(),
+  onToggleExpand = () => {}
 }) {
   // Sorted month numbers that appear in the plan
   const months = Object.keys(columnsByMonth)
@@ -151,7 +165,10 @@ export default function TrainingMatrixTable({
                   fontWeight: 700,
                   bgcolor: '#f5f5f5',
                   borderLeft: '2px solid #e0e0e0',
-                  minWidth: 100
+                  minWidth: 100,
+                  position: 'sticky',
+                  right: 0,
+                  zIndex: 2
                 }}
               >
                 % COMPLETO
@@ -172,8 +189,12 @@ export default function TrainingMatrixTable({
 
               {months.map(month => {
                 const cols = columnsByMonth[month] || [];
+                const isExpanded = expandedCells.has(`_${month}`);
+                const { visible, hidden } = getVisibleItems(cols, isExpanded);
+
                 return [
-                  ...cols.map(col => (
+                  // Visible training items
+                  ...visible.map(col => (
                     <TableCell
                       key={col.planItemId}
                       align="center"
@@ -183,6 +204,7 @@ export default function TrainingMatrixTable({
                         color: '#555',
                         bgcolor: '#fafafa',
                         borderLeft: '1px solid #e8e8e8',
+                        minWidth: 90,
                         maxWidth: 90,
                         whiteSpace: 'nowrap',
                         overflow: 'hidden',
@@ -195,29 +217,74 @@ export default function TrainingMatrixTable({
                       </Tooltip>
                     </TableCell>
                   )),
-                  // "+" cell per month
-                  <TableCell
-                    key={`add-${month}`}
-                    align="center"
-                    sx={{
-                      bgcolor: '#fafafa',
-                      borderLeft: '1px solid #e8e8e8',
-                      borderRight: '2px solid #90caf9',
-                      width: 36,
-                      p: 0
-                    }}
-                  >
-                    <Tooltip title="Agregar capacitación a este mes">
-                      <IconButton
+                  // Expand/collapse button (or add button if no hidden items)
+                  hidden > 0 ? (
+                    <TableCell
+                      key={`expand-${month}`}
+                      align="center"
+                      sx={{
+                        bgcolor: '#fafafa',
+                        borderLeft: '1px solid #e8e8e8',
+                        minWidth: 50,
+                        maxWidth: 50,
+                        p: 0.5
+                      }}
+                    >
+                      <Button
                         size="small"
-                        onClick={() => onAddToMonth(month)}
-                        sx={{ color: '#42a5f5', p: 0.5 }}
+                        onClick={() => onToggleExpand('_', month)}
+                        sx={{ fontSize: '0.7rem', minWidth: 'auto', p: '2px 4px' }}
                       >
-                        <AddIcon fontSize="small" />
-                      </IconButton>
-                    </Tooltip>
-                  </TableCell>
-                ];
+                        {isExpanded ? '−' : `+${hidden}`}
+                      </Button>
+                    </TableCell>
+                  ) : (
+                    <TableCell
+                      key={`add-${month}`}
+                      align="center"
+                      sx={{
+                        bgcolor: '#fafafa',
+                        borderLeft: '1px solid #e8e8e8',
+                        minWidth: 36,
+                        p: 0
+                      }}
+                    >
+                      <Tooltip title="Agregar capacitación a este mes">
+                        <IconButton
+                          size="small"
+                          onClick={() => onAddToMonth(month)}
+                          sx={{ color: '#42a5f5', p: 0.5 }}
+                        >
+                          <AddIcon fontSize="small" />
+                        </IconButton>
+                      </Tooltip>
+                    </TableCell>
+                  ),
+                  // Add button (always shown at the end)
+                  hidden > 0 && (
+                    <TableCell
+                      key={`add-${month}`}
+                      align="center"
+                      sx={{
+                        bgcolor: '#fafafa',
+                        borderLeft: '1px solid #e8e8e8',
+                        borderRight: '2px solid #90caf9',
+                        minWidth: 36,
+                        p: 0
+                      }}
+                    >
+                      <Tooltip title="Agregar capacitación a este mes">
+                        <IconButton
+                          size="small"
+                          onClick={() => onAddToMonth(month)}
+                          sx={{ color: '#42a5f5', p: 0.5 }}
+                        >
+                          <AddIcon fontSize="small" />
+                        </IconButton>
+                      </Tooltip>
+                    </TableCell>
+                  ),
+                ].filter(Boolean);
               })}
 
               <TableCell sx={{ bgcolor: '#fafafa', borderLeft: '2px solid #e0e0e0' }} />
@@ -264,8 +331,13 @@ export default function TrainingMatrixTable({
                   {/* Cells per month */}
                   {months.map(month => {
                     const cols = columnsByMonth[month] || [];
+                    const key = `${row.empleadoId}_${month}`;
+                    const isExpanded = expandedCells.has(key);
+                    const { visible, hidden } = getVisibleItems(cols, isExpanded);
+
                     return [
-                      ...cols.map(col => (
+                      // Visible training cells
+                      ...visible.map(col => (
                         <TableCell
                           key={col.planItemId}
                           align="center"
@@ -284,17 +356,37 @@ export default function TrainingMatrixTable({
                           />
                         </TableCell>
                       )),
-                      // Empty "+" cell (for layout alignment)
-                      <TableCell
-                        key={`spacer-${month}-${row.empleadoId}`}
-                        sx={{
-                          borderLeft: '1px solid #e8e8e8',
-                          borderRight: '2px solid #90caf9',
-                          width: 36,
-                          p: 0
-                        }}
-                      />
-                    ];
+                      // Expand/collapse button or spacer
+                      hidden > 0 ? (
+                        <TableCell
+                          key={`expand-${month}`}
+                          align="center"
+                          sx={{
+                            p: 0,
+                            borderLeft: '1px solid #e8e8e8',
+                            minWidth: 50
+                          }}
+                        >
+                          <Button
+                            size="small"
+                            onClick={() => onToggleExpand(row.empleadoId, month)}
+                            sx={{ fontSize: '0.7rem', minWidth: 'auto', p: '2px 4px', width: '100%' }}
+                          >
+                            {isExpanded ? '−' : `+${hidden}`}
+                          </Button>
+                        </TableCell>
+                      ) : (
+                        <TableCell
+                          key={`spacer-${month}-${row.empleadoId}`}
+                          sx={{
+                            borderLeft: '1px solid #e8e8e8',
+                            borderRight: '2px solid #90caf9',
+                            minWidth: 36,
+                            p: 0
+                          }}
+                        />
+                      ),
+                    ].filter(Boolean);
                   })}
 
                   {/* % Completo */}
@@ -306,7 +398,10 @@ export default function TrainingMatrixTable({
                       fontSize: '0.82rem',
                       color: pctColor(row.pct),
                       bgcolor: `${pctColor(row.pct)}22`,
-                      py: 0
+                      py: 0,
+                      position: 'sticky',
+                      right: 0,
+                      zIndex: 2
                     }}
                   >
                     {row.pct}%
