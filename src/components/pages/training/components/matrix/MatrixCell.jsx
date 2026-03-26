@@ -3,6 +3,7 @@ import { Box, IconButton, Tooltip } from '@mui/material';
 import CheckIcon from '@mui/icons-material/Check';
 import CloseIcon from '@mui/icons-material/Close';
 import RemoveIcon from '@mui/icons-material/Remove';
+import HistoryIcon from '@mui/icons-material/History';
 import { CELL_STATE } from '../../../../../hooks/training/useTrainingMatrix';
 
 const STATE_CONFIG = {
@@ -38,7 +39,9 @@ export default function MatrixCell({ cellData, pendingState, onPendingChange, on
 
   const config = STATE_CONFIG[displayState] ?? STATE_CONFIG[CELL_STATE.BLANK];
 
-  const canEdit = (displayState === CELL_STATE.BLANK || displayState === CELL_STATE.RED) && !isTerminal;
+  // La editabilidad se define por el estado base guardado, no por el pending.
+  // Asi se puede cambiar varias veces antes de guardar.
+  const canEdit = (baseState === CELL_STATE.BLANK || baseState === CELL_STATE.RED) && !isTerminal;
   const canOpenDrawer = (displayState === CELL_STATE.GREEN || displayState === CELL_STATE.GRAY) && hasSessions;
 
   return (
@@ -121,6 +124,29 @@ export default function MatrixCell({ cellData, pendingState, onPendingChange, on
       {canOpenDrawer && !hovered && (
         <Tooltip title="Ver sesiones">
           <Box sx={{ position: 'absolute', inset: 0 }} />
+        </Tooltip>
+      )}
+
+      {/* Marca visual para "Presente" ya guardado en sesión anterior */}
+      {baseState === CELL_STATE.GREEN && hasSessions && pendingState === undefined && (
+        <Tooltip title="Presente registrado en sesión anterior">
+          <Box
+            sx={{
+              position: 'absolute',
+              top: 2,
+              right: 2,
+              width: 14,
+              height: 14,
+              borderRadius: '50%',
+              bgcolor: 'rgba(255,255,255,0.9)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              boxShadow: '0 0 0 1px rgba(255,255,255,0.6)'
+            }}
+          >
+            <HistoryIcon sx={{ fontSize: 10, color: '#2e7d32' }} />
+          </Box>
         </Tooltip>
       )}
     </Box>
