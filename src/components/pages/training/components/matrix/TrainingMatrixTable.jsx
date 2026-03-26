@@ -213,9 +213,12 @@ export default function TrainingMatrixTable({
                   bgcolor: '#f5f5f5',
                   borderLeft: '2px solid #e0e0e0',
                   minWidth: 100,
+                  width: 100,
+                  maxWidth: 100,
                   position: 'sticky',
                   right: 0,
-                  zIndex: 2
+                  zIndex: 6,
+                  boxShadow: '-2px 0 0 #e0e0e0'
                 }}
               >
                 % COMPLETO
@@ -358,9 +361,13 @@ export default function TrainingMatrixTable({
                       color: pctColor(row.pct),
                       bgcolor: `${pctColor(row.pct)}22`,
                       py: 0,
+                      minWidth: 100,
+                      width: 100,
+                      maxWidth: 100,
                       position: 'sticky',
                       right: 0,
-                      zIndex: 2
+                      zIndex: 5,
+                      boxShadow: '-2px 0 0 #e0e0e0'
                     }}
                   >
                     {row.pct}%
