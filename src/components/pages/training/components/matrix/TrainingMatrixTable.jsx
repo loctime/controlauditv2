@@ -97,15 +97,17 @@ export default function TrainingMatrixTable({
 
   // Legend
   const LEGEND = [
-    { state: CELL_STATE.NOT_TRAINED, label: 'No capacitado' },
-    { state: CELL_STATE.IN_PROGRESS, label: 'En curso' },
-    { state: CELL_STATE.COMPLETE, label: 'Capacitación completa' }
+    { state: CELL_STATE.BLANK, label: 'Sin registro' },
+    { state: CELL_STATE.RED, label: 'Ausente' },
+    { state: CELL_STATE.GREEN, label: 'Presente' },
+    { state: CELL_STATE.GRAY, label: 'N/A' }
   ];
 
   const legendColors = {
-    [CELL_STATE.NOT_TRAINED]: '#ef5350',
-    [CELL_STATE.IN_PROGRESS]: '#ffa726',
-    [CELL_STATE.COMPLETE]: '#66bb6a'
+    [CELL_STATE.BLANK]: '#e0e0e0',
+    [CELL_STATE.RED]: '#ef5350',
+    [CELL_STATE.GREEN]: '#66bb6a',
+    [CELL_STATE.GRAY]: '#9e9e9e'
   };
 
   return (
@@ -340,11 +342,10 @@ export default function TrainingMatrixTable({
                           }}
                         >
                           <MatrixCell
-                            state={row.cellMap[col.planItemId].estado}
-                            sessionId={row.cellMap[col.planItemId].sessionId}
-                            pendingState={pendingChanges[`${row.empleadoId}_${col.planItemId}`]?.newState}
-                            onPendingChange={newState => onPendingChange(col.planItemId, row.empleadoId, newState)}
-                            onSessionClick={() => onCellClick(col.planItemId, row.empleadoId, row.cellMap[col.planItemId].sessionId, col.name)}
+                            cellData={row.cellMap[col.planItemId]}
+                            pendingState={pendingChanges[`${row.empleadoId}_${col.planItemId}`]}
+                            onPendingChange={(newState) => onPendingChange(col.planItemId, row.empleadoId, newState, row.cellMap[col.planItemId])}
+                            onSessionClick={() => onCellClick(col.planItemId, row.empleadoId, row.cellMap[col.planItemId], col.name)}
                           />
                         </TableCell>
                       )),

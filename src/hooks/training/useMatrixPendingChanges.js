@@ -5,7 +5,7 @@ import { useState, useCallback } from 'react';
  * Acumula cambios celda a celda antes de confirmar con "Guardar sesión".
  *
  * @returns {{
- *   changes: Object,          // { [empleadoId_planItemId]: { empleadoId, planItemId, newState } }
+ *   changes: Object,          // { [empleadoId_planItemId]: 'RED' | 'GREEN' | 'GRAY' }
  *   setPendingChange: Function,
  *   removePendingChange: Function,
  *   clearPendingChanges: Function,
@@ -16,11 +16,14 @@ import { useState, useCallback } from 'react';
 export function useMatrixPendingChanges() {
   const [changes, setChanges] = useState({});
 
-  const setPendingChange = useCallback((empleadoId, planItemId, newState) => {
+  const setPendingChange = useCallback((empleadoId, planItemId, newState, cellData) => {
+    if (cellData?.isTerminal === true) {
+      return;
+    }
     const key = `${empleadoId}_${planItemId}`;
     setChanges(prev => ({
       ...prev,
-      [key]: { empleadoId, planItemId, newState }
+      [key]: newState
     }));
   }, []);
 

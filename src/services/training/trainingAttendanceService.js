@@ -220,6 +220,9 @@ export const trainingAttendanceService = {
     const sessionData = await getSessionMeta(ownerId, sessionId, payload.sessionData || null);
     if (!sessionData) throw new Error(`No se encontró la sesión ${sessionId}`);
 
+    const planId = normalizeId(payload.planId || sessionData?.planId) || null;
+    const planItemId = normalizeId(payload.planItemId || sessionData?.planItemId) || null;
+
     const resolvedPeriod = await resolveTrainingPeriod(ownerId, sessionData);
 
     const trainingTypeId = normalizeId(payload.trainingTypeId || sessionData?.trainingTypeId);
@@ -272,6 +275,8 @@ export const trainingAttendanceService = {
       trainingTypeId,
       companyId,
       branchId,
+      planId,
+      planItemId,
       requiresEvaluation: Boolean(requiresEvaluation),
       attendanceStatus: payload.attendanceStatus || TRAINING_ATTENDANCE_STATUSES.INVITED,
       evaluationStatus: resolvedEvaluationStatus,
@@ -479,6 +484,21 @@ export const trainingAttendanceService = {
     const ref = attendanceByEmployeeCollection(ownerId);
     const snap = await getDocs(query(ref, where('employeeId', '==', employeeId), orderBy('updatedAt', 'desc')));
     return snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+  },
+
+  async listAttendanceByPlanItemAndEmployee(ownerId, planItemId, employeeId, options = {}) {
+    planItemId = normalizeId(planItemId);
+    employeeId = normalizeId(employeeId);
+    if (!planItemId) throw new Error('planItemId inválido');
+    if (!employeeId) throw new Error('employeeId inválido');
+
+    const constraints = [
+      buildWhere('planItemId', '==', planItemId),
+      buildWhere('employeeId', '==', employeeId),
+      buildOrderBy('updatedAt', 'desc')
+    ];
+    if (options.limit) constraints.push(buildLimit(options.limit));
+    return queryDocuments(ownerId, 'trainingAttendanceByEmployee', constraints);
   },
 
   async listByTrainingTypeId(ownerId, trainingTypeId, options = {}) {

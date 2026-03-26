@@ -6,58 +6,63 @@ import RemoveIcon from '@mui/icons-material/Remove';
 import { CELL_STATE } from '../../../../../hooks/training/useTrainingMatrix';
 
 const STATE_CONFIG = {
-  [CELL_STATE.NOT_TRAINED]: { bg: '#ef5350', label: '0', tooltip: 'No capacitado' },
-  [CELL_STATE.IN_PROGRESS]:  { bg: '#ffa726', label: '1', tooltip: 'En curso' },
-  [CELL_STATE.COMPLETE]:     { bg: '#66bb6a', label: '2', tooltip: 'Capacitación completa' },
-  [CELL_STATE.NOT_APPLICABLE]: { bg: '#bdbdbd', label: 'N/A', tooltip: 'No aplica' }
+  [CELL_STATE.BLANK]: { bg: '#ffffff', label: '', tooltip: 'Sin registro' },
+  [CELL_STATE.RED]: { bg: '#ef5350', label: 'Ausente', tooltip: 'Ausente' },
+  [CELL_STATE.GREEN]: { bg: '#66bb6a', label: 'Presente', tooltip: 'Presente' },
+  [CELL_STATE.GRAY]: { bg: '#bdbdbd', label: 'N/A', tooltip: 'No aplica' }
 };
 
 const SELECTOR_OPTIONS = [
-  { state: CELL_STATE.NOT_TRAINED, icon: <CloseIcon sx={{ fontSize: 14 }} />, label: 'No realizado', color: '#ef5350' },
-  { state: CELL_STATE.COMPLETE,    icon: <CheckIcon  sx={{ fontSize: 14 }} />, label: 'Realizado',    color: '#66bb6a' },
-  { state: CELL_STATE.NOT_APPLICABLE, icon: <RemoveIcon sx={{ fontSize: 14 }} />, label: 'No aplica', color: '#9e9e9e' }
+  { state: CELL_STATE.RED, icon: <CloseIcon sx={{ fontSize: 14 }} />, label: 'Ausente', color: '#ef5350' },
+  { state: CELL_STATE.GREEN, icon: <CheckIcon sx={{ fontSize: 14 }} />, label: 'Presente', color: '#66bb6a' },
+  { state: CELL_STATE.GRAY, icon: <RemoveIcon sx={{ fontSize: 14 }} />, label: 'No aplica', color: '#9e9e9e' }
 ];
 
 /**
  * Celda de la matriz.
  *
  * Props:
- *   state         — estado guardado (CELL_STATE)
- *   sessionId     — id de sesión si hay estado guardado en Firestore
+ *   cellData      — { estado, sessionIds, isTerminal }
  *   pendingState  — cambio pendiente local (undefined si no hay)
  *   onPendingChange(newState) — callback al seleccionar opción en selector
  *   onSessionClick() — callback al click en celda guardada
  */
-export default function MatrixCell({ state, sessionId, pendingState, onPendingChange, onSessionClick }) {
+export default function MatrixCell({ cellData, pendingState, onPendingChange, onSessionClick }) {
   const [hovered, setHovered] = useState(false);
 
-  const displayState = pendingState !== undefined ? pendingState : state;
-  const isPending = pendingState !== undefined && pendingState !== state;
-  const isGuardada = sessionId !== null && pendingState === undefined;
+  const baseState = cellData?.estado ?? CELL_STATE.BLANK;
+  const displayState = pendingState !== undefined ? pendingState : baseState;
+  const isPending = pendingState !== undefined && pendingState !== baseState;
+  const isTerminal = cellData?.isTerminal === true;
+  const hasSessions = (cellData?.sessionIds?.length || 0) > 0;
 
-  const config = STATE_CONFIG[displayState] ?? STATE_CONFIG[CELL_STATE.NOT_TRAINED];
+  const config = STATE_CONFIG[displayState] ?? STATE_CONFIG[CELL_STATE.BLANK];
+
+  const canEdit = (displayState === CELL_STATE.BLANK || displayState === CELL_STATE.RED) && !isTerminal;
+  const canOpenDrawer = (displayState === CELL_STATE.GREEN || displayState === CELL_STATE.GRAY) && hasSessions;
 
   return (
     <Box
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
-      onClick={isGuardada ? onSessionClick : undefined}
+      onClick={canOpenDrawer ? onSessionClick : undefined}
       sx={{
         position: 'relative',
         width: '100%',
         height: 36,
         bgcolor: config.bg,
+        border: displayState === CELL_STATE.BLANK ? '1px solid #eeeeee' : 'none',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
         outline: isPending ? '2px dashed #f59e0b' : 'none',
         outlineOffset: '-2px',
         transition: 'background-color 0.15s',
-        cursor: isGuardada ? 'pointer' : 'default'
+        cursor: canOpenDrawer ? 'pointer' : (canEdit ? 'default' : 'not-allowed')
       }}
     >
       {/* Selector inline — solo si es pendiente o sin guardar */}
-      {hovered && !isGuardada && (
+      {hovered && canEdit && (
         <Box
           sx={{
             position: 'absolute',
@@ -98,18 +103,23 @@ export default function MatrixCell({ state, sessionId, pendingState, onPendingCh
       )}
 
       {/* Label */}
-      {!hovered && (
+      {!hovered && config.label && (
         <Box
           component="span"
-          sx={{ color: '#fff', fontWeight: 700, fontSize: '0.8rem', pointerEvents: 'none' }}
+          sx={{
+            color: displayState === CELL_STATE.BLANK ? '#666' : '#fff',
+            fontWeight: 700,
+            fontSize: '0.72rem',
+            pointerEvents: 'none'
+          }}
         >
           {config.label}
         </Box>
       )}
 
       {/* Tooltip para celdas guardadas */}
-      {isGuardada && !hovered && (
-        <Tooltip title="Ver sesión">
+      {canOpenDrawer && !hovered && (
+        <Tooltip title="Ver sesiones">
           <Box sx={{ position: 'absolute', inset: 0 }} />
         </Tooltip>
       )}

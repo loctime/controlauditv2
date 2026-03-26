@@ -68,7 +68,12 @@ export default function MatrixScreen() {
 
   // SessionViewDrawer state
   const [viewDrawerOpen, setViewDrawerOpen] = useState(false);
-  const [viewDrawerData, setViewDrawerData] = useState({ sessionId: null, empleadoId: null, trainingTypeName: '' });
+  const [viewDrawerData, setViewDrawerData] = useState({
+    sessionIds: [],
+    empleadoId: null,
+    trainingTypeName: '',
+    isTerminal: false
+  });
 
   // Expanded months per employee: Set of `${empleadoId}_${month}`
   const [expandedCells, setExpandedCells] = useState(new Set());
@@ -84,8 +89,8 @@ export default function MatrixScreen() {
     setExpandedCells(newExpanded);
   }
 
-  function handlePendingChange(planItemId, empleadoId, newState) {
-    setPendingChange(empleadoId, planItemId, newState);
+  function handlePendingChange(planItemId, empleadoId, newState, cellData) {
+    setPendingChange(empleadoId, planItemId, newState, cellData);
   }
 
   function handleAddToMonth(month) {
@@ -93,9 +98,15 @@ export default function MatrixScreen() {
     setAddModalOpen(true);
   }
 
-  function handleCellClick(planItemId, empleadoId, sessionId, trainingTypeName) {
-    if (!sessionId) return; // Solo abrir si hay sesión guardada
-    setViewDrawerData({ sessionId, empleadoId, trainingTypeName });
+  function handleCellClick(planItemId, empleadoId, cellData, trainingTypeName) {
+    const sessionIds = cellData?.sessionIds || [];
+    if (!sessionIds.length) return;
+    setViewDrawerData({
+      sessionIds,
+      empleadoId,
+      trainingTypeName,
+      isTerminal: Boolean(cellData?.isTerminal)
+    });
     setViewDrawerOpen(true);
   }
 

@@ -7,20 +7,28 @@ import { trainingAttendanceService } from '../../services/training/trainingAtten
 import { trainingCatalogService } from '../../services/training/trainingCatalogService';
 import {
   TRAINING_SESSION_STATUSES,
-  TRAINING_ATTENDANCE_STATUSES
+  TRAINING_ATTENDANCE_STATUSES,
+  TRAINING_EVALUATION_STATUSES
 } from '../../types/trainingDomain';
 
 export const CELL_STATE = {
-  NOT_TRAINED: 0,
-  IN_PROGRESS: 1,
-  COMPLETE: 2,
-  NOT_APPLICABLE: 'N/A'
+  BLANK: 'BLANK',
+  RED: 'RED',
+  GREEN: 'GREEN',
+  GRAY: 'GRAY'
 };
 
 const IN_PROGRESS_STATUSES = new Set([
   TRAINING_SESSION_STATUSES.SCHEDULED,
   TRAINING_SESSION_STATUSES.IN_PROGRESS,
   TRAINING_SESSION_STATUSES.PENDING_CLOSURE
+]);
+
+const ABSENT_STATUSES = new Set([
+  TRAINING_ATTENDANCE_STATUSES.JUSTIFIED_ABSENCE,
+  TRAINING_ATTENDANCE_STATUSES.UNJUSTIFIED_ABSENCE,
+  // compat legacy (por si existen registros viejos)
+  'absent'
 ]);
 
 function getEmployeeName(emp) {
@@ -184,38 +192,86 @@ export function useTrainingMatrix({ ownerId, sucursalId, year }) {
     return map;
   }, [sessions, planItems]);
 
+  // Sessions grouped by planItemId: { planItemId: session[] }
+  const sessionsByPlanItem = useMemo(() => {
+    const byKey = {};
+    const itemByTypeAndMonth = {};
+    planItems.forEach((item) => {
+      const key = `${item.trainingTypeId}_${item.plannedMonth}`;
+      if (!itemByTypeAndMonth[key]) itemByTypeAndMonth[key] = item;
+    });
+
+    sessions.forEach((session) => {
+      let planItemId = session.planItemId || null;
+      if (!planItemId) {
+        const key = `${session.trainingTypeId}_${session.periodMonth}`;
+        planItemId = itemByTypeAndMonth[key]?.id || null;
+      }
+      if (!planItemId) return;
+      if (!byKey[planItemId]) byKey[planItemId] = [];
+      byKey[planItemId].push(session);
+    });
+
+    // Mantener orden (más reciente primero) como viene en `sessions`
+    return byKey;
+  }, [sessions, planItems]);
+
   // Compute state for a single (empleadoId, planItem) pair
-  // Returns: { estado: CELL_STATE, sessionId: string|null }
-  const computeCellState = useCallback((empleadoId, planItem) => {
+  // Returns: { estado: 'BLANK'|'RED'|'GREEN'|'GRAY', sessionIds: string[], isTerminal: boolean }
+  const computeCellData = useCallback((empleadoId, planItem) => {
     const { planItemId, noAplicaEmployeeIds } = planItem;
 
+    // Plan item explícitamente no aplica para el empleado: terminal GRAY sin sesiones.
     if (noAplicaEmployeeIds && noAplicaEmployeeIds.includes(empleadoId)) {
-      return { estado: CELL_STATE.NOT_APPLICABLE, sessionId: null };
+      return { estado: CELL_STATE.GRAY, sessionIds: [], isTerminal: true };
     }
 
-    const session = sessionByPlanItem[planItemId];
-    if (!session) return { estado: CELL_STATE.NOT_TRAINED, sessionId: null };
+    const sessionsForItem = sessionsByPlanItem[planItemId] || [];
+    if (!sessionsForItem.length) {
+      return { estado: CELL_STATE.BLANK, sessionIds: [], isTerminal: false };
+    }
 
-    const attendance = attendanceMap[session.id]?.[empleadoId];
-    const estado = (() => {
-      if (session.status === TRAINING_SESSION_STATUSES.CLOSED) {
-        return attendance?.attendanceStatus === TRAINING_ATTENDANCE_STATUSES.PRESENT
-          ? CELL_STATE.COMPLETE
-          : CELL_STATE.NOT_TRAINED;
-      }
+    const records = [];
+    const sessionIds = [];
 
-      if (IN_PROGRESS_STATUSES.has(session.status)) {
-        const isInvitedOrPresent =
-          attendance?.attendanceStatus === TRAINING_ATTENDANCE_STATUSES.INVITED ||
-          attendance?.attendanceStatus === TRAINING_ATTENDANCE_STATUSES.PRESENT;
-        if (isInvitedOrPresent) return CELL_STATE.IN_PROGRESS;
-      }
+    sessionsForItem.forEach((session) => {
+      const attendance = attendanceMap[session.id]?.[empleadoId];
+      if (!attendance) return;
+      records.push(attendance);
+      sessionIds.push(session.id);
+    });
 
-      return CELL_STATE.NOT_TRAINED;
-    })();
+    // Sin registros → BLANK
+    if (!records.length) {
+      return { estado: CELL_STATE.BLANK, sessionIds: [], isTerminal: false };
+    }
 
-    return { estado, sessionId: session.id };
-  }, [sessionByPlanItem, attendanceMap]);
+    // Si alguno PRESENT → GREEN (terminal)
+    const hasPresent = records.some((r) =>
+      r?.attendanceStatus === TRAINING_ATTENDANCE_STATUSES.PRESENT
+    );
+    if (hasPresent) {
+      return { estado: CELL_STATE.GREEN, sessionIds, isTerminal: true };
+    }
+
+    // Si alguno NOT_APPLICABLE → GRAY (terminal)
+    const hasNotApplicable = records.some((r) =>
+      r?.evaluationStatus === TRAINING_EVALUATION_STATUSES.NOT_APPLICABLE ||
+      r?.attendanceStatus === TRAINING_EVALUATION_STATUSES.NOT_APPLICABLE // compat por si alguien lo grabó mal
+    );
+    if (hasNotApplicable) {
+      return { estado: CELL_STATE.GRAY, sessionIds, isTerminal: true };
+    }
+
+    // Si todos (los registros explícitos) son no-present y alguno es ausencia → RED
+    const hasAbsent = records.some((r) => ABSENT_STATUSES.has(r?.attendanceStatus));
+    if (hasAbsent) {
+      return { estado: CELL_STATE.RED, sessionIds, isTerminal: false };
+    }
+
+    // Invitado/reprogramado/etc sin “ausente” explícito → BLANK (no hay ausencias implícitas)
+    return { estado: CELL_STATE.BLANK, sessionIds, isTerminal: false };
+  }, [sessionsByPlanItem, attendanceMap]);
 
   // Rows: one per employee, with cellMap per planItem
   const rows = useMemo(() => {
@@ -223,15 +279,15 @@ export function useTrainingMatrix({ ownerId, sucursalId, year }) {
     return empleados.map(emp => {
       const cellMap = {};
       allPlanItems.forEach(planItem => {
-        cellMap[planItem.planItemId] = computeCellState(emp.id, planItem);
+        cellMap[planItem.planItemId] = computeCellData(emp.id, planItem);
       });
 
-      // % completo: count COMPLETE / (total - NOT_APPLICABLE)
-      const relevant = allPlanItems.filter(pi =>
-        cellMap[pi.planItemId].estado !== CELL_STATE.NOT_APPLICABLE
+      // % completo: count GREEN / (total - GRAY)
+      const relevant = allPlanItems.filter((pi) =>
+        cellMap[pi.planItemId]?.estado !== CELL_STATE.GRAY
       );
-      const completed = relevant.filter(pi =>
-        cellMap[pi.planItemId].estado === CELL_STATE.COMPLETE
+      const completed = relevant.filter((pi) =>
+        cellMap[pi.planItemId]?.estado === CELL_STATE.GREEN
       ).length;
       const pct = relevant.length > 0
         ? Math.round((completed / relevant.length) * 100)
@@ -244,7 +300,7 @@ export function useTrainingMatrix({ ownerId, sucursalId, year }) {
         pct
       };
     });
-  }, [empleados, columnsByMonth, computeCellState]);
+  }, [empleados, columnsByMonth, computeCellData]);
 
   return {
     columnsByMonth,
