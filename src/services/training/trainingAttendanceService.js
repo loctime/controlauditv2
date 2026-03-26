@@ -133,22 +133,6 @@ function monthLabel(periodYear, periodMonth) {
   }).format(date);
 }
 
-function createPeriodConflictError(lockData = {}, employeeId) {
-  const periodLabel = lockData.periodYear && lockData.periodMonth
-    ? monthLabel(lockData.periodYear, lockData.periodMonth)
-    : (lockData.periodKey || 'este per\u00edodo');
-  const error = new Error(`El empleado ${employeeId} ya registr\u00f3 esta capacitaci\u00f3n en ${periodLabel} en otra sesi\u00f3n.`);
-  error.code = 'training_attendance_period_conflict';
-  error.details = {
-    employeeId,
-    sessionId: lockData.sessionId || null,
-    periodKey: lockData.periodKey || null,
-    periodYear: lockData.periodYear || null,
-    periodMonth: lockData.periodMonth || null
-  };
-  return error;
-}
-
 function getSessionTimestamp(sessionData = {}) {
   return sessionData.executedDate || sessionData.scheduledDate || sessionData.updatedAt || sessionData.createdAt || null;
 }
@@ -305,15 +289,6 @@ export const trainingAttendanceService = {
     if (!attendanceData.periodMonth) throw new Error('periodMonth inválido');
     if (!attendanceData.periodKey) throw new Error('periodKey inválido');
 
-    const nextLockId = buildAttendancePeriodLockId(
-      employeeId,
-      trainingTypeId,
-      attendanceData.periodYear,
-      attendanceData.periodMonth
-    );
-
-    const nextLockRef = attendancePeriodLockDocument(ownerId, nextLockId);
-
     const periodResultId = buildEmployeeTrainingPeriodResultId(
       employeeId,
       trainingTypeId,
@@ -346,28 +321,6 @@ export const trainingAttendanceService = {
       id: nextDenormId,
       createdAt: payload.createdAt || now
     }, sessionData));
-
-    // Conflicto: solo bloquear si existe otro PRESENT que sea "consumidor" del período.
-    // Con requiresEvaluation: solo APPROVED consume; FAILED nunca consume y no debe bloquear otra sesión.
-    const isPeriodConsumer = (item) => {
-      if (!item || item.isDeleted) return false;
-      if (item.attendanceStatus !== TRAINING_ATTENDANCE_STATUSES.PRESENT) return false;
-
-      const itemRequiresEvaluation =
-        item.requiresEvaluation ??
-        catalogItem?.requiresEvaluation ??
-        false;
-
-      if (!itemRequiresEvaluation) return true;
-      return item.evaluationStatus === TRAINING_EVALUATION_STATUSES.APPROVED;
-    };
-    const existingPresentElsewhere = recomputeSet.find(
-      (item) => item.sessionId !== sessionId && isPeriodConsumer(item)
-    );
-
-    if (existingPresentElsewhere) {
-      throw createPeriodConflictError(existingPresentElsewhere, employeeId);
-    }
 
     const consolidatedResult =
       trainingPeriodResultService.consolidatePeriodAttendances(recomputeSet, now);
@@ -410,34 +363,6 @@ export const trainingAttendanceService = {
         transaction.delete(periodResultRef);
       }
 
-      // Lock solo cuando el consumidor del período tiene vigencia (APPROVED con vigencia o tipo sin evaluación).
-      const consumerHasVigencia = consolidatedResult?.finalValidUntil != null;
-      const shouldSetLock =
-        consolidatedResult?.finalStatus === TRAINING_ATTENDANCE_STATUSES.PRESENT &&
-        (consumerHasVigencia || !requiresEvaluation);
-      if (shouldSetLock) {
-        transaction.set(
-          nextLockRef,
-          decorateWithAppId({
-            employeeId,
-            trainingTypeId,
-            periodYear: attendanceData.periodYear,
-            periodMonth: attendanceData.periodMonth,
-            periodKey: attendanceData.periodKey,
-            sessionId: consolidatedResult.consumerSessionId,
-            periodResultId,
-            planId: normalizeId(sessionData?.planId) || null,
-            planItemId: normalizeId(sessionData?.planItemId) || null,
-            companyId,
-            branchId,
-            createdAt: now,
-            updatedAt: now
-          }),
-          { merge: true }
-        );
-      } else {
-        transaction.delete(nextLockRef);
-      }
     });
 
     const shouldRecompute =

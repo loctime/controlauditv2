@@ -21,10 +21,21 @@ export function useMatrixPendingChanges() {
       return;
     }
     const key = `${empleadoId}_${planItemId}`;
-    setChanges(prev => ({
-      ...prev,
-      [key]: newState
-    }));
+    const originalState = cellData?.estado ?? 'BLANK';
+
+    if (newState === originalState) {
+      // Volvió al estado original → no hay cambio pendiente real
+      setChanges(prev => {
+        const next = { ...prev };
+        delete next[key];
+        return next;
+      });
+    } else {
+      setChanges(prev => ({
+        ...prev,
+        [key]: newState
+      }));
+    }
   }, []);
 
   const removePendingChange = useCallback((empleadoId, planItemId) => {

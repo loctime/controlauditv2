@@ -680,16 +680,9 @@ export default function CreateTrainingSession({
       console.error('[CreateTrainingSession] Error al guardar', err);
       const msg = err?.message || '';
       const isPathError = msg.includes("reading 'path'") || msg.includes('reading "path"');
-      const isPeriodConflict = err?.code === 'training_attendance_period_conflict';
       let displayMessage = msg || 'No se pudo guardar la capacitación';
       if (isPathError) {
         displayMessage = 'Error al vincular con el plan. Por favor, vuelve a abrir "Registrar desde Plan" e inténtalo de nuevo.';
-      } else if (isPeriodConflict) {
-        const d = err?.details || {};
-        const periodLabel = d.periodYear && d.periodMonth
-          ? new Date(d.periodYear, d.periodMonth - 1).toLocaleDateString('es', { month: 'long', year: 'numeric' })
-          : 'este período';
-        displayMessage = `Un empleado ya tiene esta capacitación registrada como asistió en otra sesión (${periodLabel}). Solo puede contarse una sesión por empleado por período. Revisa la otra sesión o quita la asistencia allí antes de guardar aquí.`;
       }
       setError(displayMessage);
     } finally {

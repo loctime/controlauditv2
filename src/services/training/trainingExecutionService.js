@@ -69,7 +69,7 @@ export async function suggestParticipants(ownerId, sessionContext) {
     };
   }
 
-  const [rules, records, locks] = await Promise.all([
+  const [rules, records] = await Promise.all([
     trainingRequirementService.listRules(ownerId, {
       companyId,
       branchId,
@@ -77,19 +77,7 @@ export async function suggestParticipants(ownerId, sessionContext) {
       status: 'active'
     }),
     employeeTrainingRecordService.listByEmployees(ownerId, employeesList.map((e) => e.id)),
-    trainingAttendanceService.listPeriodLocks(ownerId, {
-      companyId,
-      branchId,
-      trainingTypeId,
-      periodYear: period.periodYear,
-      periodMonth: period.periodMonth
-    })
   ]);
-
-  const lockByEmployeeId = (locks || []).reduce((acc, lock) => {
-    acc[lock.employeeId] = lock;
-    return acc;
-  }, {});
 
   const recordsByEmployee = (records || []).reduce((acc, record) => {
     if (!acc[record.employeeId]) acc[record.employeeId] = [];
@@ -123,44 +111,12 @@ export async function suggestParticipants(ownerId, sessionContext) {
   });
 
   const blockedEmployees = [];
-  const eligibleEmployees = [];
-  employeesList.forEach((employee) => {
-    const lock = lockByEmployeeId[employee.id];
-    if (lock) {
-      blockedEmployees.push({
-        ...employee,
-        periodYear: lock.periodYear,
-        periodMonth: lock.periodMonth,
-        sessionId: lock.sessionId || null
-      });
-    } else {
-      eligibleEmployees.push(employee);
-    }
-  });
-
-  // Enriquecer bloqueados con score y notas de la sesión donde ya registraron
-  const enrichedBlocked = await Promise.all(
-    blockedEmployees.map(async (b) => {
-      if (!b.sessionId || !b.id) return { ...b, score: null, notes: '' };
-      try {
-        const attendance = await trainingAttendanceService.getAttendance(ownerId, b.sessionId, b.id);
-        return {
-          ...b,
-          score: attendance?.score ?? null,
-          notes: attendance?.notes ?? ''
-        };
-      } catch {
-        return { ...b, score: null, notes: '' };
-      }
-    })
-  );
-
-  const blockedIdSet = new Set(enrichedBlocked.map((e) => e.id));
-  const suggestedIds = Array.from(suggested).filter((id) => !blockedIdSet.has(id));
+  const eligibleEmployees = employeesList;
+  const suggestedIds = Array.from(suggested);
 
   return {
     eligibleEmployees,
-    blockedEmployees: enrichedBlocked,
+    blockedEmployees,
     suggestedIds,
     period: period ? { periodYear: period.periodYear, periodMonth: period.periodMonth } : null
   };

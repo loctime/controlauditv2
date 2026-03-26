@@ -91,13 +91,11 @@ export default function SessionExecutionView({ ownerId, session, onChanged }) {
   const [error, setError] = useState('');
   const [requiresEvaluation, setRequiresEvaluation] = useState(false);
   const [period, setPeriod] = useState(null);
-  const [periodLocksByEmployee, setPeriodLocksByEmployee] = useState({});
 
   const load = async () => {
     if (!ownerId || !session?.id) return;
     setError('');
     setPeriod(null);
-    setPeriodLocksByEmployee({});
     try {
       const [attendance, catalog] = await Promise.all([
         trainingAttendanceService.listAttendanceBySession(ownerId, session.id),
@@ -115,23 +113,6 @@ export default function SessionExecutionView({ ownerId, session, onChanged }) {
         return;
       }
       setPeriod(resolvedPeriod);
-
-      const locks = await trainingAttendanceService.listPeriodLocks(ownerId, {
-        companyId: session.companyId,
-        branchId: session.branchId,
-        trainingTypeId: session.trainingTypeId,
-        periodYear: resolvedPeriod.periodYear,
-        periodMonth: resolvedPeriod.periodMonth
-      });
-      const byEmployee = {};
-      (locks || []).forEach((lock) => {
-        const key = toEmployeeKey(lock.employeeId);
-        byEmployee[key] = {
-          consumed: true,
-          isOtherSession: lock.sessionId !== session.id
-        };
-      });
-      setPeriodLocksByEmployee(byEmployee);
     } catch (err) {
       setError(err.message || 'No se pudieron cargar los registros de ejecución.');
     }
@@ -144,7 +125,6 @@ export default function SessionExecutionView({ ownerId, session, onChanged }) {
   const updateRecord = async (employeeId, patch) => {
     const normalizedEmployeeId = toEmployeeKey(employeeId);
     if (!ownerId || !session?.id) return;
-    if (periodLocksByEmployee[normalizedEmployeeId]?.consumed) return;
     try {
       const current = records.find((record) => toEmployeeKey(record.employeeId) === normalizedEmployeeId) || {};
       await trainingAttendanceService.upsertAttendance(ownerId, session.id, normalizedEmployeeId, {
@@ -154,16 +134,6 @@ export default function SessionExecutionView({ ownerId, session, onChanged }) {
       await load();
       onChanged();
     } catch (err) {
-      if (err?.code === 'training_attendance_period_conflict') {
-        const current = records.find((record) => record.employeeId === employeeId) || {};
-        await load();
-        setError(buildAttendanceConflictMessage(
-          err,
-          current.employeeDisplayName || current.employeeName || current.employeeId
-        ));
-        return;
-      }
-
       setError(err.message || 'No se pudo actualizar la asistencia.');
     }
   };
@@ -194,20 +164,10 @@ export default function SessionExecutionView({ ownerId, session, onChanged }) {
       <Stack spacing={1.5}>
         {records.map((record) => {
           const employeeKey = toEmployeeKey(record.employeeId);
-          const lockInfo = periodLocksByEmployee[employeeKey];
-          const isReadOnly = Boolean(lockInfo?.consumed);
-          const showCompletedInOtherSession = Boolean(lockInfo?.isOtherSession);
           const evaluationDisabled = !requiresEvaluation || record.attendanceStatus !== TRAINING_ATTENDANCE_STATUSES.PRESENT;
 
           return (
             <Grid container spacing={1.5} key={employeeKey || String(index)} alignItems="center">
-              {showCompletedInOtherSession && (
-                <Grid item xs={12}>
-                  <Typography variant="caption" color="text.secondary" sx={{ fontStyle: 'italic' }}>
-                    Completado en otra sesión este mes
-                  </Typography>
-                </Grid>
-              )}
               <Grid item xs={12} md={3}>
                 <Typography>
                   {record.employeeDisplayName ||
@@ -223,7 +183,6 @@ export default function SessionExecutionView({ ownerId, session, onChanged }) {
                   label="Asistencia"
                   value={record.attendanceStatus || TRAINING_ATTENDANCE_STATUSES.PRESENT}
                   onChange={(e) => updateRecord(record.employeeId, { attendanceStatus: e.target.value })}
-                  disabled={isReadOnly}
                 >
                   {attendanceMenu}
                 </TextField>
@@ -236,7 +195,7 @@ export default function SessionExecutionView({ ownerId, session, onChanged }) {
                   label="Evaluación"
                   value={record.evaluationStatus || TRAINING_EVALUATION_STATUSES.PENDING}
                   onChange={(e) => updateRecord(record.employeeId, { evaluationStatus: e.target.value })}
-                  disabled={evaluationDisabled || isReadOnly}
+                  disabled={evaluationDisabled}
                 >
                   {evaluationMenu}
                 </TextField>
@@ -253,7 +212,6 @@ export default function SessionExecutionView({ ownerId, session, onChanged }) {
                       fileReference: e.target.value
                     }
                   })}
-                  disabled={isReadOnly}
                 />
               </Grid>
               <Grid item xs={12} md={3}>
@@ -268,7 +226,6 @@ export default function SessionExecutionView({ ownerId, session, onChanged }) {
                       fileReference: e.target.value
                     }
                   })}
-                  disabled={isReadOnly}
                 />
               </Grid>
             </Grid>
