@@ -177,7 +177,7 @@ export default function TrainingMatrixTable({
                     {hasHidden && (
                       <Button
                         size="small"
-                        onClick={() => onToggleExpand('_', month)}
+                        onClick={() => onToggleExpand('', month)}
                         sx={{
                           position: 'absolute',
                           right: -16,
