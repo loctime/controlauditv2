@@ -15,12 +15,15 @@ import {
 import RefreshIcon from '@mui/icons-material/Refresh';
 import SaveIcon from '@mui/icons-material/Save';
 import SettingsIcon from '@mui/icons-material/Settings';
+import AddIcon from '@mui/icons-material/Add';
 import IconButton from '@mui/material/IconButton';
 import Tooltip from '@mui/material/Tooltip';
+import Swal from 'sweetalert2';
 import { useAuth } from '@/components/context/AuthContext';
 import { useGlobalSelection } from '../../../../hooks/useGlobalSelection';
 import { useTrainingMatrix } from '../../../../hooks/training/useTrainingMatrix';
 import { useMatrixPendingChanges } from '../../../../hooks/training/useMatrixPendingChanges';
+import { trainingPlanService } from '@/services/training';
 import TrainingMatrixTable from '../components/matrix/TrainingMatrixTable';
 import AddPlanItemModal from '../components/matrix/AddPlanItemModal';
 import SaveSessionModal from '../components/matrix/SaveSessionModal';
@@ -89,6 +92,44 @@ export default function MatrixScreen() {
 
   // Expanded months per employee: Set of `${empleadoId}_${month}`
   const [expandedCells, setExpandedCells] = useState(new Set());
+
+  // State for creating annual plan
+  const [creatingPlan, setCreatingPlan] = useState(false);
+
+  async function handleCreateAnnualPlan() {
+    if (!effectiveSucursalId || !efectiveCompanyId) return;
+
+    setCreatingPlan(true);
+    try {
+      const plan = await trainingPlanService.ensureAnnualPlan(ownerId, {
+        companyId: efectiveCompanyId,
+        branchId: effectiveSucursalId,
+        year
+      });
+
+      if (plan && plan.id) {
+        Swal.fire({
+          icon: 'success',
+          title: '✅ Plan anual creado',
+          text: `Plan de capacitaciones para ${year} creado con 12 meses.`,
+          timer: 2000,
+          timerProgressBar: true
+        });
+        refresh();
+      } else {
+        throw new Error('Plan no se creó correctamente');
+      }
+    } catch (err) {
+      console.error('❌ Error creando plan anual:', err);
+      Swal.fire({
+        icon: 'error',
+        title: 'Error',
+        text: 'No se pudo crear el plan anual: ' + (err?.message || 'error desconocido')
+      });
+    } finally {
+      setCreatingPlan(false);
+    }
+  }
 
   function toggleExpandCell(empleadoId, month) {
     const key = `${empleadoId}_${month}`;
@@ -251,6 +292,33 @@ export default function MatrixScreen() {
             }}
           />
         </Box>
+      )}
+
+      {/* Button to create annual plan if missing */}
+      {effectiveSucursalId && !loading && !planId && (
+        <Alert
+          severity="warning"
+          sx={{ mb: 2, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}
+        >
+          <Box>
+            <Typography variant="body2" sx={{ fontWeight: 600 }}>
+              📋 Plan anual para {year} no existe
+            </Typography>
+            <Typography variant="caption" sx={{ color: 'inherit' }}>
+              Creá el plan anual con 12 meses para comenzar a cargar capacitaciones.
+            </Typography>
+          </Box>
+          <Button
+            variant="contained"
+            size="small"
+            startIcon={<AddIcon />}
+            onClick={handleCreateAnnualPlan}
+            disabled={creatingPlan}
+            sx={{ ml: 2, minWidth: 200 }}
+          >
+            {creatingPlan ? 'Creando...' : 'Crear plan anual'}
+          </Button>
+        </Alert>
       )}
 
       {effectiveSucursalId && (
