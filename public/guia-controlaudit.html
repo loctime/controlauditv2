@@ -271,7 +271,7 @@
         <a href="#formularios" class="hero-module"><span class="hm-icon">📋</span><span class="hm-title">Formularios</span><span class="hm-route">/formulario</span></a>
         <a href="#auditorias" class="hero-module"><span class="hm-icon">🔍</span><span class="hm-title">Auditorías</span><span class="hm-route">/auditoria</span></a>
         <a href="#accidentes" class="hero-module"><span class="hm-icon">⚠️</span><span class="hm-title">Accidentes</span><span class="hm-route">/accidentes</span></a>
-        <a href="#capacitaciones" class="hero-module"><span class="hm-icon">🎓</span><span class="hm-title">Capacitaciones</span><span class="hm-route">/training</span></a>
+        <a href="#capacitaciones" class="hero-module"><span class="hm-icon">🎓</span><span class="hm-title">Capacitaciones</span><span class="hm-route">/training · /training/config</span></a>
         <a href="#dashboards" class="hero-module"><span class="hm-icon">📊</span><span class="hm-title">Dashboards</span><span class="hm-route">/tablero</span></a>
         <a href="#calendario" class="hero-module"><span class="hm-icon">📅</span><span class="hm-title">Calendario</span><span class="hm-route">/panel</span></a>
         <a href="#permisos" class="hero-module"><span class="hm-icon">🔐</span><span class="hm-title">Permisos</span><span class="hm-route">Config.</span></a>
@@ -299,7 +299,7 @@
           <div class="card"><div class="card-icon">🏢</div><h4>Gestión de clientes</h4><p>Organizá tus clientes en empresas y sucursales. Todos los datos están asociados a una sucursal.</p></div>
           <div class="card"><div class="card-icon">🔍</div><h4>Auditorías en campo</h4><p>Realizá auditorías con formularios personalizados. Funciona offline con autoguardado automático.</p></div>
           <div class="card"><div class="card-icon">⚠️</div><h4>Accidentes e incidentes</h4><p>Registrá casos con evidencia fotográfica, días de reposo y seguimiento hasta el cierre.</p></div>
-          <div class="card"><div class="card-icon">🎓</div><h4>Capacitaciones</h4><p>Planificá el plan anual, registrá sesiones y hacé seguimiento del cumplimiento por empleado.</p></div>
+          <div class="card"><div class="card-icon">🎓</div><h4>Capacitaciones</h4><p>Plan anual por sucursal, matriz de cumplimiento y registro de sesiones con asistencia y evidencias.</p></div>
           <div class="card"><div class="card-icon">📊</div><h4>Indicadores HSE</h4><p>Dashboards con índices IF, IG e IA calculados en tiempo real sobre datos reales de accidentes.</p></div>
           <div class="card"><div class="card-icon">📅</div><h4>Planificación</h4><p>Agendá auditorías en el calendario y gestioná tu plan de trabajo semanal/mensual.</p></div>
         </div>
@@ -529,32 +529,42 @@
       <section id="capacitaciones" class="section">
         <div class="section-header">
           <div class="section-icon green">🎓</div>
-          <div class="section-title"><h2>Capacitaciones</h2><span class="route-badge">/training</span></div>
+          <div class="section-title"><h2>Capacitaciones</h2><span class="route-badge">/training · /training/config</span></div>
         </div>
         <div class="intro-card">
-          <p>Gestiona el <strong>ciclo completo de formación laboral</strong>: desde el plan anual hasta el registro de sesiones y el seguimiento de cumplimiento por empleado.</p>
+          <p>El módulo actual se centra en una <strong>matriz anual</strong> por sucursal: empleados en filas, capacitaciones del plan por mes en columnas. Ahí marcás asistencia pendiente, adjuntás evidencia al guardar y consultás historial sin salir de la pantalla.</p>
+          <p>El <strong>plan anual del año en curso</strong> se crea automáticamente al dar de alta una <strong>nueva sucursal</strong>. No hace falta crear el plan a mano en el flujo habitual.</p>
         </div>
         <div class="table-wrap">
           <table>
-            <thead><tr><th>Sección</th><th>Para qué sirve</th></tr></thead>
+            <thead><tr><th>Ruta</th><th>Qué es</th></tr></thead>
             <tbody>
-              <tr><td><strong>📊 Reportes</strong></td><td>KPIs operativos y reportes gerenciales — es la sección que se abre por defecto</td></tr>
-              <tr><td><strong>🗓️ Sesiones</strong></td><td>Ver y crear sesiones de capacitación concretas</td></tr>
-              <tr><td><strong>📋 Historial</strong></td><td>Registros de asistencia por período</td></tr>
-              <tr><td><strong>✅ Cumplimiento</strong></td><td>Matriz por rol y riesgo, con exportación PDF/ZIP</td></tr>
-              <tr><td><strong>👥 Personas</strong></td><td>Ficha de cumplimiento e historial de capacitaciones por empleado</td></tr>
-              <tr><td><strong>⚙️ Configuración</strong></td><td>Catálogo de tipos + planes anuales — <em>solo visible para el admin</em></td></tr>
+              <tr><td><code>/training</code></td><td><strong>Matriz de cumplimiento</strong>: seleccioná empresa/sucursal (si aplica), año y trabajá celda por celda. Botón de engranaje para ir a configuración.</td></tr>
+              <tr><td><code>/training/config</code></td><td><strong>Configuración</strong> (según permisos): catálogo de tipos de capacitación y gestión de planes anuales / ítems por mes.</td></tr>
+              <tr><td><code>/training/plans/:planId</code></td><td>Detalle de un plan anual con ítems y KPIs (enlace desde flujos de planificación).</td></tr>
             </tbody>
           </table>
         </div>
-        <h3 style="font-size:17px;margin-bottom:16px;margin-top:28px;">🗺️ Configurar el plan anual</h3>
+        <div class="info-box note">
+          <span class="icon">📌</span>
+          <div class="body"><strong>Matriz: reglas de edición</strong><p>Cada celda muestra el <strong>último estado</strong> registrado para ese empleado y esa capacitación del mes. Solo <strong>Presente</strong> bloquea la celda; <strong>Ausente</strong>, <strong>N/A</strong> y <strong>sin registro</strong> siguen editables. Mientras tenés cambios sin guardar, el sistema deja activa <strong>una sola columna</strong> (la del primer cambio) hasta que vaciés los pendientes o uses <strong>Guardar sesión</strong>.</p></div>
+        </div>
+        <h3 style="font-size:17px;margin-bottom:16px;margin-top:28px;">📊 Usar la matriz (<code>/training</code>)</h3>
         <div class="steps">
-          <div class="step"><div class="step-number">1</div><div class="step-body"><strong>Ir a Configuración en /training</strong><p>Solo visible para admins.</p></div></div>
-          <div class="step"><div class="step-number">2</div><div class="step-body"><strong>Definir el catálogo de tipos</strong><p>Creá los tipos de capacitación (ej: "Primeros auxilios"). Acá definís nombre, categoría, modalidad y si requiere evaluación — la vigencia se asigna más adelante, al agregar el tipo al plan.</p></div></div>
-          <div class="step"><div class="step-number">3</div><div class="step-body"><strong>Crear el plan anual</strong><p>Creá un plan para la empresa y sucursal. Al agregar cada tipo al plan definís la <strong>vigencia en meses</strong> (ej: 12 meses) y el mes de inicio — el sistema genera los meses planificados automáticamente.</p></div></div>
-          <div class="step"><div class="step-number">4</div><div class="step-body"><strong>Registrar sesiones y asistencia</strong><p>A medida que ocurren las capacitaciones, registralas con asistentes y cerrá la sesión.</p></div></div>
+          <div class="step"><div class="step-number">1</div><div class="step-body"><strong>Elegir sucursal y año</strong><p>Sin sucursal no se carga la grilla. Podés cambiar el año (incluye vista de años anteriores en solo lectura).</p></div></div>
+          <div class="step"><div class="step-number">2</div><div class="step-body"><strong>Agregar capacitaciones al mes</strong><p>Con el botón <strong>+</strong> en la cabecera del mes sumás un tipo del catálogo al plan. El mismo tipo no puede repetirse dos veces en el <em>mismo mes del plan</em> (evita columnas duplicadas).</p></div></div>
+          <div class="step"><div class="step-number">3</div><div class="step-body"><strong>Marcar celdas</strong><p>Al pasar el mouse aparece el selector: Presente, Ausente o N/A. Los cambios quedan en borrador (borde discontinuo) hasta confirmar.</p></div></div>
+          <div class="step"><div class="step-number">4</div><div class="step-body"><strong>Guardar sesión</strong><p>Con pendientes, usá el botón flotante <strong>Guardar sesión</strong>: indicá fecha, hora, ubicación opcional y evidencias. Se crea la sesión y la asistencia de todos los empleados marcados en esa columna del plan. Un mismo empleado puede tener varias sesiones en el período sin bloqueo por “mismo tipo en el mismo mes” en el registro desde la matriz.</p></div></div>
+          <div class="step"><div class="step-number">5</div><div class="step-body"><strong>Paneles laterales (drawers)</strong><p><strong>Clic en la celda</strong> (Presente o N/A con historial): detalle de sesiones y evidencias. <strong>Clic en el nombre del empleado</strong>: resumen anual de capacitaciones de esa persona. <strong>Clic en el nombre del mes</strong>: estado de todos los empleados en ese mes; en ambos últimos casos podés expandir para ver evidencias.</p></div></div>
+        </div>
+        <h3 style="font-size:17px;margin-bottom:16px;margin-top:28px;">🗺️ Catálogo y plan (<code>/training/config</code>)</h3>
+        <div class="steps">
+          <div class="step"><div class="step-number">1</div><div class="step-body"><strong>Abrir Configuración</strong><p>Desde el ícono de engranaje en la matriz o navegando a <code>/training/config</code>. Depende de permisos de administrador.</p></div></div>
+          <div class="step"><div class="step-number">2</div><div class="step-body"><strong>Catálogo de tipos</strong><p>Alta de tipos de capacitación (nombre, categoría, modalidad, evaluación, etc.). La vigencia en meses se define al incorporar el tipo al plan.</p></div></div>
+          <div class="step"><div class="step-number">3</div><div class="step-body"><strong>Planes anuales</strong><p>Revisá o ajustá ítems del plan por empresa/sucursal. Si algo falló al crear la sucursal, la matriz puede ofrecer crear el plan del año seleccionado como respaldo.</p></div></div>
         </div>
         <h3 style="font-size:17px;margin-bottom:16px;margin-top:20px;">🔄 Estados de una sesión</h3>
+        <p style="font-size:14px;color:var(--text-muted);margin-bottom:12px;">Aplica a sesiones gestionadas con el flujo completo de ejecución (programación, cierre, etc.). Desde la matriz, al guardar, la sesión queda registrada como cerrada.</p>
         <div class="status-flow">
           <div class="status-bubble">📝 Borrador</div>
           <span style="color:var(--text-muted);font-size:18px;padding:0 4px;">→</span>
@@ -688,7 +698,7 @@
           <div style="font-size:14px;font-weight:700;">🛡️ ControlAudit</div>
           <div style="font-size:12px;color:var(--text-muted);">Guía de usuario · Versión 2</div>
         </div>
-        <div style="font-size:12px;color:var(--text-muted);">Generado el 23 de marzo de 2026</div>
+        <div style="font-size:12px;color:var(--text-muted);">Actualizado · marzo 2026</div>
       </div>
 
     </div><!-- /content -->
