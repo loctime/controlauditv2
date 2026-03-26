@@ -12,7 +12,7 @@ import {
 import { dbAudit } from '../firebaseControlFile';
 import { firestoreRoutesCore } from '../core/firestore/firestoreRoutes.core';
 import { addDocWithAppId } from '../firebase/firestoreAppWriter';
-import { trainingCatalogService, trainingRequirementService } from './training';
+import { trainingCatalogService, trainingRequirementService, trainingPlanService } from './training';
 import { registrarAccionSistema, normalizeSucursal } from '../utils/firestoreUtils';
 
 async function autoSeedTrainingRulesForBranch({ ownerId, companyId, branchId }) {
@@ -73,6 +73,12 @@ export const sucursalService = {
     if (!ownerId) throw new Error('ownerId no disponible');
     if (!data?.empresaId) throw new Error('empresaId es requerido');
     if (!data?.nombre || !String(data.nombre).trim()) throw new Error('nombre de sucursal es requerido');
+
+    logger.debug('[sucursalService.crearSucursalCompleta] iniciando creación', {
+      ownerId,
+      empresaId: data.empresaId,
+      nombre: data.nombre
+    });
 
     const actorUid = user?.uid || null;
     const actorRole = user?.role || null;
@@ -138,6 +144,43 @@ export const sucursalService = {
       logger.debug('[sucursalService.crearSucursalCompleta] autoSeedTrainingRulesForBranch', seedResult);
     } catch (err) {
       logger.warn('[sucursalService.crearSucursalCompleta] auto-seed reglas falló', err);
+    }
+
+    // Side-effect: crear plan anual del año en curso para la sucursal nueva
+    try {
+      const currentYear = Number(new Date().getFullYear());
+      if (!Number.isFinite(currentYear) || currentYear < 2000 || currentYear > 2100) {
+        throw new Error(`Invalid year: ${currentYear}`);
+      }
+      logger.debug('[sucursalService.crearSucursalCompleta] iniciando auto-seed de plan anual', {
+        ownerId,
+        branchId: docRef.id,
+        companyId: data.empresaId,
+        currentYear
+      });
+      const plan = await trainingPlanService.ensureAnnualPlan(ownerId, {
+        companyId: data.empresaId,
+        branchId: docRef.id,
+        year: currentYear
+      });
+      if (!plan || !plan.id) {
+        logger.error('[sucursalService.crearSucursalCompleta] plan anual no se creó (resultado vacío)', {
+          branchId: docRef.id,
+          planResult: plan
+        });
+      } else {
+        logger.debug('[sucursalService.crearSucursalCompleta] plan anual asegurado exitosamente', {
+          planId: plan.id,
+          year: currentYear,
+          branchId: docRef.id
+        });
+      }
+    } catch (err) {
+      logger.error('[sucursalService.crearSucursalCompleta] error asegurando plan anual:', {
+        error: err?.message || String(err),
+        stack: err?.stack,
+        branchId: docRef.id
+      });
     }
 
     return { id: docRef.id, seedResult };
