@@ -6,101 +6,91 @@ import {
   Stack,
   Typography,
   Alert,
-  Divider,
-  Chip
+  Divider
 } from '@mui/material';
 import { useAuth } from '@/components/context/AuthContext';
 import { trainingSessionService } from '../../../../../services/training/trainingSessionService';
 import { trainingAttendanceService } from '../../../../../services/training/trainingAttendanceService';
 import { convertirShareTokenAUrl } from '../../../../../utils/imageUtils';
-
-const MONTH_NAMES = [
-  '', 'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio',
-  'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'
-];
+import { TRAINING_ATTENDANCE_STATUSES, TRAINING_EVALUATION_STATUSES } from '../../../../../types/trainingDomain';
 
 /**
- * Drawer lateral para ver detalles de una sesión guardada.
+ * Drawer lateral para ver historial de sesiones de una celda.
  *
  * @param {{
  *   open: boolean,
  *   onClose: () => void,
- *   sessionId: string,
+ *   sessionIds: string[],
  *   empleadoId: string,
- *   trainingTypeName: string
+ *   trainingTypeName: string,
+ *   isTerminal?: boolean
  * }} props
  */
 export default function SessionViewDrawer({
   open,
   onClose,
-  sessionId,
+  sessionIds = [],
   empleadoId,
-  trainingTypeName
+  trainingTypeName,
+  isTerminal = false
 }) {
   const { userProfile } = useAuth();
   const ownerId = userProfile?.ownerId;
 
-  const [session, setSession] = useState(null);
-  const [attendance, setAttendance] = useState(null);
+  const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
   useEffect(() => {
-    if (!open || !ownerId || !sessionId || !empleadoId) return;
+    if (!open || !ownerId || !empleadoId || !sessionIds.length) return;
 
     setLoading(true);
     setError('');
 
     (async () => {
       try {
-        const [sess, att] = await Promise.all([
-          trainingSessionService.getSessionById(ownerId, sessionId),
-          trainingAttendanceService.getAttendance(ownerId, sessionId, empleadoId)
-        ]);
+        const uniqueSessionIds = [...new Set(sessionIds)];
+        const loaded = await Promise.all(uniqueSessionIds.map(async (id) => {
+          const [session, attendance] = await Promise.all([
+            trainingSessionService.getSessionById(ownerId, id),
+            trainingAttendanceService.getAttendance(ownerId, id, empleadoId)
+          ]);
+          return { sessionId: id, session, attendance };
+        }));
 
-        setSession(sess);
-        setAttendance(att);
+        const toDateValue = (session) => {
+          const raw = session?.executedDate || session?.scheduledDate || session?.createdAt;
+          if (!raw) return new Date(0);
+          if (typeof raw?.toDate === 'function') return raw.toDate();
+          return new Date(raw);
+        };
+
+        loaded.sort((a, b) => toDateValue(b.session) - toDateValue(a.session));
+        setItems(loaded.filter((x) => x.session));
       } catch (err) {
         setError(err?.message || 'Error al cargar la sesión.');
       } finally {
         setLoading(false);
       }
     })();
-  }, [open, ownerId, sessionId, empleadoId]);
+  }, [open, ownerId, sessionIds, empleadoId]);
 
-  if (!session) {
-    return (
-      <Drawer
-        anchor="right"
-        open={open}
-        onClose={onClose}
-        PaperProps={{
-          sx: {
-            width: { xs: '100%', sm: 400 },
-            mt: '64px',
-            height: 'calc(100vh - 64px)'
-          }
-        }}
-      >
-        {loading && (
-          <Box sx={{ display: 'flex', justifyContent: 'center', py: 4 }}>
-            <CircularProgress />
-          </Box>
-        )}
-        {error && <Alert severity="error" sx={{ m: 2 }}>{error}</Alert>}
-      </Drawer>
-    );
+  function resolveEmployeeStatus(attendance) {
+    if (!attendance) return { label: 'Sin registro', color: '#9e9e9e', bg: '#f5f5f5' };
+    if (
+      attendance.status === 'NOT_APPLICABLE' ||
+      attendance.evaluationStatus === TRAINING_EVALUATION_STATUSES.NOT_APPLICABLE
+    ) {
+      return { label: 'No aplica', color: '#616161', bg: '#eeeeee' };
+    }
+    if (
+      attendance.attended === true ||
+      attendance.attendanceStatus === TRAINING_ATTENDANCE_STATUSES.PRESENT
+    ) {
+      return { label: 'Presente', color: '#2e7d32', bg: '#e8f5e9' };
+    }
+    return { label: 'Ausente', color: '#c62828', bg: '#ffebee' };
   }
-
-  const scheduledDate = session.scheduledDate?.toDate?.() || new Date(session.scheduledDate);
-  const dateStr = scheduledDate.toLocaleDateString('es-AR');
-  const timeStr = scheduledDate.toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' });
-
-  const attendanceStatus = attendance?.attendanceStatus || 'N/A';
-  const isPresent = attendanceStatus === 'present';
-  const isNotApplicable = attendanceStatus === 'not_applicable';
-
-  const evidenceIds = attendance?.evidenceIds || [];
 
   return (
     <Drawer
@@ -127,97 +117,75 @@ export default function SessionViewDrawer({
           </Typography>
         </Box>
 
-        <Divider />
-
-        {/* Fecha y hora */}
-        <Box>
-          <Typography variant="body2" color="text.secondary">
-            Fecha y hora
-          </Typography>
-          <Typography variant="body1">
-            {dateStr} a las {timeStr}
-          </Typography>
-        </Box>
-
-        {/* Ubicación */}
-        {session.location && (
-          <>
-            <Box>
-              <Typography variant="body2" color="text.secondary">
-                Ubicación
-              </Typography>
-              <Typography variant="body1">{session.location}</Typography>
-            </Box>
-            <Divider />
-          </>
+        {isTerminal && (
+          <Alert severity="info">
+            Estado final — no se pueden registrar más cambios
+          </Alert>
         )}
 
-        {/* Instructor */}
-        <Box>
-          <Typography variant="body2" color="text.secondary">
-            Instructor
-          </Typography>
-          <Typography variant="body1">{session.instructorName || session.instructorId || 'N/A'}</Typography>
-        </Box>
-
-        <Divider />
-
-        {/* Estado del empleado */}
-        <Box>
-          <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
-            Estado del empleado
-          </Typography>
-          <Chip
-            label={isPresent ? 'Realizado ✓' : isNotApplicable ? 'No aplica' : 'No realizado'}
-            color={isPresent ? 'success' : isNotApplicable ? 'default' : 'error'}
-            variant="outlined"
-            size="small"
-          />
-        </Box>
-
-        <Divider />
-
-        {/* Evidencias */}
-        {evidenceIds.length > 0 && (
-          <Box>
-            <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
-              Evidencias ({evidenceIds.length})
-            </Typography>
-            <Stack spacing={1}>
-              {evidenceIds.map((shareToken, idx) => {
-                const url = convertirShareTokenAUrl(shareToken);
-                const isImage = /\.(jpg|jpeg|png|gif|webp)$/i.test(url);
-
-                return isImage ? (
-                  <Box
-                    key={idx}
-                    component="img"
-                    src={url}
-                    alt={`Evidencia ${idx + 1}`}
-                    sx={{
-                      width: '100%',
-                      borderRadius: 1,
-                      maxHeight: 200,
-                      objectFit: 'cover'
-                    }}
-                  />
-                ) : (
-                  <Typography
-                    key={idx}
-                    component="a"
-                    href={url}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    variant="body2"
-                    sx={{ color: 'primary.main', cursor: 'pointer', wordBreak: 'break-all' }}
-                  >
-                    Archivo {idx + 1}
-                  </Typography>
-                );
-              })}
-            </Stack>
+        {loading && (
+          <Box sx={{ display: 'flex', justifyContent: 'center', py: 3 }}>
+            <CircularProgress />
           </Box>
         )}
+
+        {!loading && items.map(({ sessionId, session, attendance }) => {
+          const dateValue = session?.executedDate || session?.scheduledDate || session?.createdAt;
+          const date = typeof dateValue?.toDate === 'function' ? dateValue.toDate() : new Date(dateValue);
+          const status = resolveEmployeeStatus(attendance);
+          const evidenceIds = attendance?.evidenceIds || [];
+
+          return (
+            <Box key={sessionId} sx={{ border: '1px solid #eeeeee', borderRadius: 1.5, p: 1.5 }}>
+              <Stack spacing={1.25}>
+                <Typography variant="body2" sx={{ fontWeight: 600 }}>
+                  {date.toLocaleDateString('es-AR')} — {date.toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' })}
+                </Typography>
+
+                <Box sx={{ display: 'inline-flex', px: 1, py: 0.25, borderRadius: 1, bgcolor: status.bg, color: status.color, width: 'fit-content', fontSize: '0.78rem', fontWeight: 700 }}>
+                  {status.label}
+                </Box>
+
+                <Typography variant="body2" color="text.secondary">
+                  Instructor: {session?.instructor || session?.instructorName || session?.instructorId || 'N/A'}
+                </Typography>
+
+                {evidenceIds.length > 0 && (
+                  <Stack spacing={0.75}>
+                    <Typography variant="caption" color="text.secondary">
+                      Evidencias ({evidenceIds.length})
+                    </Typography>
+                    {evidenceIds.map((shareToken, idx) => {
+                      const url = convertirShareTokenAUrl(shareToken);
+                      const isImage = /\.(jpg|jpeg|png|gif|webp)$/i.test(url);
+                      return isImage ? (
+                        <Box
+                          key={`${sessionId}-${idx}`}
+                          component="img"
+                          src={url}
+                          alt={`Evidencia ${idx + 1}`}
+                          sx={{ width: '100%', borderRadius: 1, maxHeight: 180, objectFit: 'cover' }}
+                        />
+                      ) : (
+                        <Typography
+                          key={`${sessionId}-${idx}`}
+                          component="a"
+                          href={url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          variant="caption"
+                          sx={{ color: 'primary.main', wordBreak: 'break-all' }}
+                        >
+                          Archivo {idx + 1}
+                        </Typography>
+                      );
+                    })}
+                  </Stack>
+                )}
+              </Stack>
+            </Box>
+          );
+        })}
 
         {error && <Alert severity="error">{error}</Alert>}
       </Stack>

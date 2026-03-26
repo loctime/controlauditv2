@@ -18,15 +18,13 @@ import CloseIcon from '@mui/icons-material/Close';
 import { useAuth } from '@/components/context/AuthContext';
 import { trainingSessionService } from '../../../../../services/training/trainingSessionService';
 import { trainingAttendanceService } from '../../../../../services/training/trainingAttendanceService';
-import { trainingPlanService } from '../../../../../services/training/trainingPlanService';
 import { uploadFileWithContext } from '../../../../../services/unifiedFileUploadService';
-import { TRAINING_SESSION_STATUSES, TRAINING_ATTENDANCE_STATUSES } from '../../../../../types/trainingDomain';
+import {
+  TRAINING_SESSION_STATUSES,
+  TRAINING_ATTENDANCE_STATUSES,
+  TRAINING_EVALUATION_STATUSES
+} from '../../../../../types/trainingDomain';
 import { CELL_STATE } from '../../../../../hooks/training/useTrainingMatrix';
-
-const MONTH_NAMES = [
-  '', 'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio',
-  'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'
-];
 
 function todayString() {
   return new Date().toISOString().slice(0, 10);
@@ -43,7 +41,7 @@ function nowTimeString() {
  * @param {{
  *   open: boolean,
  *   onClose: () => void,
- *   pendingChanges: Object,    // { key: { empleadoId, planItemId, newState } }
+ *   pendingChanges: Object,    // { [empleadoId_planItemId]: 'RED' | 'GREEN' | 'GRAY' }
  *   columnsByMonth: Object,    // para resolver trainingTypeId y plannedMonth por planItemId
  *   planId: string|null,
  *   sucursalId: string,
@@ -84,10 +82,15 @@ export default function SaveSessionModal({
     });
   });
 
-  const changeList = Object.values(pendingChanges);
-  const completedChanges = changeList.filter(c => c.newState === CELL_STATE.COMPLETE);
-  const naChanges = changeList.filter(c => c.newState === CELL_STATE.NOT_APPLICABLE);
-  const notTrainedChanges = changeList.filter(c => c.newState === CELL_STATE.NOT_TRAINED);
+  const changeList = Object.entries(pendingChanges).map(([key, newState]) => {
+    const splitAt = key.indexOf('_');
+    const empleadoId = splitAt >= 0 ? key.slice(0, splitAt) : key;
+    const planItemId = splitAt >= 0 ? key.slice(splitAt + 1) : '';
+    return { key, empleadoId, planItemId, newState };
+  });
+  const completedChanges = changeList.filter(c => c.newState === CELL_STATE.GREEN);
+  const naChanges = changeList.filter(c => c.newState === CELL_STATE.GRAY);
+  const notTrainedChanges = changeList.filter(c => c.newState === CELL_STATE.RED);
 
   function handleFileAdd(e) {
     const added = Array.from(e.target.files || []);
@@ -110,35 +113,40 @@ export default function SaveSessionModal({
       const [hh, mm] = hora.split(':').map(Number);
       const scheduledDate = new Date(y, mo - 1, d, hh, mm, 0);
 
-      // Derive a single trainingTypeId and periodMonth for the session.
-      // If there are "Realizado" changes, use the first one. Otherwise use any planItem.
-      const firstChange = completedChanges[0] || changeList[0];
-      const firstMeta = firstChange ? planItemMeta[firstChange.planItemId] : null;
+      // Crear sesión por planItem para mantener consistencia de trainingType/period.
+      const changesByPlanItem = {};
+      changeList.forEach((change) => {
+        if (!changesByPlanItem[change.planItemId]) changesByPlanItem[change.planItemId] = [];
+        changesByPlanItem[change.planItemId].push(change);
+      });
 
-      let sessionId = null;
+      const sessionSaveTasks = Object.entries(changesByPlanItem).map(async ([planItemId, planItemChanges]) => {
+        const meta = planItemMeta[planItemId];
+        if (!meta) return;
 
-      // Create session only when there are "Realizado" changes
-      if (completedChanges.length > 0 && firstMeta) {
         const session = await trainingSessionService.createSession(ownerId, {
           branchId: sucursalId,
-          trainingTypeId: firstMeta.trainingTypeId,
+          trainingTypeId: meta.trainingTypeId,
           periodYear: year,
-          periodMonth: firstMeta.plannedMonth,
+          periodMonth: meta.plannedMonth,
           scheduledDate,
           executedDate: scheduledDate,
+          date: fecha,
+          time: hora,
           location: ubicacion || null,
+          instructor: instructorEmail,
           instructorName: instructorEmail,
           planId: planId || null,
-          planItemId: firstChange.planItemId,
+          planItemId,
           sessionOrigin: planId ? 'plan' : 'ad_hoc',
           status: TRAINING_SESSION_STATUSES.CLOSED
         });
-        sessionId = session?.id || session;
+        const sessionId = session?.id || session;
 
-        // Upload evidence files
+        let evidenceIds = [];
         if (files.length > 0 && sessionId) {
-          await Promise.allSettled(files.map(file =>
-            uploadFileWithContext({
+          const uploadResults = await Promise.allSettled(
+            files.map((file) => uploadFileWithContext({
               file,
               fecha: scheduledDate,
               uploadedBy: instructorEmail,
@@ -151,68 +159,47 @@ export default function SaveSessionModal({
                 module: 'training',
                 entityId: sessionId
               }
-            })
-          ));
+            }))
+          );
+          evidenceIds = uploadResults
+            .filter((r) => r.status === 'fulfilled' && r.value?.shareToken)
+            .map((r) => r.value.shareToken);
         }
 
-        // Register attendance for all "Realizado" changes
-        await Promise.all(completedChanges.map(change => {
-          const meta = planItemMeta[change.planItemId];
-          if (!meta) return Promise.resolve();
+        await Promise.all(planItemChanges.map((change) => {
+          const statePayload = (() => {
+            if (change.newState === CELL_STATE.GREEN) {
+              return {
+                attendanceStatus: TRAINING_ATTENDANCE_STATUSES.PRESENT,
+                attended: true,
+                status: 'COMPLETED'
+              };
+            }
+            if (change.newState === CELL_STATE.GRAY) {
+              return {
+                attendanceStatus: TRAINING_ATTENDANCE_STATUSES.INVITED,
+                evaluationStatus: TRAINING_EVALUATION_STATUSES.NOT_APPLICABLE,
+                attended: false,
+                status: 'NOT_APPLICABLE'
+              };
+            }
+            return {
+              attendanceStatus: TRAINING_ATTENDANCE_STATUSES.UNJUSTIFIED_ABSENCE,
+              attended: false,
+              status: 'ABSENT'
+            };
+          })();
+
           return trainingAttendanceService.upsertAttendance(ownerId, sessionId, change.empleadoId, {
-            attendanceStatus: TRAINING_ATTENDANCE_STATUSES.PRESENT
+            planItemId,
+            trainingTypeId: meta.trainingTypeId,
+            evidenceIds,
+            ...statePayload
           });
         }));
-      }
+      });
 
-      // Handle "No aplica" changes: update noAplicaEmployeeIds[] on each planItem
-      if (naChanges.length > 0) {
-        // Group by planItemId to batch updates
-        const byPlanItem = {};
-        naChanges.forEach(change => {
-          if (!byPlanItem[change.planItemId]) byPlanItem[change.planItemId] = [];
-          byPlanItem[change.planItemId].push(change.empleadoId);
-        });
-
-        await Promise.all(Object.entries(byPlanItem).map(async ([planItemId, empIds]) => {
-          // Get current noAplicaEmployeeIds and merge
-          const current = columnsByMonth;
-          // We find the col to get existing noAplicaEmployeeIds
-          let existingNoAplica = [];
-          Object.values(columnsByMonth).forEach(cols => {
-            const col = cols.find(c => c.planItemId === planItemId);
-            if (col) existingNoAplica = col.noAplicaEmployeeIds || [];
-          });
-          const merged = [...new Set([...existingNoAplica, ...empIds])];
-          return trainingPlanService.updatePlanItem(ownerId, planItemId, {
-            noAplicaEmployeeIds: merged
-          });
-        }));
-      }
-
-      // Handle "No realizado" changes: remove from noAplicaEmployeeIds[] if present
-      if (notTrainedChanges.length > 0) {
-        const byPlanItem = {};
-        notTrainedChanges.forEach(change => {
-          if (!byPlanItem[change.planItemId]) byPlanItem[change.planItemId] = [];
-          byPlanItem[change.planItemId].push(change.empleadoId);
-        });
-
-        await Promise.all(Object.entries(byPlanItem).map(async ([planItemId, empIds]) => {
-          let existingNoAplica = [];
-          Object.values(columnsByMonth).forEach(cols => {
-            const col = cols.find(c => c.planItemId === planItemId);
-            if (col) existingNoAplica = col.noAplicaEmployeeIds || [];
-          });
-          const filtered = existingNoAplica.filter(id => !empIds.includes(id));
-          // Only update if something actually changed
-          if (filtered.length !== existingNoAplica.length) {
-            return trainingPlanService.updatePlanItem(ownerId, planItemId, {
-              noAplicaEmployeeIds: filtered
-            });
-          }
-        }));
-      }
+      await Promise.all(sessionSaveTasks);
 
       onSaved();
       onClose();
@@ -236,13 +223,13 @@ export default function SaveSessionModal({
           {/* Summary */}
           <Box sx={{ bgcolor: '#f5f5f5', borderRadius: 1, p: 1.5, fontSize: '0.82rem', color: '#555' }}>
             {completedChanges.length > 0 && (
-              <div>✅ {completedChanges.length} realizad{completedChanges.length !== 1 ? 'os' : 'o'}</div>
+              <div>✅ {completedChanges.length} presente{completedChanges.length !== 1 ? 's' : ''}</div>
             )}
             {naChanges.length > 0 && (
               <div>— {naChanges.length} no aplica</div>
             )}
             {notTrainedChanges.length > 0 && (
-              <div>❌ {notTrainedChanges.length} no realizado{notTrainedChanges.length !== 1 ? 's' : ''}</div>
+              <div>❌ {notTrainedChanges.length} ausente{notTrainedChanges.length !== 1 ? 's' : ''}</div>
             )}
           </Box>
 

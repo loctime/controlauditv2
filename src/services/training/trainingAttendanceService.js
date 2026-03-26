@@ -277,6 +277,8 @@ export const trainingAttendanceService = {
       branchId,
       planId,
       planItemId,
+      attended: payload.attended ?? null,
+      status: payload.status || null,
       requiresEvaluation: Boolean(requiresEvaluation),
       attendanceStatus: payload.attendanceStatus || TRAINING_ATTENDANCE_STATUSES.INVITED,
       evaluationStatus: resolvedEvaluationStatus,

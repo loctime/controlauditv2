@@ -284,9 +284,10 @@ export default function MatrixScreen() {
       <SessionViewDrawer
         open={viewDrawerOpen}
         onClose={() => setViewDrawerOpen(false)}
-        sessionId={viewDrawerData.sessionId}
+        sessionIds={viewDrawerData.sessionIds}
         empleadoId={viewDrawerData.empleadoId}
         trainingTypeName={viewDrawerData.trainingTypeName}
+        isTerminal={viewDrawerData.isTerminal}
       />
     </Box>
   );
