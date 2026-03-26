@@ -79,21 +79,32 @@ const AuthContextComponent = ({ children }) => {
       let empresaARestaurar = 'todas';
       let sucursalARestaurar = 'todas';
 
-      // Validar y restaurar empresa
+      // EMPRESA: Si hay guardado y es válido, usar. Si no, auto-seleccionar la primera.
       if (savedEmpresa && savedEmpresa !== 'todas') {
         const existe = empresasDisponibles.find(e => e.id === savedEmpresa);
-        if (existe) {
-          empresaARestaurar = savedEmpresa;
-        }
+        empresaARestaurar = existe ? savedEmpresa : (empresasDisponibles.length > 0 ? empresasDisponibles[0].id : 'todas');
+      } else if (!savedEmpresa && empresasDisponibles.length > 0) {
+        // No hay guardado, auto-seleccionar primera empresa
+        empresaARestaurar = empresasDisponibles[0].id;
       }
 
-      // Validar y restaurar sucursal (solo si la empresa es válida)
-      if (savedSucursal && savedSucursal !== 'todas' && empresaARestaurar !== 'todas') {
-        const existe = sucursalesDisponibles.find(
-          s => s.id === savedSucursal && s.empresaId === empresaARestaurar
-        );
-        if (existe) {
-          sucursalARestaurar = savedSucursal;
+      // SUCURSAL: Si la empresa es válida, intentar restaurar guardado o auto-seleccionar primera
+      if (empresaARestaurar !== 'todas') {
+        let sucursalValida = null;
+
+        if (savedSucursal && savedSucursal !== 'todas') {
+          sucursalValida = sucursalesDisponibles.find(
+            s => s.id === savedSucursal && s.empresaId === empresaARestaurar
+          );
+        }
+
+        if (!sucursalValida) {
+          // No hay guardado válido, auto-seleccionar primera sucursal de la empresa
+          sucursalValida = sucursalesDisponibles.find(s => s.empresaId === empresaARestaurar);
+        }
+
+        if (sucursalValida) {
+          sucursalARestaurar = sucursalValida.id;
         }
       }
 
