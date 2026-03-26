@@ -4,6 +4,7 @@ import CheckIcon from '@mui/icons-material/Check';
 import CloseIcon from '@mui/icons-material/Close';
 import RemoveIcon from '@mui/icons-material/Remove';
 import HistoryIcon from '@mui/icons-material/History';
+import ClearIcon from '@mui/icons-material/Clear';
 import { CELL_STATE } from '../../../../../hooks/training/useTrainingMatrix';
 
 const STATE_CONFIG = {
@@ -102,6 +103,28 @@ export default function MatrixCell({ cellData, pendingState, onPendingChange, on
               </IconButton>
             </Tooltip>
           ))}
+          {/* Desmarcar button — mostrar si hay algo pendiente que no sea BLANK */}
+          {isPending && (
+            <Tooltip title="Desmarcar" placement="top">
+              <IconButton
+                size="small"
+                onClick={e => {
+                  e.stopPropagation();
+                  onPendingChange(CELL_STATE.BLANK);
+                }}
+                sx={{
+                  width: 22,
+                  height: 22,
+                  p: 0,
+                  color: '#999',
+                  bgcolor: 'transparent',
+                  '&:hover': { bgcolor: '#99999933' }
+                }}
+              >
+                <ClearIcon sx={{ fontSize: 14 }} />
+              </IconButton>
+            </Tooltip>
+          )}
         </Box>
       )}
 
