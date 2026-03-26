@@ -11,8 +11,8 @@ import {
 import { useAuth } from '@/components/context/AuthContext';
 import { trainingSessionService } from '../../../../../services/training/trainingSessionService';
 import { trainingAttendanceService } from '../../../../../services/training/trainingAttendanceService';
-import { convertirShareTokenAUrl } from '../../../../../utils/imageUtils';
 import { TRAINING_ATTENDANCE_STATUSES, TRAINING_EVALUATION_STATUSES } from '../../../../../types/trainingDomain';
+import EvidencePreviewList from './EvidencePreviewList';
 
 /**
  * Drawer lateral para ver historial de sesiones de una celda.
@@ -159,38 +159,12 @@ export default function SessionViewDrawer({
                   Instructor: {session?.instructor || session?.instructorName || session?.instructorId || 'N/A'}
                 </Typography>
 
-                {evidenceIds.length > 0 && (
-                  <Stack spacing={0.75}>
-                    <Typography variant="caption" color="text.secondary">
-                      Evidencias ({evidenceIds.length})
-                    </Typography>
-                    {evidenceIds.map((shareToken, idx) => {
-                      const url = convertirShareTokenAUrl(shareToken);
-                      const isImage = /\.(jpg|jpeg|png|gif|webp)$/i.test(url);
-                      return isImage ? (
-                        <Box
-                          key={`${sessionId}-${idx}`}
-                          component="img"
-                          src={url}
-                          alt={`Evidencia ${idx + 1}`}
-                          sx={{ width: '100%', borderRadius: 1, maxHeight: 180, objectFit: 'cover' }}
-                        />
-                      ) : (
-                        <Typography
-                          key={`${sessionId}-${idx}`}
-                          component="a"
-                          href={url}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          variant="caption"
-                          sx={{ color: 'primary.main', wordBreak: 'break-all' }}
-                        >
-                          Archivo {idx + 1}
-                        </Typography>
-                      );
-                    })}
-                  </Stack>
-                )}
+                <Stack spacing={0.75}>
+                  <Typography variant="caption" color="text.secondary">
+                    Evidencias ({evidenceIds.length})
+                  </Typography>
+                  <EvidencePreviewList evidenceIds={evidenceIds} previewHeight={160} />
+                </Stack>
               </Stack>
             </Box>
           );

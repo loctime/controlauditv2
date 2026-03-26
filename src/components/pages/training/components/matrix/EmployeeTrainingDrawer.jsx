@@ -12,8 +12,8 @@ import {
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import { useAuth } from '@/components/context/AuthContext';
 import { trainingAttendanceService } from '../../../../../services/training/trainingAttendanceService';
-import { convertirShareTokenAUrl } from '../../../../../utils/imageUtils';
 import { TRAINING_ATTENDANCE_STATUSES, TRAINING_EVALUATION_STATUSES } from '../../../../../types/trainingDomain';
+import EvidencePreviewList from './EvidencePreviewList';
 
 const MONTH_NAMES = [
   '', 'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio',
@@ -55,46 +55,6 @@ function formatSessionDate(record) {
   const date = toDate(dateValue);
   if (!date || Number.isNaN(date.getTime())) return 'Fecha no disponible';
   return `${date.toLocaleDateString('es-AR')} \u2014 ${date.toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' })}`;
-}
-
-function renderEvidenceList(evidenceIds = [], sessionKey) {
-  if (!evidenceIds.length) {
-    return (
-      <Typography variant="caption" color="text.secondary">
-        Sin evidencia
-      </Typography>
-    );
-  }
-
-  return (
-    <Stack spacing={0.5}>
-      {evidenceIds.map((shareToken, idx) => {
-        const url = convertirShareTokenAUrl(shareToken);
-        const isImage = /\.(jpg|jpeg|png|gif|webp)$/i.test(url);
-        return isImage ? (
-          <Box
-            key={`${sessionKey}-img-${idx}`}
-            component="img"
-            src={url}
-            alt={`Evidencia ${idx + 1}`}
-            sx={{ width: '100%', borderRadius: 1, maxHeight: 180, objectFit: 'cover' }}
-          />
-        ) : (
-          <Typography
-            key={`${sessionKey}-file-${idx}`}
-            component="a"
-            href={url}
-            target="_blank"
-            rel="noopener noreferrer"
-            variant="caption"
-            sx={{ color: 'primary.main', wordBreak: 'break-all' }}
-          >
-            Archivo {idx + 1}
-          </Typography>
-        );
-      })}
-    </Stack>
-  );
 }
 
 /**
@@ -277,7 +237,7 @@ export default function EmployeeTrainingDrawer({
                       <Typography variant="body2" sx={{ fontWeight: 600 }}>
                         {formatSessionDate(record)}
                       </Typography>
-                      {renderEvidenceList(record.evidenceIds || [], record.id)}
+                      <EvidencePreviewList evidenceIds={record.evidenceIds || []} previewHeight={140} />
                     </Box>
                   ))}
                 </Stack>

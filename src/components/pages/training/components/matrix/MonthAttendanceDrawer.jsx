@@ -8,8 +8,8 @@ import {
   Typography
 } from '@mui/material';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
-import { convertirShareTokenAUrl } from '../../../../../utils/imageUtils';
 import { TRAINING_ATTENDANCE_STATUSES, TRAINING_EVALUATION_STATUSES } from '../../../../../types/trainingDomain';
+import EvidencePreviewList from './EvidencePreviewList';
 
 const MONTH_NAMES = [
   '', 'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio',
@@ -57,37 +57,6 @@ function resolveAggregateStatus(records = []) {
   const hasNoAplica = records.some((r) => resolveEmployeeStatus(r).label === 'N/A');
   if (hasNoAplica) return { label: 'N/A', color: '#616161', bg: '#eeeeee' };
   return { label: 'AUSENTE', color: '#c62828', bg: '#ffebee' };
-}
-
-function renderEvidenceList(evidenceIds = [], sessionKey) {
-  if (!evidenceIds.length) {
-    return (
-      <Typography variant="caption" color="text.secondary">
-        Sin evidencia
-      </Typography>
-    );
-  }
-
-  return (
-    <Stack spacing={0.5}>
-      {evidenceIds.map((shareToken, idx) => {
-        const url = convertirShareTokenAUrl(shareToken);
-        return (
-          <Typography
-            key={`${sessionKey}-file-${idx}`}
-            component="a"
-            href={url}
-            target="_blank"
-            rel="noopener noreferrer"
-            variant="caption"
-            sx={{ color: 'primary.main', wordBreak: 'break-all' }}
-          >
-            Evidencia {idx + 1}
-          </Typography>
-        );
-      })}
-    </Stack>
-  );
 }
 
 /**
@@ -256,7 +225,7 @@ export default function MonthAttendanceDrawer({
                           >
                             {status.label}
                           </Box>
-                          {renderEvidenceList(attendance?.evidenceIds || [], session.id)}
+                          <EvidencePreviewList evidenceIds={attendance?.evidenceIds || []} previewHeight={140} />
                         </Stack>
                       </Box>
                     );
