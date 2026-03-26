@@ -35,3 +35,4 @@ backend/serviceAccountKey.json
 backend/serviceAccountKey-controlfile.json
 backend/serviceAccountKey.json
 
+package-lock.json

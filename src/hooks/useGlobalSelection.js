@@ -91,6 +91,7 @@ export const useGlobalSelection = () => {
   };
 
   return {
+    // Valores normalizados (nunca null/undefined, siempre 'todas' o un ID válido)
     empresaId,
     sucursalId,
     setEmpresa,
@@ -99,9 +100,9 @@ export const useGlobalSelection = () => {
     sucursalesDisponibles,
     isTodasEmpresas,
     isTodasSucursales,
-    // Mantener compatibilidad con código existente
-    selectedEmpresa: empresaId === 'todas' ? '' : empresaId,
-    selectedSucursal: sucursalId === 'todas' ? '' : sucursalId,
+    // Compatibilidad: alias para código existente
+    selectedEmpresa: empresaId,
+    selectedSucursal: sucursalId,
     setSelectedEmpresa: setEmpresa,
     setSelectedSucursal: setSucursal,
     sucursalesFiltradas: sucursalesDisponibles,

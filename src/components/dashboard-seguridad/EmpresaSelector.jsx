@@ -75,7 +75,7 @@ export default function EmpresaSelector({
         )}
         <FormControl fullWidth size="small">
           <Select
-            value={selectedEmpresa || "todas"}
+            value={selectedEmpresa === 'todas' || !selectedEmpresa ? "todas" : selectedEmpresa}
             onChange={(e) => onEmpresaChange(e.target.value)}
             aria-label="Seleccionar empresa"
             sx={{
