@@ -35,7 +35,9 @@ function pctColor(pct) {
  * @param {{
  *   columnsByMonth: Object,
  *   rows: Array,
- *   onCellClick: (planItemId: string, empleadoId: string) => void,
+ *   pendingChanges: Object,   // { [empleadoId_planItemId]: { newState } }
+ *   onPendingChange: (planItemId: string, empleadoId: string, newState: any) => void,
+ *   onCellClick: (planItemId: string, empleadoId: string, sessionId: string|null, trainingTypeName: string) => void,
  *   onAddToMonth: (month: number) => void,
  *   loading: boolean,
  *   noPlanMessage?: string
@@ -44,6 +46,8 @@ function pctColor(pct) {
 export default function TrainingMatrixTable({
   columnsByMonth,
   rows,
+  pendingChanges = {},
+  onPendingChange,
   onCellClick,
   onAddToMonth,
   loading,
@@ -272,8 +276,11 @@ export default function TrainingMatrixTable({
                           }}
                         >
                           <MatrixCell
-                            state={row.cellMap[col.planItemId]}
-                            onClick={() => onCellClick(col.planItemId, row.empleadoId)}
+                            state={row.cellMap[col.planItemId].estado}
+                            sessionId={row.cellMap[col.planItemId].sessionId}
+                            pendingState={pendingChanges[`${row.empleadoId}_${col.planItemId}`]?.newState}
+                            onPendingChange={newState => onPendingChange(col.planItemId, row.empleadoId, newState)}
+                            onSessionClick={() => onCellClick(col.planItemId, row.empleadoId, row.cellMap[col.planItemId].sessionId, col.name)}
                           />
                         </TableCell>
                       )),
@@ -298,7 +305,8 @@ export default function TrainingMatrixTable({
                       fontWeight: 700,
                       fontSize: '0.82rem',
                       color: pctColor(row.pct),
-                      bgcolor: `${pctColor(row.pct)}22`
+                      bgcolor: `${pctColor(row.pct)}22`,
+                      py: 0
                     }}
                   >
                     {row.pct}%

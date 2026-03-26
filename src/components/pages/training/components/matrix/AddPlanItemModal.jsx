@@ -9,6 +9,7 @@ import {
   DialogActions,
   DialogContent,
   DialogTitle,
+  Link,
   TextField,
   Typography
 } from '@mui/material';
@@ -54,6 +55,10 @@ export default function AddPlanItemModal({
   const [selectedType, setSelectedType] = useState(null);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
+  const [createTypeDialogOpen, setCreateTypeDialogOpen] = useState(false);
+  const [newTypeName, setNewTypeName] = useState('');
+  const [creatingType, setCreatingType] = useState(false);
+  const [createTypeError, setCreateTypeError] = useState('');
 
   const companyId = userSucursales.find(s => s.id === sucursalId)?.empresaId || '';
 
@@ -72,8 +77,37 @@ export default function AddPlanItemModal({
     if (!open) {
       setSelectedType(null);
       setError('');
+      setCreateTypeDialogOpen(false);
+      setNewTypeName('');
+      setCreateTypeError('');
     }
   }, [open]);
+
+  async function handleCreateType() {
+    if (!newTypeName.trim() || !ownerId) return;
+    setCreateTypeError('');
+    setCreatingType(true);
+
+    try {
+      const newCatalogItem = await trainingCatalogService.create(ownerId, {
+        name: newTypeName.trim(),
+        status: 'active'
+      });
+
+      // Reload catalog
+      const updated = await trainingCatalogService.listActive(ownerId);
+      setCatalogItems(updated || []);
+
+      // Auto-select the new item
+      setSelectedType(newCatalogItem);
+      setCreateTypeDialogOpen(false);
+      setNewTypeName('');
+    } catch (err) {
+      setCreateTypeError(err?.message || 'Error al crear el tipo de capacitación.');
+    } finally {
+      setCreatingType(false);
+    }
+  }
 
   const existingSet = new Set(existingTrainingTypeIds);
 
@@ -126,22 +160,34 @@ export default function AddPlanItemModal({
               Seleccioná el tipo de capacitación que querés agregar a este mes del plan.
             </Typography>
 
-            <Autocomplete
-              options={catalogItems}
-              getOptionLabel={item => item.name || item.id}
-              value={selectedType}
-              onChange={(_, val) => { setSelectedType(val); setError(''); }}
-              renderInput={params => (
-                <TextField
-                  {...params}
-                  label="Tipo de capacitación"
-                  size="small"
-                  autoFocus
-                />
-              )}
-              noOptionsText="No hay tipos de capacitación activos"
-              isOptionEqualToValue={(opt, val) => opt.id === val.id}
-            />
+            <Box>
+              <Autocomplete
+                options={catalogItems}
+                getOptionLabel={item => item.name || item.id}
+                getOptionKey={item => item.id}
+                value={selectedType}
+                onChange={(_, val) => { setSelectedType(val); setError(''); }}
+                renderInput={params => (
+                  <TextField
+                    {...params}
+                    label="Tipo de capacitación"
+                    size="small"
+                    autoFocus
+                  />
+                )}
+                noOptionsText="No hay tipos de capacitación activos"
+                isOptionEqualToValue={(opt, val) => opt.id === val.id}
+              />
+              <Link
+                component="button"
+                type="button"
+                variant="body2"
+                onClick={() => setCreateTypeDialogOpen(true)}
+                sx={{ mt: 1, display: 'block', cursor: 'pointer' }}
+              >
+                + Crear nuevo tipo de capacitación
+              </Link>
+            </Box>
 
             {selectedType && existingSet.has(selectedType.id) && (
               <Alert severity="warning" sx={{ mt: 1.5 }}>
@@ -166,6 +212,33 @@ export default function AddPlanItemModal({
           {saving ? <CircularProgress size={18} color="inherit" /> : 'Agregar'}
         </Button>
       </DialogActions>
+
+      {/* Create new training type dialog */}
+      <Dialog open={createTypeDialogOpen} onClose={() => !creatingType && setCreateTypeDialogOpen(false)} maxWidth="xs" fullWidth>
+        <DialogTitle sx={{ fontWeight: 700 }}>Crear nuevo tipo de capacitación</DialogTitle>
+        <DialogContent sx={{ pt: 2 }}>
+          <TextField
+            label="Nombre"
+            size="small"
+            fullWidth
+            value={newTypeName}
+            onChange={e => setNewTypeName(e.target.value)}
+            autoFocus
+            placeholder="Ej: Primeros auxilios"
+          />
+          {createTypeError && <Alert severity="error" sx={{ mt: 1.5 }}>{createTypeError}</Alert>}
+        </DialogContent>
+        <DialogActions sx={{ px: 3, pb: 2 }}>
+          <Button onClick={() => setCreateTypeDialogOpen(false)} disabled={creatingType}>Cancelar</Button>
+          <Button
+            variant="contained"
+            onClick={handleCreateType}
+            disabled={!newTypeName.trim() || creatingType}
+          >
+            {creatingType ? <CircularProgress size={18} color="inherit" /> : 'Crear'}
+          </Button>
+        </DialogActions>
+      </Dialog>
     </Dialog>
   );
 }

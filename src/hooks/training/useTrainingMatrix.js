@@ -185,32 +185,36 @@ export function useTrainingMatrix({ ownerId, sucursalId, year }) {
   }, [sessions, planItems]);
 
   // Compute state for a single (empleadoId, planItem) pair
+  // Returns: { estado: CELL_STATE, sessionId: string|null }
   const computeCellState = useCallback((empleadoId, planItem) => {
     const { planItemId, noAplicaEmployeeIds } = planItem;
 
     if (noAplicaEmployeeIds && noAplicaEmployeeIds.includes(empleadoId)) {
-      return CELL_STATE.NOT_APPLICABLE;
+      return { estado: CELL_STATE.NOT_APPLICABLE, sessionId: null };
     }
 
     const session = sessionByPlanItem[planItemId];
-    if (!session) return CELL_STATE.NOT_TRAINED;
+    if (!session) return { estado: CELL_STATE.NOT_TRAINED, sessionId: null };
 
     const attendance = attendanceMap[session.id]?.[empleadoId];
+    const estado = (() => {
+      if (session.status === TRAINING_SESSION_STATUSES.CLOSED) {
+        return attendance?.attendanceStatus === TRAINING_ATTENDANCE_STATUSES.PRESENT
+          ? CELL_STATE.COMPLETE
+          : CELL_STATE.NOT_TRAINED;
+      }
 
-    if (session.status === TRAINING_SESSION_STATUSES.CLOSED) {
-      return attendance?.attendanceStatus === TRAINING_ATTENDANCE_STATUSES.PRESENT
-        ? CELL_STATE.COMPLETE
-        : CELL_STATE.NOT_TRAINED;
-    }
+      if (IN_PROGRESS_STATUSES.has(session.status)) {
+        const isInvitedOrPresent =
+          attendance?.attendanceStatus === TRAINING_ATTENDANCE_STATUSES.INVITED ||
+          attendance?.attendanceStatus === TRAINING_ATTENDANCE_STATUSES.PRESENT;
+        if (isInvitedOrPresent) return CELL_STATE.IN_PROGRESS;
+      }
 
-    if (IN_PROGRESS_STATUSES.has(session.status)) {
-      const isInvitedOrPresent =
-        attendance?.attendanceStatus === TRAINING_ATTENDANCE_STATUSES.INVITED ||
-        attendance?.attendanceStatus === TRAINING_ATTENDANCE_STATUSES.PRESENT;
-      if (isInvitedOrPresent) return CELL_STATE.IN_PROGRESS;
-    }
+      return CELL_STATE.NOT_TRAINED;
+    })();
 
-    return CELL_STATE.NOT_TRAINED;
+    return { estado, sessionId: session.id };
   }, [sessionByPlanItem, attendanceMap]);
 
   // Rows: one per employee, with cellMap per planItem
@@ -224,10 +228,10 @@ export function useTrainingMatrix({ ownerId, sucursalId, year }) {
 
       // % completo: count COMPLETE / (total - NOT_APPLICABLE)
       const relevant = allPlanItems.filter(pi =>
-        cellMap[pi.planItemId] !== CELL_STATE.NOT_APPLICABLE
+        cellMap[pi.planItemId].estado !== CELL_STATE.NOT_APPLICABLE
       );
       const completed = relevant.filter(pi =>
-        cellMap[pi.planItemId] === CELL_STATE.COMPLETE
+        cellMap[pi.planItemId].estado === CELL_STATE.COMPLETE
       ).length;
       const pct = relevant.length > 0
         ? Math.round((completed / relevant.length) * 100)

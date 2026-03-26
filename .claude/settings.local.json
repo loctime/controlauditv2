@@ -8,7 +8,8 @@
       "Bash(mv scripts/migrate-empleados.js scripts/migration/)",
       "Bash(mv scripts/migrate-registros-asistencia.js scripts/migration/)",
       "Bash(mv scripts/fix-firestore-structure.js scripts/migration/)",
-      "mcp__Claude_Preview__preview_start"
+      "mcp__Claude_Preview__preview_start",
+      "Bash(del \"C:\\\\Users\\\\User\\\\Desktop\\\\controlauditv2\\\\src\\\\components\\\\pages\\\\training\\\\components\\\\matrix\\\\SessionCellDrawer.jsx\")"
     ]
   }
 }

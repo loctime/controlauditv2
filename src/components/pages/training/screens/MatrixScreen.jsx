@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react';
 import {
   Alert,
   Box,
+  Button,
   FormControl,
   InputLabel,
   MenuItem,
@@ -10,19 +11,18 @@ import {
   Typography
 } from '@mui/material';
 import RefreshIcon from '@mui/icons-material/Refresh';
+import SaveIcon from '@mui/icons-material/Save';
 import IconButton from '@mui/material/IconButton';
 import Tooltip from '@mui/material/Tooltip';
 import { useAuth } from '@/components/context/AuthContext';
 import { useGlobalSelection } from '../../../../hooks/useGlobalSelection';
-import { useTrainingMatrix, CELL_STATE } from '../../../../hooks/training/useTrainingMatrix';
+import { useTrainingMatrix } from '../../../../hooks/training/useTrainingMatrix';
+import { useMatrixPendingChanges } from '../../../../hooks/training/useMatrixPendingChanges';
 import TrainingMatrixTable from '../components/matrix/TrainingMatrixTable';
-import SessionCellDrawer from '../components/matrix/SessionCellDrawer';
 import AddPlanItemModal from '../components/matrix/AddPlanItemModal';
+import SaveSessionModal from '../components/matrix/SaveSessionModal';
+import SessionViewDrawer from '../components/matrix/SessionViewDrawer';
 
-/**
- * Pantalla de la matriz de capacitaciones.
- * Filas = empleados, columnas = items del plan agrupados por mes.
- */
 export default function MatrixScreen() {
   const { userProfile } = useAuth();
   const ownerId = userProfile?.ownerId;
@@ -32,68 +32,42 @@ export default function MatrixScreen() {
   const currentYear = new Date().getFullYear();
   const [year, setYear] = useState(currentYear);
 
+  const effectiveSucursalId = sucursalId === 'todas' ? null : sucursalId;
+
   const {
     columnsByMonth,
     rows,
     planId,
-    sessions,
-    sessionByPlanItem,
-    attendanceMap = {},
     loading,
     error,
     refresh
   } = useTrainingMatrix({
     ownerId,
-    sucursalId: sucursalId === 'todas' ? null : sucursalId,
+    sucursalId: effectiveSucursalId,
     year
   });
 
-  // Drawer state
-  const [drawerOpen, setDrawerOpen] = useState(false);
-  const [drawerContext, setDrawerContext] = useState(null);
-  // { planItemId, planId, empleadoId, empleadoNombre, trainingTypeId, trainingTypeName, month, year, sucursalId, session, attendanceRecord }
+  const {
+    changes,
+    setPendingChange,
+    clearPendingChanges,
+    pendingCount,
+    hasPendingChanges
+  } = useMatrixPendingChanges();
 
   // AddPlanItem modal state
   const [addModalOpen, setAddModalOpen] = useState(false);
   const [addModalMonth, setAddModalMonth] = useState(null);
 
-  function handleCellClick(planItemId, empleadoId) {
-    // Find the planItem column info
-    let planItemCol = null;
-    let itemMonth = null;
-    for (const [month, cols] of Object.entries(columnsByMonth)) {
-      const col = cols.find(c => c.planItemId === planItemId);
-      if (col) {
-        planItemCol = col;
-        itemMonth = Number(month);
-        break;
-      }
-    }
-    if (!planItemCol) return;
+  // SaveSession modal state
+  const [saveModalOpen, setSaveModalOpen] = useState(false);
 
-    const row = rows.find(r => r.empleadoId === empleadoId);
-    const cellState = row?.cellMap[planItemId];
-    const session = sessionByPlanItem[planItemId] || null;
+  // SessionViewDrawer state
+  const [viewDrawerOpen, setViewDrawerOpen] = useState(false);
+  const [viewDrawerData, setViewDrawerData] = useState({ sessionId: null, empleadoId: null, trainingTypeName: '' });
 
-    // Attendance record for this employee in the session
-    const attendanceRecord = cellState === CELL_STATE.NOT_APPLICABLE
-      ? 'N/A'
-      : (session ? (attendanceMap[session.id]?.[empleadoId] || null) : null);
-
-    setDrawerContext({
-      planItemId,
-      planId,
-      empleadoId,
-      empleadoNombre: row?.nombre || '',
-      trainingTypeId: planItemCol.trainingTypeId,
-      trainingTypeName: planItemCol.name,
-      month: itemMonth,
-      year,
-      sucursalId: sucursalId === 'todas' ? null : sucursalId,
-      session,
-      attendanceRecord
-    });
-    setDrawerOpen(true);
+  function handlePendingChange(planItemId, empleadoId, newState) {
+    setPendingChange(empleadoId, planItemId, newState);
   }
 
   function handleAddToMonth(month) {
@@ -101,10 +75,13 @@ export default function MatrixScreen() {
     setAddModalOpen(true);
   }
 
-  // Year options: current year ± 2
-  const yearOptions = [currentYear - 1, currentYear, currentYear + 1];
+  function handleCellClick(planItemId, empleadoId, sessionId, trainingTypeName) {
+    if (!sessionId) return; // Solo abrir si hay sesión guardada
+    setViewDrawerData({ sessionId, empleadoId, trainingTypeName });
+    setViewDrawerOpen(true);
+  }
 
-  const effectiveSucursalId = sucursalId === 'todas' ? null : sucursalId;
+  const yearOptions = [currentYear - 1, currentYear, currentYear + 1];
 
   // Existing trainingTypeIds for the selected month (to prevent duplicates)
   const existingTypeIdsForMonth = useMemo(() => {
@@ -121,7 +98,6 @@ export default function MatrixScreen() {
         alignItems={{ sm: 'center' }}
         sx={{ mb: 2 }}
       >
-        {/* Empresa selector (if multiple) */}
         {empresasDisponibles.length > 1 && (
           <FormControl size="small" sx={{ minWidth: 180 }}>
             <InputLabel>Empresa</InputLabel>
@@ -138,7 +114,6 @@ export default function MatrixScreen() {
           </FormControl>
         )}
 
-        {/* Sucursal selector */}
         <FormControl size="small" sx={{ minWidth: 180 }}>
           <InputLabel>Sucursal</InputLabel>
           <Select
@@ -153,7 +128,6 @@ export default function MatrixScreen() {
           </Select>
         </FormControl>
 
-        {/* Year selector */}
         <FormControl size="small" sx={{ minWidth: 100 }}>
           <InputLabel>Año</InputLabel>
           <Select
@@ -174,38 +148,71 @@ export default function MatrixScreen() {
         </Tooltip>
       </Stack>
 
-      {/* Error state */}
-      {error && (
-        <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>
-      )}
+      {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
 
-      {/* No sucursal selected warning */}
       {!effectiveSucursalId && !loading && (
         <Alert severity="info" sx={{ mb: 2 }}>
           Seleccioná una sucursal para ver la matriz de capacitaciones.
         </Alert>
       )}
 
-      {/* Matrix table */}
       {effectiveSucursalId && (
         <TrainingMatrixTable
           columnsByMonth={columnsByMonth}
           rows={rows}
+          pendingChanges={changes}
+          onPendingChange={handlePendingChange}
           onCellClick={handleCellClick}
           onAddToMonth={handleAddToMonth}
           loading={loading}
         />
       )}
 
-      {/* Session cell drawer */}
-      {drawerContext && (
-        <SessionCellDrawer
-          open={drawerOpen}
-          onClose={() => setDrawerOpen(false)}
-          {...drawerContext}
-          onSaved={() => { setDrawerOpen(false); refresh(); }}
-        />
+      {/* Floating save button */}
+      {hasPendingChanges && (
+        <Box
+          sx={{
+            position: 'fixed',
+            bottom: 24,
+            left: '50%',
+            transform: 'translateX(-50%)',
+            zIndex: 1200
+          }}
+        >
+          <Button
+            variant="contained"
+            color="primary"
+            size="large"
+            startIcon={<SaveIcon />}
+            onClick={() => setSaveModalOpen(true)}
+            sx={{
+              borderRadius: 8,
+              px: 3,
+              boxShadow: 6,
+              fontWeight: 700,
+              textTransform: 'none'
+            }}
+          >
+            Guardar sesión ({pendingCount} cambio{pendingCount !== 1 ? 's' : ''})
+          </Button>
+        </Box>
       )}
+
+      {/* Save session modal */}
+      <SaveSessionModal
+        open={saveModalOpen}
+        onClose={() => setSaveModalOpen(false)}
+        pendingChanges={changes}
+        columnsByMonth={columnsByMonth}
+        planId={planId}
+        sucursalId={effectiveSucursalId}
+        year={year}
+        onSaved={() => {
+          setSaveModalOpen(false);
+          clearPendingChanges();
+          refresh();
+        }}
+      />
 
       {/* Add plan item modal */}
       <AddPlanItemModal
@@ -217,6 +224,15 @@ export default function MatrixScreen() {
         sucursalId={effectiveSucursalId}
         existingTrainingTypeIds={existingTypeIdsForMonth}
         onSaved={() => { setAddModalOpen(false); refresh(); }}
+      />
+
+      {/* Session view drawer */}
+      <SessionViewDrawer
+        open={viewDrawerOpen}
+        onClose={() => setViewDrawerOpen(false)}
+        sessionId={viewDrawerData.sessionId}
+        empleadoId={viewDrawerData.empleadoId}
+        trainingTypeName={viewDrawerData.trainingTypeName}
       />
     </Box>
   );

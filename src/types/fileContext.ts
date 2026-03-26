@@ -13,7 +13,8 @@ export type ContextType =
   | 'auditoria'
   | 'reporte'
   | 'empresa'
-  | 'auditoriaManual';
+  | 'auditoriaManual'
+  | 'training_session';
 
 export interface FileContext {
   contextType: ContextType;

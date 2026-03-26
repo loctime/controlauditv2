@@ -1,0 +1,333 @@
+import { useState } from 'react';
+import {
+  Alert,
+  Box,
+  Button,
+  CircularProgress,
+  Dialog,
+  DialogActions,
+  DialogContent,
+  DialogTitle,
+  IconButton,
+  Stack,
+  TextField,
+  Typography
+} from '@mui/material';
+import AttachFileIcon from '@mui/icons-material/AttachFile';
+import CloseIcon from '@mui/icons-material/Close';
+import { useAuth } from '@/components/context/AuthContext';
+import { trainingSessionService } from '../../../../../services/training/trainingSessionService';
+import { trainingAttendanceService } from '../../../../../services/training/trainingAttendanceService';
+import { trainingPlanService } from '../../../../../services/training/trainingPlanService';
+import { uploadFileWithContext } from '../../../../../services/unifiedFileUploadService';
+import { TRAINING_SESSION_STATUSES, TRAINING_ATTENDANCE_STATUSES } from '../../../../../types/trainingDomain';
+import { CELL_STATE } from '../../../../../hooks/training/useTrainingMatrix';
+
+const MONTH_NAMES = [
+  '', 'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio',
+  'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'
+];
+
+function todayString() {
+  return new Date().toISOString().slice(0, 10);
+}
+
+function nowTimeString() {
+  const d = new Date();
+  return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
+}
+
+/**
+ * Modal para confirmar y guardar los cambios pendientes de la matriz.
+ *
+ * @param {{
+ *   open: boolean,
+ *   onClose: () => void,
+ *   pendingChanges: Object,    // { key: { empleadoId, planItemId, newState } }
+ *   columnsByMonth: Object,    // para resolver trainingTypeId y plannedMonth por planItemId
+ *   planId: string|null,
+ *   sucursalId: string,
+ *   year: number,
+ *   onSaved: () => void
+ * }} props
+ */
+export default function SaveSessionModal({
+  open,
+  onClose,
+  pendingChanges = {},
+  columnsByMonth = {},
+  planId,
+  sucursalId,
+  year,
+  onSaved
+}) {
+  const { userProfile } = useAuth();
+  const ownerId = userProfile?.ownerId;
+  const instructorEmail = userProfile?.email || '';
+
+  const [fecha, setFecha] = useState(todayString);
+  const [hora, setHora] = useState(nowTimeString);
+  const [ubicacion, setUbicacion] = useState('');
+  const [files, setFiles] = useState([]);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState('');
+
+  // Flat map: planItemId → { trainingTypeId, name, plannedMonth }
+  const planItemMeta = {};
+  Object.entries(columnsByMonth).forEach(([month, cols]) => {
+    cols.forEach(col => {
+      planItemMeta[col.planItemId] = {
+        trainingTypeId: col.trainingTypeId,
+        name: col.name,
+        plannedMonth: Number(month)
+      };
+    });
+  });
+
+  const changeList = Object.values(pendingChanges);
+  const completedChanges = changeList.filter(c => c.newState === CELL_STATE.COMPLETE);
+  const naChanges = changeList.filter(c => c.newState === CELL_STATE.NOT_APPLICABLE);
+  const notTrainedChanges = changeList.filter(c => c.newState === CELL_STATE.NOT_TRAINED);
+
+  function handleFileAdd(e) {
+    const added = Array.from(e.target.files || []);
+    setFiles(prev => [...prev, ...added]);
+    e.target.value = '';
+  }
+
+  function handleFileRemove(idx) {
+    setFiles(prev => prev.filter((_, i) => i !== idx));
+  }
+
+  async function handleSave() {
+    if (!ownerId || !sucursalId) return;
+    setError('');
+    setSaving(true);
+
+    try {
+      // Build scheduled date from fecha + hora
+      const [y, mo, d] = fecha.split('-').map(Number);
+      const [hh, mm] = hora.split(':').map(Number);
+      const scheduledDate = new Date(y, mo - 1, d, hh, mm, 0);
+
+      // Derive a single trainingTypeId and periodMonth for the session.
+      // If there are "Realizado" changes, use the first one. Otherwise use any planItem.
+      const firstChange = completedChanges[0] || changeList[0];
+      const firstMeta = firstChange ? planItemMeta[firstChange.planItemId] : null;
+
+      let sessionId = null;
+
+      // Create session only when there are "Realizado" changes
+      if (completedChanges.length > 0 && firstMeta) {
+        const session = await trainingSessionService.createSession(ownerId, {
+          branchId: sucursalId,
+          trainingTypeId: firstMeta.trainingTypeId,
+          periodYear: year,
+          periodMonth: firstMeta.plannedMonth,
+          scheduledDate,
+          executedDate: scheduledDate,
+          location: ubicacion || null,
+          instructorName: instructorEmail,
+          planId: planId || null,
+          planItemId: firstChange.planItemId,
+          sessionOrigin: planId ? 'plan' : 'ad_hoc',
+          status: TRAINING_SESSION_STATUSES.CLOSED
+        });
+        sessionId = session?.id || session;
+
+        // Upload evidence files
+        if (files.length > 0 && sessionId) {
+          await Promise.allSettled(files.map(file =>
+            uploadFileWithContext({
+              file,
+              fecha: scheduledDate,
+              uploadedBy: instructorEmail,
+              context: {
+                contextType: 'training_session',
+                contextEventId: sessionId,
+                companyId: userProfile?.companyId || null,
+                sucursalId,
+                tipoArchivo: 'evidencia_capacitacion',
+                module: 'training',
+                entityId: sessionId
+              }
+            })
+          ));
+        }
+
+        // Register attendance for all "Realizado" changes
+        await Promise.all(completedChanges.map(change => {
+          const meta = planItemMeta[change.planItemId];
+          if (!meta) return Promise.resolve();
+          return trainingAttendanceService.upsertAttendance(ownerId, sessionId, change.empleadoId, {
+            attendanceStatus: TRAINING_ATTENDANCE_STATUSES.PRESENT
+          });
+        }));
+      }
+
+      // Handle "No aplica" changes: update noAplicaEmployeeIds[] on each planItem
+      if (naChanges.length > 0) {
+        // Group by planItemId to batch updates
+        const byPlanItem = {};
+        naChanges.forEach(change => {
+          if (!byPlanItem[change.planItemId]) byPlanItem[change.planItemId] = [];
+          byPlanItem[change.planItemId].push(change.empleadoId);
+        });
+
+        await Promise.all(Object.entries(byPlanItem).map(async ([planItemId, empIds]) => {
+          // Get current noAplicaEmployeeIds and merge
+          const current = columnsByMonth;
+          // We find the col to get existing noAplicaEmployeeIds
+          let existingNoAplica = [];
+          Object.values(columnsByMonth).forEach(cols => {
+            const col = cols.find(c => c.planItemId === planItemId);
+            if (col) existingNoAplica = col.noAplicaEmployeeIds || [];
+          });
+          const merged = [...new Set([...existingNoAplica, ...empIds])];
+          return trainingPlanService.updatePlanItem(ownerId, planItemId, {
+            noAplicaEmployeeIds: merged
+          });
+        }));
+      }
+
+      // Handle "No realizado" changes: remove from noAplicaEmployeeIds[] if present
+      if (notTrainedChanges.length > 0) {
+        const byPlanItem = {};
+        notTrainedChanges.forEach(change => {
+          if (!byPlanItem[change.planItemId]) byPlanItem[change.planItemId] = [];
+          byPlanItem[change.planItemId].push(change.empleadoId);
+        });
+
+        await Promise.all(Object.entries(byPlanItem).map(async ([planItemId, empIds]) => {
+          let existingNoAplica = [];
+          Object.values(columnsByMonth).forEach(cols => {
+            const col = cols.find(c => c.planItemId === planItemId);
+            if (col) existingNoAplica = col.noAplicaEmployeeIds || [];
+          });
+          const filtered = existingNoAplica.filter(id => !empIds.includes(id));
+          // Only update if something actually changed
+          if (filtered.length !== existingNoAplica.length) {
+            return trainingPlanService.updatePlanItem(ownerId, planItemId, {
+              noAplicaEmployeeIds: filtered
+            });
+          }
+        }));
+      }
+
+      onSaved();
+      onClose();
+    } catch (err) {
+      setError(err?.message || 'Error al guardar la sesión.');
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  const totalChanges = changeList.length;
+
+  return (
+    <Dialog open={open} onClose={saving ? undefined : onClose} maxWidth="xs" fullWidth>
+      <DialogTitle sx={{ fontWeight: 700 }}>
+        Guardar sesión — {totalChanges} cambio{totalChanges !== 1 ? 's' : ''}
+      </DialogTitle>
+
+      <DialogContent>
+        <Stack spacing={2} sx={{ mt: 0.5 }}>
+          {/* Summary */}
+          <Box sx={{ bgcolor: '#f5f5f5', borderRadius: 1, p: 1.5, fontSize: '0.82rem', color: '#555' }}>
+            {completedChanges.length > 0 && (
+              <div>✅ {completedChanges.length} realizad{completedChanges.length !== 1 ? 'os' : 'o'}</div>
+            )}
+            {naChanges.length > 0 && (
+              <div>— {naChanges.length} no aplica</div>
+            )}
+            {notTrainedChanges.length > 0 && (
+              <div>❌ {notTrainedChanges.length} no realizado{notTrainedChanges.length !== 1 ? 's' : ''}</div>
+            )}
+          </Box>
+
+          {/* Fecha */}
+          <TextField
+            label="Fecha"
+            type="date"
+            size="small"
+            value={fecha}
+            onChange={e => setFecha(e.target.value)}
+            InputLabelProps={{ shrink: true }}
+          />
+
+          {/* Hora */}
+          <TextField
+            label="Hora"
+            type="time"
+            size="small"
+            value={hora}
+            onChange={e => setHora(e.target.value)}
+            InputLabelProps={{ shrink: true }}
+          />
+
+          {/* Ubicación */}
+          <TextField
+            label="Ubicación (opcional)"
+            size="small"
+            value={ubicacion}
+            onChange={e => setUbicacion(e.target.value)}
+            placeholder="Ej: Sala de reuniones A"
+          />
+
+          {/* Evidencia */}
+          <Box>
+            <Button
+              component="label"
+              size="small"
+              startIcon={<AttachFileIcon />}
+              variant="outlined"
+              sx={{ mb: files.length > 0 ? 1 : 0 }}
+            >
+              Agregar evidencia
+              <input type="file" hidden multiple onChange={handleFileAdd} />
+            </Button>
+
+            {files.map((file, idx) => (
+              <Box
+                key={idx}
+                sx={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 0.5,
+                  bgcolor: '#f5f5f5',
+                  borderRadius: 1,
+                  px: 1,
+                  py: 0.5,
+                  mb: 0.5,
+                  fontSize: '0.8rem'
+                }}
+              >
+                <AttachFileIcon sx={{ fontSize: 14, color: '#888' }} />
+                <Typography variant="caption" sx={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                  {file.name}
+                </Typography>
+                <IconButton size="small" onClick={() => handleFileRemove(idx)} sx={{ p: 0.25 }}>
+                  <CloseIcon sx={{ fontSize: 14 }} />
+                </IconButton>
+              </Box>
+            ))}
+          </Box>
+
+          {error && <Alert severity="error">{error}</Alert>}
+        </Stack>
+      </DialogContent>
+
+      <DialogActions sx={{ px: 3, pb: 2 }}>
+        <Button onClick={onClose} disabled={saving}>Cancelar</Button>
+        <Button
+          variant="contained"
+          onClick={handleSave}
+          disabled={saving || totalChanges === 0 || !fecha}
+        >
+          {saving ? <CircularProgress size={18} color="inherit" /> : 'Confirmar y guardar'}
+        </Button>
+      </DialogActions>
+    </Dialog>
+  );
+}

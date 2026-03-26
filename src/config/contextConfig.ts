@@ -74,6 +74,12 @@ export const CONTEXT_CONFIG: Record<ContextType, ContextConfig> = {
     requiresTipoArchivo: true,
     validTiposArchivo: ['evidencia'] as const,
   },
+  training_session: {
+    requiresCompanyId: false,
+    requiresSucursalId: false,
+    requiresTipoArchivo: true,
+    validTiposArchivo: ['evidencia_capacitacion', 'material', 'certificado'] as const,
+  },
 } as const;
 
 /**
