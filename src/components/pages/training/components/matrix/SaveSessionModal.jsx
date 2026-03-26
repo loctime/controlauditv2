@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import {
   Alert,
   Box,
@@ -69,6 +69,21 @@ export default function SaveSessionModal({
   const [files, setFiles] = useState([]);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
+
+  const resetState = useCallback(() => {
+    setFecha(todayString());
+    setHora(nowTimeString());
+    setUbicacion('');
+    setFiles([]);
+    setError('');
+    setSaving(false);
+  }, []);
+
+  useEffect(() => {
+    if (!open) return;
+    // El componente de MUI puede permanecer montado; al reabrir queremos limpiar la evidencia previa.
+    resetState();
+  }, [open, resetState]);
 
   // Flat map: planItemId → { trainingTypeId, name, plannedMonth }
   const planItemMeta = {};
@@ -200,6 +215,10 @@ export default function SaveSessionModal({
       });
 
       await Promise.all(sessionSaveTasks);
+
+      // Limpiar evidencia para que al guardar otra sesión no se reutilice el estado anterior.
+      setFiles([]);
+      setError('');
 
       onSaved();
       onClose();
