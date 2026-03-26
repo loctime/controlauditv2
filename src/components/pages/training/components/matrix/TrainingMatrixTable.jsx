@@ -41,9 +41,7 @@ function getVisibleItems(cols, isExpanded) {
 
 function getMonthColumnCount(cols, isExpanded) {
   const { visible, hidden } = getVisibleItems(cols, isExpanded);
-  // Siempre mostramos la columna "+" para agregar capacitación.
-  // Si hay ocultas, agregamos también una columna para expandir/contraer.
-  return visible.length + (hidden > 0 ? 2 : 1);
+  return visible.length;
 }
 
 /**
@@ -147,6 +145,8 @@ export default function TrainingMatrixTable({
                 const cols = columnsByMonth[month] || [];
                 const isExpanded = expandedCells.has(`_${month}`);
                 const colSpan = getMonthColumnCount(cols, isExpanded);
+                const hiddenCount = Math.max(cols.length - 2, 0);
+                const hasHidden = hiddenCount > 0;
                 return (
                   <TableCell
                     key={month}
@@ -157,10 +157,50 @@ export default function TrainingMatrixTable({
                       bgcolor: '#e3f2fd',
                       borderLeft: '2px solid #90caf9',
                       borderRight: '2px solid #90caf9',
-                      py: 0.75
+                      py: 0.75,
+                      position: 'relative',
+                      overflow: 'visible'
                     }}
                   >
-                    {MONTH_NAMES[month]}
+                    <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 0.5 }}>
+                      <span>{MONTH_NAMES[month]}</span>
+                      <Tooltip title="Agregar capacitación a este mes">
+                        <IconButton
+                          size="small"
+                          onClick={() => onAddToMonth(month)}
+                          sx={{ color: '#42a5f5', p: 0.25 }}
+                        >
+                          <AddIcon fontSize="small" />
+                        </IconButton>
+                      </Tooltip>
+                    </Box>
+                    {hasHidden && (
+                      <Button
+                        size="small"
+                        onClick={() => onToggleExpand('_', month)}
+                        sx={{
+                          position: 'absolute',
+                          right: -16,
+                          top: '50%',
+                          transform: 'translateY(-50%)',
+                          minWidth: 28,
+                          height: 24,
+                          px: 0.75,
+                          fontSize: '0.78rem',
+                          lineHeight: 1,
+                          fontWeight: 700,
+                          borderRadius: '12px',
+                          zIndex: 20,
+                          color: '#1565c0',
+                          bgcolor: '#fff',
+                          border: '1px solid #64b5f6',
+                          boxShadow: '0 1px 4px rgba(0,0,0,0.18)',
+                          '&:hover': { bgcolor: '#e3f2fd', borderColor: '#42a5f5' }
+                        }}
+                      >
+                        {isExpanded ? '−' : `+${hiddenCount}`}
+                      </Button>
+                    )}
                   </TableCell>
                 );
               })}
@@ -182,7 +222,7 @@ export default function TrainingMatrixTable({
               </TableCell>
             </TableRow>
 
-            {/* Row 2: training name sub-headers + "+" button */}
+            {/* Row 2: training name sub-headers */}
             <TableRow>
               <TableCell
                 sx={{
@@ -201,7 +241,7 @@ export default function TrainingMatrixTable({
 
                 return [
                   // Visible training items
-                  ...visible.map(col => (
+                  ...visible.map((col, idx) => (
                     <TableCell
                       key={col.planItemId}
                       align="center"
@@ -211,12 +251,14 @@ export default function TrainingMatrixTable({
                         color: '#555',
                         bgcolor: '#fafafa',
                         borderLeft: '1px solid #e8e8e8',
+                        borderRight: idx === visible.length - 1 ? '2px solid #90caf9' : undefined,
                         minWidth: 90,
                         maxWidth: 90,
                         whiteSpace: 'nowrap',
                         overflow: 'hidden',
                         textOverflow: 'ellipsis',
-                        py: 0.5
+                        py: 0.5,
+                        position: 'relative'
                       }}
                     >
                       <Tooltip title={col.name} placement="top">
@@ -224,50 +266,7 @@ export default function TrainingMatrixTable({
                       </Tooltip>
                     </TableCell>
                   )),
-                  // Expand/collapse button (solo en encabezado del mes)
-                  hidden > 0 && (
-                    <TableCell
-                      key={`expand-${month}`}
-                      align="center"
-                      sx={{
-                        bgcolor: '#fafafa',
-                        borderLeft: '1px solid #e8e8e8',
-                        minWidth: 50,
-                        maxWidth: 50,
-                        p: 0.5
-                      }}
-                    >
-                      <Button
-                        size="small"
-                        onClick={() => onToggleExpand('_', month)}
-                        sx={{ fontSize: '0.7rem', minWidth: 'auto', p: '2px 4px' }}
-                      >
-                        {isExpanded ? '−' : `+${hidden}`}
-                      </Button>
-                    </TableCell>
-                  ),
-                  // Add button (siempre visible al final del mes)
-                  <TableCell
-                    key={`add-${month}`}
-                    align="center"
-                    sx={{
-                      bgcolor: '#fafafa',
-                      borderLeft: '1px solid #e8e8e8',
-                      borderRight: '2px solid #90caf9',
-                      minWidth: 36,
-                      p: 0
-                    }}
-                  >
-                    <Tooltip title="Agregar capacitación a este mes">
-                      <IconButton
-                        size="small"
-                        onClick={() => onAddToMonth(month)}
-                        sx={{ color: '#42a5f5', p: 0.5 }}
-                      >
-                        <AddIcon fontSize="small" />
-                      </IconButton>
-                    </Tooltip>
-                  </TableCell>,
+                  
                 ].filter(Boolean);
               })}
 
@@ -326,13 +325,14 @@ export default function TrainingMatrixTable({
 
                     return [
                       // Visible training cells
-                      ...visible.map(col => (
+                      ...visible.map((col, idx) => (
                         <TableCell
                           key={col.planItemId}
                           align="center"
                           sx={{
                             p: 0,
                             borderLeft: '1px solid #e8e8e8',
+                            borderRight: idx === visible.length - 1 ? '2px solid #90caf9' : undefined,
                             minWidth: 60
                           }}
                         >
@@ -344,18 +344,6 @@ export default function TrainingMatrixTable({
                             onSessionClick={() => onCellClick(col.planItemId, row.empleadoId, row.cellMap[col.planItemId].sessionId, col.name)}
                           />
                         </TableCell>
-                      )),
-                      // Espaciadores para columnas de control del encabezado (expand + add)
-                      ...(hidden > 0 ? [0, 1] : [0]).map((_, idx) => (
-                        <TableCell
-                          key={`spacer-${month}-${row.empleadoId}-${idx}`}
-                          sx={{
-                            borderLeft: '1px solid #e8e8e8',
-                            borderRight: idx === (hidden > 0 ? 1 : 0) ? '2px solid #90caf9' : undefined,
-                            minWidth: idx === 0 && hidden > 0 ? 50 : 36,
-                            p: 0
-                          }}
-                        />
                       )),
                     ];
                   })}
