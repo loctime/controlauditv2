@@ -1,3 +1,4 @@
+import { useEffect, useRef } from 'react';
 import {
   Box,
   Button,
@@ -39,8 +40,8 @@ function getVisibleItems(cols, isExpanded) {
 }
 
 function getMonthColumnCount(cols, isExpanded) {
-  const { visible, hidden } = getVisibleItems(cols, isExpanded);
-  return visible.length;
+  const { visible } = getVisibleItems(cols, isExpanded);
+  return Math.max(visible.length, 1);
 }
 
 /**
@@ -76,10 +77,55 @@ export default function TrainingMatrixTable({
   onEmployeeClick,
   onMonthClick
 }) {
+  const tableScrollRef = useRef(null);
+  const monthKeyCount = Object.keys(columnsByMonth).length;
+
+  useEffect(() => {
+    const el = tableScrollRef.current;
+    if (!el) return;
+
+    const onWheel = (e) => {
+      if (el.scrollWidth <= el.clientWidth) return;
+
+      const dy = e.deltaY;
+      if (dy === 0) return;
+
+      const maxScroll = el.scrollWidth - el.clientWidth;
+      const next = el.scrollLeft + dy;
+
+      const canScrollLeft = el.scrollLeft > 0;
+      const canScrollRight = el.scrollLeft < maxScroll - 0.5;
+
+      if (dy < 0 && next < 0) {
+        if (canScrollLeft) {
+          e.preventDefault();
+          el.scrollLeft = 0;
+        }
+        return;
+      }
+      if (dy > 0 && next > maxScroll) {
+        if (canScrollRight) {
+          e.preventDefault();
+          el.scrollLeft = maxScroll;
+        }
+        return;
+      }
+
+      e.preventDefault();
+      el.scrollLeft = next;
+    };
+
+    el.addEventListener('wheel', onWheel, { passive: false });
+    return () => el.removeEventListener('wheel', onWheel);
+  }, [loading, monthKeyCount, rows.length]);
+
   // Sorted month numbers that appear in the plan
   const months = Object.keys(columnsByMonth)
     .map(Number)
     .sort((a, b) => a - b);
+
+  console.log('🔍 columnsByMonth:', columnsByMonth);
+  console.log('🔍 months extraídos:', months);
 
   if (loading) {
     return (
@@ -128,7 +174,7 @@ export default function TrainingMatrixTable({
         ))}
       </Box>
 
-      <TableContainer component={Paper} sx={{ overflowX: 'auto' }}>
+      <TableContainer ref={tableScrollRef} component={Paper} sx={{ overflowX: 'auto' }}>
         <Table size="small" stickyHeader sx={{ borderCollapse: 'collapse' }}>
           <TableHead>
             {/* Row 1: month headers */}
@@ -245,6 +291,26 @@ export default function TrainingMatrixTable({
                 const isExpanded = expandedCells.has(`_${month}`);
                 const { visible, hidden } = getVisibleItems(cols, isExpanded);
 
+                if (visible.length === 0) {
+                  return [
+                    <TableCell
+                      key={`header_placeholder_${month}`}
+                      align="center"
+                      sx={{
+                        fontSize: '0.75rem',
+                        fontWeight: 600,
+                        color: '#555',
+                        bgcolor: '#fafafa',
+                        borderLeft: '1px solid #e8e8e8',
+                        borderRight: '2px solid #90caf9',
+                        minWidth: 90,
+                        maxWidth: 90,
+                        py: 0.5
+                      }}
+                    />
+                  ];
+                }
+
                 return [
                   // Visible training items
                   ...visible.map((col, idx) => (
@@ -353,6 +419,21 @@ export default function TrainingMatrixTable({
                     const cols = columnsByMonth[month] || [];
                     const isExpanded = expandedCells.has(`_${month}`);
                     const { visible, hidden } = getVisibleItems(cols, isExpanded);
+
+                    if (visible.length === 0) {
+                      return [
+                        <TableCell
+                          key={`placeholder_${row.empleadoId}_${month}`}
+                          align="center"
+                          sx={{
+                            p: 0,
+                            borderLeft: '1px solid #e8e8e8',
+                            borderRight: '2px solid #90caf9',
+                            minWidth: 60
+                          }}
+                        />
+                      ];
+                    }
 
                     return [
                       // Visible training cells
