@@ -54,29 +54,34 @@ const htmlToPdf = async (html) => {
  * @param {string} reporteId - ID del reporte
  * @param {string} html - Contenido HTML del reporte
  * @param {Object} metadata - Metadatos del reporte
- * @param {string} companyId - ID de la empresa (opcional, default: 'system')
+ * @param {string} companyId - Nombre de la empresa (o ID como fallback, opcional, default: 'system')
+ * @param {Object} optionsLegible - Nombres legibles opcionales {empresaNombre, reporteName}
  * @returns {Promise<string>} - URL persistente usando shareToken
  */
-export const guardarPdfEnStorage = async (reporteId, html, metadata = {}, companyId = 'system') => {
+export const guardarPdfEnStorage = async (reporteId, html, metadata = {}, companyId = 'system', optionsLegible = {}) => {
   try {
     logger.debug('[pdfStorageService] Iniciando guardado de PDF en ControlFile...');
-    
+
     // Generar nombre único para el archivo
     const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
     const fileName = `reporte-${reporteId}-${timestamp}.html`;
-    
+
     // Convertir HTML a File/Blob para subir
     const htmlBlob = new Blob([html], { type: 'text/html; charset=utf-8' });
     const htmlFile = new File([htmlBlob], fileName, { type: 'text/html; charset=utf-8' });
-    
+
+    // Usar nombres legibles si están disponibles
+    const finalCompanyId = optionsLegible.empresaNombre || companyId;
+    const reporteName = optionsLegible.reporteName || `Reporte ${reporteId}`;
+
     // Subir archivo a ControlFile usando flujo unificado (legacy retirado intencionalmente)
     logger.debug('[pdfStorageService] Subiendo archivo a ControlFile...');
     const result = await uploadFileWithContext({
       file: htmlFile,
       context: {
         contextType: 'reporte',
-        contextEventId: `reporte_${reporteId}`,
-        companyId: companyId,
+        contextEventId: reporteName,
+        companyId: finalCompanyId,
         tipoArchivo: 'reporte'
       },
       fecha: new Date()
@@ -124,9 +129,16 @@ export const generarYGuardarPdf = async (reporteId, datosReporte, ownerId = null
     
     // Obtener companyId del reporte si está disponible
     const companyId = datosReporte.empresa?.id || datosReporte.empresaId || 'system';
-    
-    // Guardar en ControlFile
-    const downloadURL = await guardarPdfEnStorage(reporteId, html, metadata, companyId);
+    const empresaNombre = datosReporte.empresa?.nombre || companyId;
+    const formularioNombre = datosReporte.formulario?.nombre || 'Reporte';
+    const fecha = metadata.fecha || new Date().toLocaleDateString();
+    const reporteName = `${formularioNombre} - ${fecha}`;
+
+    // Guardar en ControlFile con nombres legibles
+    const downloadURL = await guardarPdfEnStorage(reporteId, html, metadata, companyId, {
+      empresaNombre,
+      reporteName
+    });
     
     // Actualizar el reporte en Firestore con la URL del PDF
     try {

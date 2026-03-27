@@ -77,8 +77,8 @@ export const useEmpresasHandlers = (ownerId, updateEmpresa, onEmpresaCreated) =>
             file: empresa.logo,
             context: {
               contextType: 'empresa',
-              contextEventId: empresaId,
-              companyId: 'system',
+              contextEventId: empresa.nombre,
+              companyId: empresa.nombre,
               tipoArchivo: 'logo'
             },
             fecha: new Date()
@@ -263,8 +263,8 @@ export const useEmpresasEditHandlers = (updateEmpresa, ownerId) => {
             file: empresaEdit.logo,
             context: {
               contextType: 'empresa',
-              contextEventId: empresaEdit.id,
-              companyId: 'system',
+              contextEventId: empresaEdit.nombre,
+              companyId: empresaEdit.nombre,
               tipoArchivo: 'logo'
             },
             fecha: new Date()

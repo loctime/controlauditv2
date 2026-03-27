@@ -96,13 +96,22 @@ const NuevoAccidenteModal = ({ open, onClose, onAccidenteCreado, empresaId, sucu
     setError('');
 
     try {
+      // Construir nombre legible del evento (para carpetas en ControlFile)
+      const [year, month, day] = fechaAccidente.split('-');
+      const monthNames = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
+      const monthLabel = monthNames[parseInt(month) - 1];
+      const contextEventName = `${descripcion || 'Accidente'} - ${day} ${monthLabel} ${year}`;
+
       await onAccidenteCreado({
         empresaId,
         sucursalId,
         descripcion,
         fechaAccidente,
         empleadosSeleccionados,
-        imagenes
+        imagenes,
+        empresaNombre,
+        sucursalNombre,
+        contextEventName
       });
       handleClose();
     } catch (err) {

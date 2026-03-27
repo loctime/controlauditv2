@@ -30,7 +30,7 @@ class CapacitacionImageService {
    * @private
    * @deprecated Esta función será removida en Iteración 2 cuando todos los componentes migren
    */
-  async uploadImageNew(file, idToken, capacitacionEventoId, companyId, sucursalId = null, capacitacionTipoId = null, tipoArchivo = 'evidencia') {
+  async uploadImageNew(file, idToken, capacitacionEventoId, companyId, sucursalId = null, capacitacionTipoId = null, tipoArchivo = 'evidencia', optionsLegible = {}) {
     try {
       const user = auth.currentUser;
       if (!user) {
@@ -45,7 +45,7 @@ class CapacitacionImageService {
         const ownerId = userId; // userId ahora es ownerId
         const capacitacionRef = doc(db, ...firestoreRoutesCore.capacitacion(ownerId, capacitacionEventoId));
         const capacitacionSnap = await getDoc(capacitacionRef);
-        
+
         if (capacitacionSnap.exists()) {
           capacitacionData = capacitacionSnap.data();
         }
@@ -53,32 +53,33 @@ class CapacitacionImageService {
         logger.warn('⚠️ No se pudo obtener datos de la capacitación:', error);
       }
 
-      // Determinar valores finales
-      const finalCompanyId = companyId || capacitacionData?.empresaId;
-      const finalSucursalId = sucursalId || capacitacionData?.sucursalId;
-      
+      // Determinar valores finales: preferir nombres legibles, fallback a IDs
+      const finalCompanyId = optionsLegible.empresaNombre || companyId || capacitacionData?.empresaId;
+      const finalSucursalId = optionsLegible.sucursalNombre || sucursalId || capacitacionData?.sucursalId;
+      const finalEventName = optionsLegible.contextEventName || capacitacionEventoId;
+
       if (!finalCompanyId) {
         throw new Error('No se pudo obtener companyId para la capacitación');
       }
-      
+
       if (!finalSucursalId) {
         throw new Error('No se pudo obtener sucursalId para la capacitación');
       }
 
       const finalTipoId = capacitacionTipoId || capacitacionData?.capacitacionTipoId;
-      
+
       if (!finalTipoId || typeof finalTipoId !== 'string' || finalTipoId.trim() === '') {
         throw new Error('Capacitación sin capacitacionTipoId. Estado inválido. El capacitacionTipoId debe estar persistido en Firestore desde la creación.');
       }
 
-      logger.debug(`[capacitacionImageService] 📤 [v1.0] Subiendo archivo con modelo de contexto: capacitacion/${capacitacionEventoId}/${tipoArchivo}`);
+      logger.debug(`[capacitacionImageService] 📤 [v1.0] Subiendo archivo con modelo de contexto: capacitacion/${finalEventName}/${tipoArchivo}`);
 
       // Usar el nuevo servicio unificado
       const result = await uploadFileWithContext({
         file,
         context: {
           contextType: 'capacitacion',
-          contextEventId: capacitacionEventoId,
+          contextEventId: finalEventName,
           companyId: finalCompanyId,
           sucursalId: finalSucursalId,
           tipoArchivo,

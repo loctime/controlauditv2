@@ -85,6 +85,13 @@ const NuevoIncidenteModal = ({ open, onClose, onIncidenteCreado, empresaId, sucu
 
     try {
       const empleadoAfectado = empleados.find((emp) => emp.id === empleadoAfectadoId);
+
+      // Construir nombre legible del evento (para carpetas en ControlFile)
+      const [year, month, day] = fechaIncidente.split('-');
+      const monthNames = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
+      const monthLabel = monthNames[parseInt(month) - 1];
+      const contextEventName = `${descripcion || 'Incidente'} - ${day} ${monthLabel} ${year}`;
+
       await onIncidenteCreado({
         empresaId,
         sucursalId,
@@ -94,7 +101,10 @@ const NuevoIncidenteModal = ({ open, onClose, onIncidenteCreado, empresaId, sucu
         imagenes,
         tieneLesion,
         empleadoAfectadoId: tieneLesion ? empleadoAfectadoId : null,
-        empleadoAfectadoNombre: tieneLesion ? (empleadoAfectado?.nombre || null) : null
+        empleadoAfectadoNombre: tieneLesion ? (empleadoAfectado?.nombre || null) : null,
+        empresaNombre,
+        sucursalNombre,
+        contextEventName
       });
       handleClose();
     } catch (err) {

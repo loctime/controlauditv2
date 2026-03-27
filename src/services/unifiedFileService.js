@@ -117,7 +117,8 @@ export async function uploadFiles(params) {
     tipoArchivo = 'evidencia',
     sucursalId,
     capacitacionTipoId,
-    empleadoIds
+    empleadoIds,
+    contextEventName
   } = params;
 
   if (!ownerId) throw new Error('ownerId es requerido');
@@ -139,7 +140,7 @@ export async function uploadFiles(params) {
       file,
       context: {
         contextType: context,
-        contextEventId: String(entityId),
+        contextEventId: contextEventName || String(entityId),
         companyId,
         tipoArchivo,
         sucursalId: sucursalId || undefined,

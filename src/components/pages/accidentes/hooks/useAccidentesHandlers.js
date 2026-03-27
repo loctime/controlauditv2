@@ -15,9 +15,19 @@ import Swal from 'sweetalert2';
 export const useAccidentesHandlers = (userProfile, recargarAccidentes) => {
   const handleCrearAccidente = useCallback(async (accidenteData) => {
     try {
+      // Construir nombre legible si no se pasó desde el modal
+      let contextEventName = accidenteData.contextEventName;
+      if (!contextEventName && accidenteData.descripcion && accidenteData.fechaAccidente) {
+        const [year, month, day] = accidenteData.fechaAccidente.split('-');
+        const monthNames = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
+        const monthLabel = monthNames[parseInt(month) - 1];
+        contextEventName = `${accidenteData.descripcion || 'Accidente'} - ${day} ${monthLabel} ${year}`;
+      }
+
       await crearAccidente(
         {
           ...accidenteData,
+          contextEventName,
           reportadoPor: userProfile.uid
         },
         accidenteData.empleadosSeleccionados,
@@ -34,9 +44,19 @@ export const useAccidentesHandlers = (userProfile, recargarAccidentes) => {
 
   const handleCrearIncidente = useCallback(async (incidenteData) => {
     try {
+      // Construir nombre legible si no se pasó desde el modal
+      let contextEventName = incidenteData.contextEventName;
+      if (!contextEventName && incidenteData.descripcion && incidenteData.fechaIncidente) {
+        const [year, month, day] = incidenteData.fechaIncidente.split('-');
+        const monthNames = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
+        const monthLabel = monthNames[parseInt(month) - 1];
+        contextEventName = `${incidenteData.descripcion || 'Incidente'} - ${day} ${monthLabel} ${year}`;
+      }
+
       await crearIncidente(
         {
           ...incidenteData,
+          contextEventName,
           reportadoPor: userProfile.uid
         },
         incidenteData.testigos,

@@ -135,7 +135,10 @@ export const crearAccidente = async (accidenteData, empleadosSeleccionados, imag
         ownerId,
         uploadedBy: actorId,
         module: 'accidentes',
-        contextType: 'accidente'
+        contextType: 'accidente',
+        contextEventName: accidenteData.contextEventName,
+        empresaNombre: accidenteData.empresaNombre,
+        sucursalNombre: accidenteData.sucursalNombre
       });
     }
 
@@ -250,7 +253,10 @@ export const crearIncidente = async (incidenteData, testigos = [], imagenes = []
         ownerId,
         uploadedBy: actorId,
         module: 'incidentes',
-        contextType: 'incidente'
+        contextType: 'incidente',
+        contextEventName: incidenteData.contextEventName,
+        empresaNombre: incidenteData.empresaNombre,
+        sucursalNombre: incidenteData.sucursalNombre
       });
     }
 
@@ -307,7 +313,10 @@ const subirImagenesNew = async (accidenteId, imagenes, companyId = 'system', opt
     ownerId,
     uploadedBy = null,
     module = 'accidentes',
-    contextType = 'accidente'
+    contextType = 'accidente',
+    contextEventName = null,
+    empresaNombre = null,
+    sucursalNombre = null
   } = options;
 
   try {
@@ -319,12 +328,14 @@ const subirImagenesNew = async (accidenteId, imagenes, companyId = 'system', opt
       ownerId,
       module,
       entityId: String(accidenteId),
-      companyId,
+      companyId: empresaNombre || companyId,
       files: imagenes,
       uploadedBy,
       contextType,
       tipoArchivo: 'evidencia',
-      entityCollection: 'accidentes'
+      entityCollection: 'accidentes',
+      contextEventName,
+      sucursalId: sucursalNombre
     });
 
     // Espejo legacy temporal para mantener pantallas existentes.

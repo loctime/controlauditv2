@@ -17,7 +17,7 @@ import { db } from '../../../firebaseControlFile';
 import { useAuth } from '@/components/context/AuthContext';
 import { crearAccidente, crearIncidente, obtenerEmpleadosPorSucursal } from '../../../services/accidenteService';
 
-export default function AccidenteForm({ open, onClose, onSave, sucursalId, empresaId }) {
+export default function AccidenteForm({ open, onClose, onSave, sucursalId, empresaId, empresaNombre, sucursalNombre }) {
   const { userProfile } = useAuth();
   const [loading, setLoading] = useState(false);
   const [empleados, setEmpleados] = useState([]);
@@ -64,13 +64,21 @@ export default function AccidenteForm({ open, onClose, onSave, sucursalId, empre
     setLoading(true);
 
     try {
+      const [year, month, day] = formData.fechaHora.split('T')[0].split('-');
+      const monthNames = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
+      const monthLabel = monthNames[parseInt(month) - 1];
+      const contextEventName = `${formData.descripcion || 'Accidente'} - ${day} ${monthLabel} ${year}`;
+
       const accidenteData = {
         empresaId,
         sucursalId,
         fechaAccidente: formData.fechaHora,
         descripcion: formData.descripcion,
         lugar: formData.lugar,
-        reportadoPor: userProfile.uid
+        reportadoPor: userProfile.uid,
+        empresaNombre,
+        sucursalNombre,
+        contextEventName
       };
 
       if (formData.tipo === 'accidente') {
