@@ -456,6 +456,7 @@ export default function MatrixScreen() {
         rows={rows}
         sessions={sessions}
         attendanceMap={attendanceMap}
+        catalogMap={catalogMap}
       />
     </Box>
   );

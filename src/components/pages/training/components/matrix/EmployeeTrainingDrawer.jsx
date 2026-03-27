@@ -7,6 +7,8 @@ import {
   Drawer,
   IconButton,
   Stack,
+  Tabs,
+  Tab,
   Typography
 } from '@mui/material';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
@@ -59,6 +61,9 @@ function formatSessionDate(record) {
 
 /**
  * Drawer lateral para ver el historial anual de capacitaciones por empleado.
+ * Incluye dos vistas:
+ * - Tab 0 "Por capacitación": Agrupa por tipo de capacitación (actual)
+ * - Tab 1 "Por mes": Agrupa por mes, dentro de cada mes las capacitaciones (nuevo)
  *
  * @param {{
  *  open: boolean,
@@ -84,6 +89,7 @@ export default function EmployeeTrainingDrawer({
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [expandedKeys, setExpandedKeys] = useState(new Set());
+  const [activeTab, setActiveTab] = useState(0);
 
   useEffect(() => {
     if (!open || !ownerId || !empleadoId) return;
@@ -142,6 +148,46 @@ export default function EmployeeTrainingDrawer({
       });
   }, [records, year, catalogMap]);
 
+  const groupedByMonth = useMemo(() => {
+    const filtered = (records || []).filter((r) => Number(r?.periodYear) === Number(year));
+    const byMonth = {};
+
+    filtered.forEach((record) => {
+      const month = record.periodMonth || 0;
+      if (!byMonth[month]) {
+        byMonth[month] = {};
+      }
+
+      const trainingTypeId = record.trainingTypeId || 'unknown';
+      if (!byMonth[month][trainingTypeId]) {
+        byMonth[month][trainingTypeId] = {
+          trainingTypeId,
+          trainingTypeName: catalogMap[trainingTypeId]?.name || catalogMap[trainingTypeId] || trainingTypeId || 'N/A',
+          records: []
+        };
+      }
+      byMonth[month][trainingTypeId].records.push(record);
+    });
+
+    return Object.entries(byMonth)
+      .map(([monthNum, typesMap]) => ({
+        month: Number(monthNum),
+        monthLabel: MONTH_NAMES[monthNum] || `Mes ${monthNum}`,
+        trainingTypes: Object.values(typesMap)
+          .map((tt) => ({
+            ...tt,
+            status: resolveEmployeeStatus(tt.records[0]),
+            records: tt.records.sort((a, b) => {
+              const aDate = toDate(a?.updatedAt || a?.sourceExecutedDate || a?.sourceSessionCreatedAt);
+              const bDate = toDate(b?.updatedAt || b?.sourceExecutedDate || b?.sourceSessionCreatedAt);
+              return (bDate?.getTime() || 0) - (aDate?.getTime() || 0);
+            })
+          }))
+          .sort((a, b) => (a.trainingTypeName || '').localeCompare(b.trainingTypeName || ''))
+      }))
+      .sort((a, b) => a.month - b.month);
+  }, [records, year, catalogMap]);
+
   const toggleExpand = (key) => {
     setExpandedKeys((prev) => {
       const next = new Set(prev);
@@ -168,8 +214,9 @@ export default function EmployeeTrainingDrawer({
         }
       }}
     >
-      <Stack spacing={2} sx={{ p: 2 }}>
-        <Box>
+      <Stack spacing={0} sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
+        {/* Header */}
+        <Box sx={{ p: 2, borderBottom: '1px solid #eeeeee' }}>
           <Typography variant="body2" color="text.secondary">
             Empleado
           </Typography>
@@ -178,75 +225,219 @@ export default function EmployeeTrainingDrawer({
           </Typography>
         </Box>
 
-        {loading && (
-          <Box sx={{ display: 'flex', justifyContent: 'center', py: 3 }}>
-            <CircularProgress />
-          </Box>
-        )}
+        {/* Tabs */}
+        <Tabs
+          value={activeTab}
+          onChange={(e, newValue) => setActiveTab(newValue)}
+          sx={{
+            px: 2,
+            borderBottom: '1px solid #eeeeee'
+          }}
+        >
+          <Tab label="Por capacitación" index={0} />
+          <Tab label="Por mes" index={1} />
+        </Tabs>
 
-        {!loading && groupedItems.length === 0 && (
-          <Typography color="text.secondary">
-            No hay capacitaciones registradas para {year}.
-          </Typography>
-        )}
-
-        {!loading && groupedItems.map((item) => {
-          const isExpanded = expandedKeys.has(item.key);
-          const monthLabel = MONTH_NAMES[item.periodMonth] || `Mes ${item.periodMonth || ''}`;
-
-          return (
-            <Box key={item.key} sx={{ border: '1px solid #eeeeee', borderRadius: 1.5, p: 1.5 }}>
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                <Box sx={{ flex: 1, minWidth: 0 }}>
-                  <Typography variant="subtitle2" sx={{ fontWeight: 600 }} noWrap>
-                    {item.trainingTypeName}
-                  </Typography>
-                  <Typography variant="caption" color="text.secondary">
-                    {monthLabel}
-                  </Typography>
-                </Box>
-
-                <Box
-                  sx={{
-                    display: 'inline-flex',
-                    px: 1,
-                    py: 0.25,
-                    borderRadius: 1,
-                    bgcolor: item.status.bg,
-                    color: item.status.color,
-                    fontSize: '0.72rem',
-                    fontWeight: 700,
-                    whiteSpace: 'nowrap'
-                  }}
-                >
-                  {item.status.label}
-                </Box>
-
-                <IconButton size="small" onClick={() => toggleExpand(item.key)}>
-                  <ExpandMoreIcon
-                    fontSize="small"
-                    sx={{ transform: isExpanded ? 'rotate(180deg)' : 'rotate(0deg)', transition: 'transform 150ms ease' }}
-                  />
-                </IconButton>
-              </Box>
-
-              <Collapse in={isExpanded} timeout="auto" unmountOnExit>
-                <Stack spacing={1} sx={{ mt: 1.5 }}>
-                  {item.records.map((record) => (
-                    <Box key={record.id} sx={{ border: '1px solid #f0f0f0', borderRadius: 1, p: 1 }}>
-                      <Typography variant="body2" sx={{ fontWeight: 600 }}>
-                        {formatSessionDate(record)}
-                      </Typography>
-                      <EvidencePreviewList evidenceIds={record.evidenceIds || []} previewHeight={140} />
-                    </Box>
-                  ))}
-                </Stack>
-              </Collapse>
+        {/* Content Area */}
+        <Box sx={{ flex: 1, overflow: 'auto', p: 2 }}>
+          {/* Loading state */}
+          {loading && (
+            <Box sx={{ display: 'flex', justifyContent: 'center', py: 3 }}>
+              <CircularProgress />
             </Box>
-          );
-        })}
+          )}
 
-        {error && <Alert severity="error">{error}</Alert>}
+          {/* TAB 0: Por capacitación */}
+          {activeTab === 0 && !loading && (
+            <Stack spacing={2}>
+              {groupedItems.length === 0 && (
+                <Typography color="text.secondary">
+                  No hay capacitaciones registradas para {year}.
+                </Typography>
+              )}
+
+              {groupedItems.map((item) => {
+                const isExpanded = expandedKeys.has(item.key);
+                const monthLabel = MONTH_NAMES[item.periodMonth] || `Mes ${item.periodMonth || ''}`;
+
+                return (
+                  <Box key={item.key} sx={{ border: '1px solid #eeeeee', borderRadius: 1.5, overflow: 'hidden' }}>
+                    {/* Header */}
+                    <Box
+                      sx={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: 1,
+                        p: 1.5,
+                        bgcolor: '#f5f5f5',
+                        cursor: 'pointer',
+                        '&:hover': { bgcolor: '#f0f0f0' }
+                      }}
+                      onClick={() => toggleExpand(item.key)}
+                    >
+                      <ExpandMoreIcon
+                        fontSize="small"
+                        sx={{ transform: isExpanded ? 'rotate(180deg)' : 'rotate(0deg)', transition: 'transform 150ms ease' }}
+                      />
+                      <Box sx={{ flex: 1, minWidth: 0 }}>
+                        <Typography variant="subtitle2" sx={{ fontWeight: 600 }} noWrap>
+                          {item.trainingTypeName}
+                        </Typography>
+                        <Typography variant="caption" color="text.secondary">
+                          {monthLabel}
+                        </Typography>
+                      </Box>
+
+                      <Box
+                        sx={{
+                          display: 'inline-flex',
+                          px: 1,
+                          py: 0.25,
+                          borderRadius: 1,
+                          bgcolor: item.status.bg,
+                          color: item.status.color,
+                          fontSize: '0.72rem',
+                          fontWeight: 700,
+                          whiteSpace: 'nowrap'
+                        }}
+                      >
+                        {item.status.label}
+                      </Box>
+                    </Box>
+
+                    <Collapse in={isExpanded} timeout="auto" unmountOnExit>
+                      <Stack spacing={1} sx={{ p: 1.5 }}>
+                        {item.records.map((record) => (
+                          <Box key={record.id} sx={{ border: '1px solid #f0f0f0', borderRadius: 1, p: 1, bgcolor: '#ffffff' }}>
+                            <Typography variant="body2" sx={{ fontWeight: 600 }}>
+                              {formatSessionDate(record)}
+                            </Typography>
+                            <EvidencePreviewList evidenceIds={record.evidenceIds || []} previewHeight={140} />
+                          </Box>
+                        ))}
+                      </Stack>
+                    </Collapse>
+                  </Box>
+                );
+              })}
+            </Stack>
+          )}
+
+          {/* TAB 1: Por mes */}
+          {activeTab === 1 && !loading && (
+            <Stack spacing={1.5}>
+              {groupedByMonth.length === 0 && (
+                <Typography color="text.secondary">
+                  No hay capacitaciones registradas para {year}.
+                </Typography>
+              )}
+
+              {groupedByMonth.map((monthGroup) => {
+                const monthKey = `month-${monthGroup.month}`;
+                const isMonthExpanded = expandedKeys.has(monthKey);
+
+                return (
+                  <Box key={monthKey} sx={{ border: '1px solid #eeeeee', borderRadius: 1.5, overflow: 'hidden' }}>
+                    {/* Month Header */}
+                    <Box
+                      sx={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: 1,
+                        p: 1.5,
+                        bgcolor: '#f5f5f5',
+                        cursor: 'pointer',
+                        '&:hover': { bgcolor: '#f0f0f0' }
+                      }}
+                      onClick={() => toggleExpand(monthKey)}
+                    >
+                      <ExpandMoreIcon
+                        fontSize="small"
+                        sx={{ transform: isMonthExpanded ? 'rotate(180deg)' : 'rotate(0deg)', transition: 'transform 150ms ease' }}
+                      />
+                      <Box sx={{ flex: 1, minWidth: 0 }}>
+                        <Typography variant="subtitle2" sx={{ fontWeight: 600 }} noWrap>
+                          {monthGroup.monthLabel}
+                        </Typography>
+                      </Box>
+                      <Typography variant="caption" color="text.secondary" sx={{ whiteSpace: 'nowrap' }}>
+                        {monthGroup.trainingTypes.length} capacitación{monthGroup.trainingTypes.length !== 1 ? 'es' : ''}
+                      </Typography>
+                    </Box>
+
+                    <Collapse in={isMonthExpanded} timeout="auto" unmountOnExit>
+                      <Stack spacing={1} sx={{ p: 1.5 }}>
+                        {monthGroup.trainingTypes.map((tt) => {
+                          const ttKey = `tt-${monthGroup.month}-${tt.trainingTypeId}`;
+                          const isTtExpanded = expandedKeys.has(ttKey);
+
+                          return (
+                            <Box key={ttKey} sx={{ border: '1px solid #f0f0f0', borderRadius: 1, overflow: 'hidden' }}>
+                              {/* Training Type Header */}
+                              <Box
+                                sx={{
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  gap: 1,
+                                  p: 1,
+                                  bgcolor: '#fafafa',
+                                  cursor: 'pointer',
+                                  '&:hover': { bgcolor: '#f5f5f5' }
+                                }}
+                                onClick={() => toggleExpand(ttKey)}
+                              >
+                                <ExpandMoreIcon
+                                  fontSize="small"
+                                  sx={{ transform: isTtExpanded ? 'rotate(180deg)' : 'rotate(0deg)', transition: 'transform 150ms ease' }}
+                                />
+                                <Box sx={{ flex: 1, minWidth: 0 }}>
+                                  <Typography variant="body2" sx={{ fontWeight: 600 }} noWrap>
+                                    {tt.trainingTypeName}
+                                  </Typography>
+                                </Box>
+                                <Box
+                                  sx={{
+                                    display: 'inline-flex',
+                                    px: 0.75,
+                                    py: 0.25,
+                                    borderRadius: 0.75,
+                                    bgcolor: tt.status.bg,
+                                    color: tt.status.color,
+                                    fontSize: '0.65rem',
+                                    fontWeight: 700,
+                                    whiteSpace: 'nowrap'
+                                  }}
+                                >
+                                  {tt.status.label}
+                                </Box>
+                              </Box>
+
+                              <Collapse in={isTtExpanded} timeout="auto" unmountOnExit>
+                                <Stack spacing={0.75} sx={{ p: 1, bgcolor: '#fafafa' }}>
+                                  {tt.records.map((record) => (
+                                    <Box key={record.id} sx={{ border: '1px solid #eeeeee', borderRadius: 0.75, p: 0.75, bgcolor: '#ffffff' }}>
+                                      <Typography variant="body2" sx={{ fontWeight: 600, mb: 0.5 }}>
+                                        {formatSessionDate(record)}
+                                      </Typography>
+                                      <EvidencePreviewList evidenceIds={record.evidenceIds || []} previewHeight={100} />
+                                    </Box>
+                                  ))}
+                                </Stack>
+                              </Collapse>
+                            </Box>
+                          );
+                        })}
+                      </Stack>
+                    </Collapse>
+                  </Box>
+                );
+              })}
+            </Stack>
+          )}
+
+          {/* Error state */}
+          {error && <Alert severity="error">{error}</Alert>}
+        </Box>
       </Stack>
     </Drawer>
   );

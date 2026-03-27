@@ -15,7 +15,8 @@
       "Read(//c/Users/User/Desktop/controlauditv2/src/components/pages/training/screens/**)",
       "Bash(done)",
       "Bash(wc -l /c/Users/User/Desktop/controlauditv2/src/components/pages/training/screens/*.jsx)",
-      "Bash(grep -c \"position: ''sticky''\" /c/Users/User/Desktop/controlauditv2/src/components/pages/training/components/matrix/TrainingMatrixTable.jsx)"
+      "Bash(grep -c \"position: ''sticky''\" /c/Users/User/Desktop/controlauditv2/src/components/pages/training/components/matrix/TrainingMatrixTable.jsx)",
+      "Bash(npm run:*)"
     ]
   }
 }
