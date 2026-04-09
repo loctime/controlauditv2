@@ -1,19 +1,17 @@
 import logger from '@/utils/logger';
-import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { useEffect, useMemo, useRef } from 'react';
-import { query, where, getDocs, onSnapshot, collection } from 'firebase/firestore';
+import { useQuery } from '@tanstack/react-query';
+import { useMemo } from 'react';
+import { query, where, getDocs, collection } from 'firebase/firestore';
 import { dbAudit } from '../../firebaseControlFile';
 import { firestoreRoutesCore } from '../../core/firestore/firestoreRoutes.core';
 import { useAuth } from '@/components/context/AuthContext';
-/**
- * Normaliza una capacitación unificando campos legacy
- */
-const normalizeCapacitacion = (doc) => ({
-  id: doc.id,
-  ...doc.data(),
-  fechaCreacion: doc.data().fechaCreacion ?? doc.data().createdAt ?? null,
-  activa: doc.data().activa ?? true,
-});
+
+/** Mapea la modalidad del nuevo sistema al tipo legacy (charla/entrenamiento/capacitacion) */
+function mapModalidadToTipo(modality) {
+  if (modality === 'online' || modality === 'virtual') return 'charla';
+  if (modality === 'on_the_job' || modality === 'practical') return 'entrenamiento';
+  return 'capacitacion';
+}
 
 /**
  * Normaliza un plan anual unificando campos legacy
@@ -26,74 +24,105 @@ const normalizePlanAnual = (doc) => ({
 });
 
 /**
- * Función de fetch para capacitaciones individuales
+ * Carga el catálogo de training y devuelve un mapa id→item
  */
-const fetchCapacitaciones = async (userId, selectedEmpresa, selectedSucursal, sucursalesDisponibles, ownerId) => {
+async function fetchCatalogMap(ownerId) {
+  const ref = collection(dbAudit, ...firestoreRoutesCore.trainingCatalog(ownerId));
+  const snap = await getDocs(ref);
+  const map = {};
+  snap.docs.forEach(d => { map[d.id] = { id: d.id, ...d.data() }; });
+  return map;
+}
+
+/**
+ * Fetch de training_sessions con attendance embebida.
+ * Devuelve objetos normalizados compatibles con useCapacitacionesMetrics y la UI de Capacitaciones.
+ */
+const fetchTrainingSessions = async (userId, selectedEmpresa, selectedSucursal, sucursalesDisponibles, ownerId) => {
   if (!userId || !ownerId) return [];
 
-  const capacitacionesRef = collection(dbAudit, ...firestoreRoutesCore.capacitaciones(ownerId));
-  let qCap;
+  const catalogMap = await fetchCatalogMap(ownerId);
+  const sessionsRef = collection(dbAudit, ...firestoreRoutesCore.trainingSessions(ownerId));
+  let rawSessions = [];
 
   if (selectedSucursal) {
-    // Filtro funcional: solo por sucursal
-    qCap = query(capacitacionesRef, where('sucursalId', '==', selectedSucursal));
+    const snap = await getDocs(query(sessionsRef, where('branchId', '==', selectedSucursal)));
+    rawSessions = snap.docs.map(d => ({ id: d.id, ...d.data() }));
   } else if (selectedEmpresa && sucursalesDisponibles && sucursalesDisponibles.length > 0) {
-    // Filtro funcional: solo por empresa
     const sucursalesEmpresa = sucursalesDisponibles
       .filter(s => s.empresaId === selectedEmpresa)
       .map(s => s.id);
 
-    if (sucursalesEmpresa.length === 0) {
-      return [];
-    }
+    if (sucursalesEmpresa.length === 0) return [];
 
-    // Usar 'in' para múltiples sucursales (máximo 10)
     const chunkSize = 10;
-    const capacitacionesData = [];
-
     for (let i = 0; i < sucursalesEmpresa.length; i += chunkSize) {
       const chunk = sucursalesEmpresa.slice(i, i + chunkSize);
-      const chunkQuery = query(capacitacionesRef, where('sucursalId', 'in', chunk));
-      const chunkSnapshot = await getDocs(chunkQuery);
-      chunkSnapshot.docs.forEach(doc => {
-        capacitacionesData.push({
-          ...normalizeCapacitacion(doc),
-          tipo: 'individual'
-        });
-      });
+      const snap = await getDocs(query(sessionsRef, where('branchId', 'in', chunk)));
+      rawSessions.push(...snap.docs.map(d => ({ id: d.id, ...d.data() })));
     }
-
-    // Ordenar por fecha más reciente
-    capacitacionesData.sort((a, b) => {
-      const dateA = a.fechaRealizada?.toDate?.() || new Date(a.fechaRealizada);
-      const dateB = b.fechaRealizada?.toDate?.() || new Date(b.fechaRealizada);
-      return dateB - dateA;
-    });
-
-    return capacitacionesData;
   } else {
-    // Sin filtros funcionales: cargar todas las capacitaciones del usuario
-    qCap = capacitacionesRef;
+    const snap = await getDocs(sessionsRef);
+    rawSessions = snap.docs.map(d => ({ id: d.id, ...d.data() }));
   }
 
-  const snapshotCap = await getDocs(qCap);
-  const capacitacionesData = snapshotCap.docs.map(doc => ({
-    ...normalizeCapacitacion(doc),
-    tipo: 'individual'
-  }));
+  // Excluir eliminadas y canceladas
+  rawSessions = rawSessions.filter(s => !s.deletedAt && s.status !== 'cancelled');
 
-  // Ordenar por fecha más reciente
-  capacitacionesData.sort((a, b) => {
-    const dateA = a.fechaRealizada?.toDate?.() || new Date(a.fechaRealizada);
-    const dateB = b.fechaRealizada?.toDate?.() || new Date(b.fechaRealizada);
-    return dateB - dateA;
-  });
+  // Fetch attendance por sesión y normalizar
+  const sessions = await Promise.all(
+    rawSessions.map(async (session) => {
+      try {
+        const attRef = collection(dbAudit, ...firestoreRoutesCore.trainingSessionAttendance(ownerId, session.id));
+        const attSnap = await getDocs(attRef);
 
-  return capacitacionesData;
+        const empleados = attSnap.docs
+          .map(d => ({ ...d.data() }))
+          .filter(a => !a.isDeleted)
+          .map(a => ({
+            empleadoId: a.employeeId,
+            asistio: a.attendanceStatus === 'present',
+            validUntil: a.validUntil || null
+          }));
+
+        const catalogItem = catalogMap[session.trainingTypeId] || {};
+
+        return {
+          id: session.id,
+          nombre: catalogItem.name || session.trainingTypeId || 'Capacitación',
+          fechaRealizada: session.executedDate || session.scheduledDate || null,
+          fechaCreacion: session.createdAt || null,
+          activa: true,
+          estado: session.status === 'closed' ? 'completada' : 'activa',
+          tipo: mapModalidadToTipo(catalogItem.modality),
+          tipoRegistro: 'individual',
+          empleados,
+          duracionMinutos: catalogItem.recommendedDurationMinutes || 0,
+          sucursalId: session.branchId,
+          empresaId: session.companyId,
+          trainingTypeId: session.trainingTypeId,
+          periodYear: session.periodYear,
+          periodMonth: session.periodMonth,
+          status: session.status
+        };
+      } catch (err) {
+        logger.error('[useCapacitacionesQuery] Error cargando attendance de sesión', session.id, err);
+        return null;
+      }
+    })
+  );
+
+  return sessions
+    .filter(Boolean)
+    .sort((a, b) => {
+      const dateA = a.fechaRealizada?.toDate?.() || new Date(a.fechaRealizada || 0);
+      const dateB = b.fechaRealizada?.toDate?.() || new Date(b.fechaRealizada || 0);
+      return dateB - dateA;
+    });
 };
 
 /**
- * Función de fetch para planes anuales
+ * Fetch de planes anuales (colección legacy, se mantiene por compatibilidad con la UI)
  */
 const fetchPlanesAnuales = async (userId, selectedEmpresa, selectedSucursal, ownerId) => {
   if (!userId || !ownerId) return [];
@@ -101,7 +130,6 @@ const fetchPlanesAnuales = async (userId, selectedEmpresa, selectedSucursal, own
   const planesRef = collection(dbAudit, ...firestoreRoutesCore.planesCapacitacionesAnuales(ownerId));
   let planesQ;
 
-  // Solo filtros funcionales: empresa, sucursal, año
   if (selectedSucursal) {
     planesQ = query(
       planesRef,
@@ -121,19 +149,17 @@ const fetchPlanesAnuales = async (userId, selectedEmpresa, selectedSucursal, own
   const planesSnapshot = await getDocs(planesQ);
   return planesSnapshot.docs.map(doc => ({
     ...normalizePlanAnual(doc),
-    tipo: 'plan_anual'
+    tipoRegistro: 'plan_anual'
   }));
 };
 
 /**
- * Hook TanStack Query para capacitaciones
- * 
- * QueryKey: ['capacitaciones', userId, empresaId?, sucursalId?]
- * - userId: siempre presente (identifica el usuario)
- * - empresaId: presente si hay filtro por empresa
- * - sucursalId: presente si hay filtro por sucursal
- * 
- * Esto permite cache independiente por cada combinación de filtros.
+ * Hook TanStack Query para training_sessions (nuevo sistema).
+ *
+ * Devuelve training_sessions normalizadas con attendance embebida,
+ * en formato compatible con useCapacitacionesMetrics y la UI de Capacitaciones.
+ *
+ * QueryKey: ['training-sessions', userId, empresaId?, sucursalId?]
  */
 export const useCapacitacionesQuery = (
   selectedEmpresa,
@@ -142,47 +168,16 @@ export const useCapacitacionesQuery = (
   empresasReady
 ) => {
   const { userProfile, authReady } = useAuth();
-  const queryClient = useQueryClient();
   const userId = userProfile?.uid;
   const ownerId = userProfile?.ownerId;
-  const listenerActiveRef = useRef(false);
-  const currentQueryKeyRef = useRef(null);
-  const planesListenerActiveRef = useRef(false);
-  const currentPlanesQueryKeyRef = useRef(null);
-  const initialLoadCompleteRef = useRef(false);
 
-  // Construir queryKey dinámica basada en filtros
-  // Usar useMemo para mantener referencia estable y evitar re-renders infinitos
   const queryKey = useMemo(() => [
-    'capacitaciones',
+    'training-sessions',
     userId,
     selectedEmpresa ?? undefined,
     selectedSucursal ?? undefined
   ], [userId, selectedEmpresa, selectedSucursal]);
 
-  // Query para capacitaciones individuales
-  // CRÍTICO: Solo ejecutar cuando authReady === true para evitar queries prematuras
-  // NOTA: El listener reactivo traerá datos inmediatamente, este fetch solo sirve como respaldo inicial
-  const {
-    data: capacitaciones = [],
-    isLoading: isLoadingCapacitaciones,
-    error: errorCapacitaciones,
-    refetch: refetchCapacitaciones
-  } = useQuery({
-    queryKey,
-    queryFn: () => fetchCapacitaciones(userId, selectedEmpresa, selectedSucursal, sucursalesDisponibles, ownerId),
-    enabled: !!userId && !!ownerId && empresasReady && authReady, // Bloquear hasta que authReady sea true
-    staleTime: Infinity, // Los datos se mantienen frescos indefinidamente (el listener los actualiza)
-    gcTime: 10 * 60 * 1000, // 10 minutos en cache
-    refetchOnMount: false, // No refetch al montar (el listener mantiene actualizado)
-    refetchOnWindowFocus: false, // No refetch al recuperar foco
-    refetchOnReconnect: false, // No refetch al reconectar (el listener se reconecta automáticamente)
-    // Si el listener ya trajo datos, no sobrescribir con datos potencialmente más antiguos del fetch
-    placeholderData: (previousData) => previousData, // Mantener datos existentes mientras carga
-  });
-
-  // QueryKey para planes anuales (similar pero separada)
-  // Usar useMemo para mantener referencia estable y evitar re-renders infinitos
   const planesQueryKey = useMemo(() => [
     'planes-anuales',
     userId,
@@ -190,9 +185,23 @@ export const useCapacitacionesQuery = (
     selectedSucursal ?? undefined
   ], [userId, selectedEmpresa, selectedSucursal]);
 
-  // Query para planes anuales
-  // CRÍTICO: Solo ejecutar cuando authReady === true para evitar queries prematuras
-  // NOTA: El listener reactivo traerá datos inmediatamente, este fetch solo sirve como respaldo inicial
+  const {
+    data: capacitaciones = [],
+    isLoading: isLoadingCapacitaciones,
+    error: errorCapacitaciones,
+    refetch: refetchCapacitaciones
+  } = useQuery({
+    queryKey,
+    queryFn: () => fetchTrainingSessions(userId, selectedEmpresa, selectedSucursal, sucursalesDisponibles, ownerId),
+    enabled: !!userId && !!ownerId && empresasReady && authReady,
+    staleTime: 5 * 60 * 1000, // 5 minutos (attendance puede cambiar)
+    gcTime: 10 * 60 * 1000,
+    refetchOnMount: true,
+    refetchOnWindowFocus: false,
+    refetchOnReconnect: false,
+    placeholderData: (previousData) => previousData
+  });
+
   const {
     data: planesAnuales = [],
     isLoading: isLoadingPlanes,
@@ -201,186 +210,18 @@ export const useCapacitacionesQuery = (
   } = useQuery({
     queryKey: planesQueryKey,
     queryFn: () => fetchPlanesAnuales(userId, selectedEmpresa, selectedSucursal, ownerId),
-    enabled: !!userId && !!ownerId && empresasReady && authReady, // Bloquear hasta que authReady sea true
-    staleTime: Infinity, // Los datos se mantienen frescos indefinidamente (el listener los actualiza)
+    enabled: !!userId && !!ownerId && empresasReady && authReady,
+    staleTime: Infinity,
     gcTime: 10 * 60 * 1000,
     refetchOnMount: false,
     refetchOnWindowFocus: false,
     refetchOnReconnect: false,
-    // Si el listener ya trajo datos, no sobrescribir con datos potencialmente más antiguos del fetch
-    placeholderData: (previousData) => previousData, // Mantener datos existentes mientras carga
+    placeholderData: (previousData) => previousData
   });
 
-  // Combinar estados (definir antes de usarlo en useEffect)
   const loading = isLoadingCapacitaciones || isLoadingPlanes;
-
-  // Rastrear cuando la carga inicial termina
-  useEffect(() => {
-    if (!loading && authReady && userId) {
-      initialLoadCompleteRef.current = true;
-    }
-  }, [loading, authReady, userId]);
-
-  // Listener reactivo para capacitaciones que actualiza el cache de TanStack Query
-  // Se activa inmediatamente para mostrar datos en tiempo real sin esperar el fetch inicial
-  useEffect(() => {
-    if (!authReady || !userId || !initialLoadCompleteRef.current) {
-      listenerActiveRef.current = false;
-      currentQueryKeyRef.current = null;
-      return;
-    }
-
-    // Verificar si el queryKey cambió o si el listener no está activo
-    const queryKeyChanged = JSON.stringify(currentQueryKeyRef.current) !== JSON.stringify(queryKey);
-    
-    // Evitar activar múltiples listeners si ya está activo con los mismos parámetros
-    if (listenerActiveRef.current && !queryKeyChanged) {
-      return;
-    }
-
-    // Si el queryKey cambió, el cleanup del efecto anterior ya desactivó el listener anterior
-    logger.debug('[useCapacitacionesQuery] Activando listener reactivo de capacitaciones');
-    listenerActiveRef.current = true;
-    currentQueryKeyRef.current = queryKey;
-    if (!ownerId) {
-      logger.error('[useCapacitacionesQuery] ownerId no disponible');
-      return;
-    }
-    const capacitacionesRef = collection(dbAudit, ...firestoreRoutesCore.capacitaciones(ownerId));
-    
-    let qCap;
-    if (selectedSucursal) {
-      qCap = query(capacitacionesRef, where('sucursalId', '==', selectedSucursal));
-    } else if (selectedEmpresa && sucursalesDisponibles && sucursalesDisponibles.length > 0) {
-      const sucursalesEmpresa = sucursalesDisponibles
-        .filter(s => s.empresaId === selectedEmpresa)
-        .map(s => s.id);
-      
-      if (sucursalesEmpresa.length === 0) {
-        return;
-      }
-      
-      // Para múltiples sucursales, usar el listener sin filtro y filtrar después
-      qCap = capacitacionesRef;
-    } else {
-      qCap = capacitacionesRef;
-    }
-
-    const unsubscribe = onSnapshot(
-      qCap,
-      (snapshot) => {
-        // Procesar datos inmediatamente para mostrar resultados rápido
-        let capacitacionesData = snapshot.docs.map(doc => ({
-          ...normalizeCapacitacion(doc),
-          tipo: 'individual'
-        }));
-
-        // Aplicar filtros si es necesario (solo cuando hay filtro por empresa sin sucursal específica)
-        if (selectedEmpresa && sucursalesDisponibles && sucursalesDisponibles.length > 0 && !selectedSucursal) {
-          const sucursalesEmpresa = sucursalesDisponibles
-            .filter(s => s.empresaId === selectedEmpresa)
-            .map(s => s.id);
-          capacitacionesData = capacitacionesData.filter(c => 
-            sucursalesEmpresa.includes(c.sucursalId)
-          );
-        }
-
-        // Ordenar por fecha más reciente
-        capacitacionesData.sort((a, b) => {
-          const dateA = a.fechaRealizada?.toDate?.() || new Date(a.fechaRealizada);
-          const dateB = b.fechaRealizada?.toDate?.() || new Date(b.fechaRealizada);
-          return dateB - dateA;
-        });
-
-        // Actualizar cache inmediatamente - esto hará que los datos aparezcan en la UI de inmediato
-        queryClient.setQueryData(queryKey, capacitacionesData);
-        logger.debug('[useCapacitacionesQuery] ✅ Cache actualizado inmediatamente con', capacitacionesData.length, 'capacitaciones');
-      },
-      (error) => {
-        logger.error('[useCapacitacionesQuery] ❌ Error en listener:', error);
-        listenerActiveRef.current = false;
-      }
-    );
-
-    return () => {
-      logger.debug('[useCapacitacionesQuery] Desactivando listener reactivo');
-      listenerActiveRef.current = false;
-      unsubscribe();
-    };
-  }, [authReady, userId, ownerId, selectedEmpresa, selectedSucursal, sucursalesDisponibles, queryClient, queryKey]);
-
-  // Listener reactivo para planes anuales
-  // Se activa inmediatamente para mostrar datos en tiempo real sin esperar el fetch inicial
-  useEffect(() => {
-    if (!authReady || !userId || !initialLoadCompleteRef.current) {
-      planesListenerActiveRef.current = false;
-      currentPlanesQueryKeyRef.current = null;
-      return;
-    }
-
-    // Verificar si el queryKey cambió o si el listener no está activo
-    const queryKeyChanged = JSON.stringify(currentPlanesQueryKeyRef.current) !== JSON.stringify(planesQueryKey);
-    
-    // Evitar activar múltiples listeners si ya está activo con los mismos parámetros
-    if (planesListenerActiveRef.current && !queryKeyChanged) {
-      return;
-    }
-
-    // Si el queryKey cambió, el cleanup del efecto anterior ya desactivó el listener anterior
-    logger.debug('[useCapacitacionesQuery] Activando listener reactivo de planes anuales');
-    planesListenerActiveRef.current = true;
-    currentPlanesQueryKeyRef.current = planesQueryKey;
-    if (!ownerId) {
-      logger.error('[useCapacitacionesQuery] ownerId no disponible');
-      return;
-    }
-    const planesRef = collection(dbAudit, ...firestoreRoutesCore.planesCapacitacionesAnuales(ownerId));
-    
-    let planesQ;
-    if (selectedSucursal) {
-      planesQ = query(
-        planesRef,
-        where('sucursalId', '==', selectedSucursal),
-        where('año', '==', new Date().getFullYear())
-      );
-    } else if (selectedEmpresa) {
-      planesQ = query(
-        planesRef,
-        where('empresaId', '==', selectedEmpresa),
-        where('año', '==', new Date().getFullYear())
-      );
-    } else {
-      planesQ = query(planesRef, where('año', '==', new Date().getFullYear()));
-    }
-
-    const unsubscribe = onSnapshot(
-      planesQ,
-      (snapshot) => {
-        const planesData = snapshot.docs.map(doc => ({
-          ...normalizePlanAnual(doc),
-          tipo: 'plan_anual'
-        }));
-
-        queryClient.setQueryData(planesQueryKey, planesData);
-        logger.debug('[useCapacitacionesQuery] Cache actualizado con', planesData.length, 'planes anuales');
-      },
-      (error) => {
-        logger.error('[useCapacitacionesQuery] Error en listener de planes:', error);
-        planesListenerActiveRef.current = false;
-      }
-    );
-
-    return () => {
-      logger.debug('[useCapacitacionesQuery] Desactivando listener reactivo de planes');
-      planesListenerActiveRef.current = false;
-      unsubscribe();
-    };
-  }, [authReady, userId, ownerId, selectedEmpresa, selectedSucursal, queryClient, planesQueryKey]);
-
-  // Combinar estados (loading ya está definido arriba)
   const error = errorCapacitaciones || errorPlanes;
 
-  // Función de refetch que actualiza ambas queries
   const recargarDatos = () => {
     refetchCapacitaciones();
     refetchPlanes();
@@ -392,7 +233,6 @@ export const useCapacitacionesQuery = (
     loading,
     error,
     recargarDatos,
-    // Exponer refetch individuales por si se necesitan
     refetchCapacitaciones,
     refetchPlanes
   };
