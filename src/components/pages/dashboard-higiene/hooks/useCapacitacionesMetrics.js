@@ -67,30 +67,43 @@ export const useCapacitacionesMetrics = (capacitaciones, empleados, selectedYear
       ? Math.round((empleadosCapacitados / totalEmpleados) * 100 * 100) / 100 
       : 0;
 
-    // Calcular capacitaciones vencidas (>365 días sin renovar)
+    // Calcular capacitaciones vencidas
+    // Si el registro tiene validUntil (nuevo sistema), se usa esa fecha de vencimiento.
+    // Fallback legacy: empleado vencido si su última asistencia fue hace >365 días.
     const hoy = new Date();
     const capacitacionesVencidas = empleados.filter(emp => {
-      // Buscar última capacitación de este empleado
-      const capacitacionesEmpleado = capacitacionesPeriodo.filter(cap => {
-        return cap.empleados?.some(e => e.empleadoId === emp.id && e.asistio === true);
+      // Recopilar todas las asistencias del empleado en el período
+      const asistenciasEmpleado = [];
+      capacitacionesPeriodo.forEach(cap => {
+        (cap.empleados || []).forEach(e => {
+          if (e.empleadoId === emp.id && e.asistio === true) {
+            asistenciasEmpleado.push({
+              validUntil: e.validUntil || null,
+              fechaRealizada: cap.fechaRealizada
+            });
+          }
+        });
       });
 
-      if (capacitacionesEmpleado.length === 0) {
-        // Si nunca asistió a una capacitación, está vencido
-        return true;
+      if (asistenciasEmpleado.length === 0) return true;
+
+      // Nuevo sistema: si hay validUntil, usar el más reciente para determinar si venció
+      const conValidUntil = asistenciasEmpleado.filter(a => a.validUntil);
+      if (conValidUntil.length > 0) {
+        const latestValidUntil = conValidUntil.reduce((latest, a) => {
+          const d = a.validUntil?.toDate ? a.validUntil.toDate() : new Date(a.validUntil);
+          return d > latest ? d : latest;
+        }, new Date(0));
+        return latestValidUntil < hoy;
       }
 
-      // Buscar la más reciente
-      const masReciente = capacitacionesEmpleado.reduce((masReciente, cap) => {
-        const fechaCap = cap.fechaRealizada?.toDate 
-          ? cap.fechaRealizada.toDate() 
-          : new Date(cap.fechaRealizada);
-        return fechaCap > masReciente ? fechaCap : masReciente;
+      // Fallback legacy: vencido si última asistencia fue hace >365 días
+      const masReciente = asistenciasEmpleado.reduce((latest, a) => {
+        if (!a.fechaRealizada) return latest;
+        const d = a.fechaRealizada?.toDate ? a.fechaRealizada.toDate() : new Date(a.fechaRealizada);
+        return d > latest ? d : latest;
       }, new Date(0));
-
-      // Si la más reciente es >365 días, está vencido
-      const diasDesdeUltima = Math.floor((hoy - masReciente) / (1000 * 60 * 60 * 24));
-      return diasDesdeUltima > 365;
+      return Math.floor((hoy - masReciente) / (1000 * 60 * 60 * 24)) > 365;
     }).length;
 
     const empleadosSinCapacitar = totalEmpleados - empleadosCapacitados;
