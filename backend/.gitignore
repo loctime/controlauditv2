@@ -4,7 +4,7 @@ serviceAccountKey.json
 .env.local
 .env.production
 .env.staging
-
+serviceAccountKey-controlfile.json
 # Logs
 *.log
 

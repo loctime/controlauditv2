@@ -16,7 +16,11 @@
       "Bash(done)",
       "Bash(wc -l /c/Users/User/Desktop/controlauditv2/src/components/pages/training/screens/*.jsx)",
       "Bash(grep -c \"position: ''sticky''\" /c/Users/User/Desktop/controlauditv2/src/components/pages/training/components/matrix/TrainingMatrixTable.jsx)",
-      "Bash(npm run:*)"
+      "Bash(npm run:*)",
+      "Bash(grep -r @controlfile/sdk /c/Users/User/Desktop/controlauditv2/src --include=*.jsx --include=*.js)",
+      "Bash(grep -c 'id: \"\"dashboard-seguridad\"\"' /c/Users/User/Desktop/controlauditv2/src/config/routesConfig.js)",
+      "Bash(grep -n 'id: \"\"dashboard-seguridad\"\"' /c/Users/User/Desktop/controlauditv2/src/config/routesConfig.js)",
+      "Bash(grep -rn \"from ''@controlfile/sdk\\\\|from \"\"@controlfile\" /c/Users/User/Desktop/controlauditv2/src)"
     ]
   }
 }

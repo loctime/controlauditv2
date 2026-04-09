@@ -40,17 +40,6 @@ export const routesConfig = [
     icon: "Home",
   },
   {
-    id: "dashboard-seguridad",
-    path: "/dashboard-seguridad",
-    label: "Dashboard SST",
-    roles: ["operario", "admin", "superdev"],
-    showInMenu: false,
-    topNav: false,
-    section: "main",
-    order: 2,
-    icon: "HealthAndSafety",
-  },
-  {
     id: "panel",
     path: "/panel",
     label: "Panel",
