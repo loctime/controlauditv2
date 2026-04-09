@@ -377,12 +377,7 @@ export default function DashboardSeguridadV2() {
   );
 
   const auditoriasMetrics = useMemo(() => {
-    if (
-      typeof data?.auditsTotal === "number" ||
-      typeof data?.auditsCompleted === "number" ||
-      typeof data?.auditsPending === "number" ||
-      typeof data?.auditsNonConformities === "number"
-    ) {
+    if ((data?.auditsTotal ?? 0) > 0) {
       return {
         total: data?.auditsTotal ?? 0,
         completadas: data?.auditsCompleted ?? 0,
@@ -422,7 +417,7 @@ export default function DashboardSeguridadV2() {
       pendientes,
       noConformes
     };
-  }, [auditorias]);
+  }, [auditorias, data]);
 
   const auditoriasClasificaciones = useMemo(() => {
     if (data?.auditClassificationSummary?.total > 0) {
