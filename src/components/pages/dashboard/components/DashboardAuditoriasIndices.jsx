@@ -70,7 +70,7 @@ export default function DashboardAuditoriasIndices({
       sx={{
         p: 3.75,
         backgroundColor: 'white',
-        border: '1px solid #e5e7eb',
+        border: '1.5px solid #cbd5e1',
         borderRadius: '12px'
       }}
     >
@@ -107,7 +107,7 @@ export default function DashboardAuditoriasIndices({
 
           <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
             <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <Typography variant="body2" sx={{ color: '#6b7280', fontSize: '17px' }}>
+              <Typography variant="body2" sx={{ color: '#111827', fontSize: '17px', fontWeight: 500 }}>
                 Total programadas
               </Typography>
               <Typography variant="h6" sx={{ fontWeight: 700, color: '#8b5cf6', fontSize: '36px' }}>
@@ -116,10 +116,10 @@ export default function DashboardAuditoriasIndices({
             </Box>
 
             <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
-              <Typography variant="body2" sx={{ color: '#6b7280', fontSize: '15px' }}>
+              <Typography variant="body2" sx={{ color: '#111827', fontSize: '15px', fontWeight: 500 }}>
                 Completadas
               </Typography>
-              <Typography variant="body2" sx={{ fontWeight: 500, color: '#10b981', fontSize: '15px' }}>
+              <Typography variant="body2" sx={{ fontWeight: 600, color: '#10b981', fontSize: '15px' }}>
                 {auditoriasData.completadas} ({auditoriasData.porcentajeCompletadas}%)
               </Typography>
             </Box>
@@ -139,19 +139,19 @@ export default function DashboardAuditoriasIndices({
             />
 
             <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <Typography variant="body2" sx={{ color: '#6b7280', fontSize: '15px' }}>
+              <Typography variant="body2" sx={{ color: '#111827', fontSize: '15px', fontWeight: 500 }}>
                 Pendientes
               </Typography>
-              <Typography variant="body2" sx={{ fontWeight: 500, color: '#f59e0b', fontSize: '15px' }}>
+              <Typography variant="body2" sx={{ fontWeight: 600, color: '#f59e0b', fontSize: '15px' }}>
                 {auditoriasData.pendientes}
               </Typography>
             </Box>
 
             <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <Typography variant="body2" sx={{ color: '#6b7280', fontSize: '15px' }}>
+              <Typography variant="body2" sx={{ color: '#111827', fontSize: '15px', fontWeight: 500 }}>
                 No conformidades
               </Typography>
-              <Typography variant="body2" sx={{ fontWeight: 500, color: '#ef4444', fontSize: '15px' }}>
+              <Typography variant="body2" sx={{ fontWeight: 600, color: '#ef4444', fontSize: '15px' }}>
                 {auditoriasData.noConformes}
               </Typography>
             </Box>
@@ -172,26 +172,26 @@ export default function DashboardAuditoriasIndices({
               </Typography>
               <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
                 <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <Typography variant="body2" sx={{ color: '#6b7280', fontSize: '15px' }}>
+                  <Typography variant="body2" sx={{ color: '#111827', fontSize: '15px', fontWeight: 500 }}>
                     Condición
                   </Typography>
-                  <Typography variant="body2" sx={{ fontWeight: 500, color: '#f59e0b', fontSize: '15px' }}>
+                  <Typography variant="body2" sx={{ fontWeight: 600, color: '#f59e0b', fontSize: '15px' }}>
                     {clasificacionesData.condicion}
                   </Typography>
                 </Box>
                 <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <Typography variant="body2" sx={{ color: '#6b7280', fontSize: '15px' }}>
+                  <Typography variant="body2" sx={{ color: '#111827', fontSize: '15px', fontWeight: 500 }}>
                     Actitud
                   </Typography>
-                  <Typography variant="body2" sx={{ fontWeight: 500, color: '#3b82f6', fontSize: '15px' }}>
+                  <Typography variant="body2" sx={{ fontWeight: 600, color: '#3b82f6', fontSize: '15px' }}>
                     {clasificacionesData.actitud}
                   </Typography>
                 </Box>
                 <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <Typography variant="body2" sx={{ color: '#6b7280', fontSize: '15px' }}>
+                  <Typography variant="body2" sx={{ color: '#111827', fontSize: '15px', fontWeight: 500 }}>
                     Total hallazgos
                   </Typography>
-                  <Typography variant="body2" sx={{ fontWeight: 500, color: '#8b5cf6', fontSize: '15px' }}>
+                  <Typography variant="body2" sx={{ fontWeight: 600, color: '#8b5cf6', fontSize: '15px' }}>
                     {clasificacionesData.total}
                   </Typography>
                 </Box>

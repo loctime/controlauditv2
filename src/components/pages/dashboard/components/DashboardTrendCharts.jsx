@@ -27,7 +27,7 @@ export default function DashboardTrendCharts({
       sx={{
         p: 3.75,
         backgroundColor: 'white',
-        border: '1px solid #e5e7eb',
+        border: '1.5px solid #cbd5e1',
         borderRadius: '12px'
       }}
     >

@@ -136,7 +136,7 @@ export default function MatrixCell({ cellData, pendingState, isColumnLocked = fa
       )}
 
       {/* Label */}
-      {!hovered && config.label && (
+      {(!hovered || !effectiveCanEdit) && config.label && (
         <Box
           component="span"
           sx={{
