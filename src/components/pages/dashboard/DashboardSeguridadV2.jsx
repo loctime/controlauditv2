@@ -829,6 +829,7 @@ export default function DashboardSeguridadV2() {
             auditoriasManuales={auditoriasManuales}
             total={totalAuditoriasManuales}
             loading={auditoriasManualesLoading}
+            selectedYear={selectedYear}
           />
         </DashboardSection>
 

@@ -198,20 +198,42 @@ export default function DashboardOccupationalHealthCard({ saludOcupacional }) {
                     alignItems: "center",
                     justifyContent: "space-between",
                     backgroundColor: item.background,
-                    padding: "10px 12px",
+                    padding: "12px",
                     borderRadius: "10px",
-                    border: `1px solid ${item.border}`
+                    border: `1px solid ${item.border}`,
+                    minHeight: "56px",
+                    gap: 1
                   }}
                 >
-                  <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+                  <Box sx={{ 
+                    display: "flex", 
+                    alignItems: "center", 
+                    gap: 1,
+                    flex: 1,
+                    minWidth: 0
+                  }}>
                     {item.icon}
-                    <Typography variant="body2" sx={{ fontWeight: 600 }}>
+                    <Typography 
+                      variant="body2" 
+                      sx={{ 
+                        fontWeight: 600,
+                        fontSize: "11px",
+                        lineHeight: 1.3,
+                        flexWrap: "wrap",
+                        wordBreak: "break-word"
+                      }}
+                    >
                       {item.label}
                     </Typography>
                   </Box>
                   <Typography
-                    variant="h6"
-                    sx={{ fontWeight: "bold", color: item.color }}
+                    variant="body1"
+                    sx={{ 
+                      fontWeight: "bold", 
+                      color: item.color,
+                      fontSize: "16px",
+                      flexShrink: 0
+                    }}
                   >
                     {displayValue}
                   </Typography>
@@ -229,23 +251,45 @@ export default function DashboardOccupationalHealthCard({ saludOcupacional }) {
                   alignItems: "center",
                   justifyContent: "space-between",
                   backgroundColor: "#f9fafb",
-                  padding: "10px 12px",
+                  padding: "12px",
                   borderRadius: "10px",
-                  border: "1px solid #e5e7eb"
+                  border: "1px solid #e5e7eb",
+                  minHeight: "56px",
+                  gap: 1
                 }}
               >
-                <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+                <Box sx={{ 
+                  display: "flex", 
+                  alignItems: "center", 
+                  gap: 1,
+                  flex: 1,
+                  minWidth: 0
+                }}>
                   <HealthAndSafetyIcon
                     fontSize="small"
                     sx={{ color: "#6b7280" }}
                   />
-                  <Typography variant="body2" sx={{ fontWeight: 600 }}>
+                  <Typography 
+                    variant="body2" 
+                    sx={{ 
+                      fontWeight: 600,
+                      fontSize: "11px",
+                      lineHeight: 1.3,
+                      flexWrap: "wrap",
+                      wordBreak: "break-word"
+                    }}
+                  >
                     {tipoPersonalizado.etiqueta}
                   </Typography>
                 </Box>
                 <Typography
-                  variant="h6"
-                  sx={{ fontWeight: "bold", color: "#374151" }}
+                  variant="body1"
+                  sx={{ 
+                    fontWeight: "bold", 
+                    color: "#374151",
+                    fontSize: "16px",
+                    flexShrink: 0
+                  }}
                 >
                   {tipoPersonalizado.conteo}
                 </Typography>

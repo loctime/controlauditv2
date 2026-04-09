@@ -15,27 +15,58 @@ import {
 const COLORS = ['#059669', '#10b981', '#34d399', '#6ee7b7', '#a7f3d0', '#d1fae5'];
 
 /**
- * Widget del dashboard: gráfico de barras con nombres de auditorías manuales y sus cantidades.
- * Agrupa por nombre y muestra la cantidad por tipo.
+ * Widget del dashboard: gráfico de barras con auditorías manuales agrupadas por mes.
+ * Muestra la cantidad de auditorías manuales realizadas cada mes del año.
  */
 export default function AuditoriasManualesWidget({
   auditoriasManuales = [],
   total = 0,
-  loading = false
+  loading = false,
+  selectedYear
 }) {
   const chartData = useMemo(() => {
     if (!Array.isArray(auditoriasManuales) || auditoriasManuales.length === 0) return [];
 
-    const byName = {};
-    auditoriasManuales.forEach((aud) => {
-      const nombre = aud.nombre?.trim() || 'Sin nombre';
-      byName[nombre] = (byName[nombre] || 0) + 1;
+    const months = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
+    const currentYear = new Date().getFullYear();
+    
+    // Initialize all months with 0
+    const byMonth = {};
+    months.forEach((month, index) => {
+      byMonth[month] = 0;
     });
 
-    return Object.entries(byName)
-      .map(([nombre, cantidad]) => ({ nombre, cantidad }))
-      .sort((a, b) => b.cantidad - a.cantidad);
-  }, [auditoriasManuales]);
+    // Count auditorías by month (filtering by selected year)
+    const yearToUse = selectedYear || currentYear;
+    
+    auditoriasManuales.forEach((aud) => {
+      let fecha = null;
+      
+      // Try to get the date from different possible fields
+      if (aud.fechaCreacion) {
+        fecha = aud.fechaCreacion.toDate ? aud.fechaCreacion.toDate() : new Date(aud.fechaCreacion);
+      } else if (aud.fecha) {
+        fecha = aud.fecha.toDate ? aud.fecha.toDate() : new Date(aud.fecha);
+      } else if (aud.timestamp) {
+        fecha = aud.timestamp.toDate ? aud.timestamp.toDate() : new Date(aud.timestamp);
+      }
+      
+      if (fecha && !isNaN(fecha.getTime())) {
+        // Filter by selected year
+        if (fecha.getFullYear() === yearToUse) {
+          const monthIndex = fecha.getMonth();
+          const monthName = months[monthIndex];
+          byMonth[monthName] = (byMonth[monthName] || 0) + 1;
+        }
+      }
+    });
+
+    // Convert to chart format - show all 12 months
+    return months.map(month => ({
+      mes: month,
+      cantidad: byMonth[month] || 0
+    }));
+  }, [auditoriasManuales, selectedYear]);
 
   if (loading) {
     return (
@@ -67,21 +98,22 @@ export default function AuditoriasManualesWidget({
       </Box>
 
       {chartData.length > 0 ? (
-        <ResponsiveContainer width="100%" height={Math.max(220, chartData.length * 44)}>
+        <ResponsiveContainer width="100%" height={300}>
           <BarChart
             data={chartData}
-            layout="vertical"
             margin={{ top: 8, right: 24, left: 8, bottom: 8 }}
           >
-            <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" horizontal={false} />
-            <XAxis type="number" allowDecimals={false} stroke="#6b7280" />
-            <YAxis
-              type="category"
-              dataKey="nombre"
-              width={140}
+            <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
+            <XAxis 
+              dataKey="mes" 
               tick={{ fontSize: 12 }}
               stroke="#6b7280"
-              tickFormatter={(v) => (v.length > 22 ? `${v.slice(0, 22)}…` : v)}
+            />
+            <YAxis 
+              allowDecimals={false}
+              tick={{ fontSize: 12 }}
+              stroke="#6b7280"
+              domain={[0, 'dataMax']}
             />
             <Tooltip
               contentStyle={{
@@ -89,10 +121,10 @@ export default function AuditoriasManualesWidget({
                 border: '1px solid #e5e7eb',
                 borderRadius: '8px'
               }}
-              formatter={(value) => [value, 'Cantidad']}
-              labelFormatter={(label) => `Auditoría: ${label}`}
+              formatter={(value) => [value, 'Auditorías']}
+              labelFormatter={(label) => `Mes: ${label}`}
             />
-            <Bar dataKey="cantidad" name="Cantidad" radius={[0, 4, 4, 0]} minPointSize={8}>
+            <Bar dataKey="cantidad" name="Cantidad" radius={[4, 4, 0, 0]} minPointSize={2}>
               {chartData.map((_, index) => (
                 <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
               ))}
