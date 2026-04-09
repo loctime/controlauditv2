@@ -279,10 +279,13 @@ export const useDashboardDataFetch = (
         }
         
         // Si inicio es null (histórico), no filtrar por fecha
+        // Soporta tanto Firestore Timestamp como string ISO
         if (inicio) {
           capacitacionesData = capacitacionesData.filter(c => {
-            const fecha = c.fechaRealizada?.toDate ? c.fechaRealizada.toDate() : new Date(0);
-            return fecha >= inicio && fecha <= fin;
+            const fecha = c.fechaRealizada?.toDate
+              ? c.fechaRealizada.toDate()
+              : new Date(c.fechaRealizada);
+            return !isNaN(fecha.getTime()) && fecha >= inicio && fecha <= fin;
           });
         }
         
@@ -292,31 +295,26 @@ export const useDashboardDataFetch = (
           return fechaB - fechaA;
         });
       } else {
-        // Si inicio es null (histórico), no filtrar por fecha
+        // Query sin filtro de fecha para soportar fechaRealizada como string ISO o Timestamp
+        const q = query(
+          capacitacionesRef,
+          where('sucursalId', '==', selectedSucursal),
+          orderBy('fechaRealizada', 'desc')
+        );
+        const snapshot = await getDocs(q);
+        capacitacionesData = snapshot.docs.map(doc => ({
+          id: doc.id,
+          ...doc.data()
+        }));
+
+        // Filtrar en memoria (soporta tanto Timestamp como string ISO)
         if (inicio) {
-          const q = query(
-            capacitacionesRef,
-            where('sucursalId', '==', selectedSucursal),
-            where('fechaRealizada', '>=', inicio),
-            where('fechaRealizada', '<=', fin),
-            orderBy('fechaRealizada', 'desc')
-          );
-          const snapshot = await getDocs(q);
-          capacitacionesData = snapshot.docs.map(doc => ({
-            id: doc.id,
-            ...doc.data()
-          }));
-        } else {
-          const q = query(
-            capacitacionesRef,
-            where('sucursalId', '==', selectedSucursal),
-            orderBy('fechaRealizada', 'desc')
-          );
-          const snapshot = await getDocs(q);
-          capacitacionesData = snapshot.docs.map(doc => ({
-            id: doc.id,
-            ...doc.data()
-          }));
+          capacitacionesData = capacitacionesData.filter(c => {
+            const f = c.fechaRealizada?.toDate
+              ? c.fechaRealizada.toDate()
+              : new Date(c.fechaRealizada);
+            return !isNaN(f.getTime()) && f >= inicio && f <= fin;
+          });
         }
       }
 
