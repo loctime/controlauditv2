@@ -32,6 +32,12 @@ import {
   AccordionDetails,
   Grid,
   Stack,
+  Tabs,
+  Tab,
+  Select,
+  MenuItem,
+  FormControl,
+  InputLabel,
 } from "@mui/material";
 import syncQueueService from '../../../../services/syncQueue';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
@@ -43,6 +49,7 @@ import VisibilityIcon from '@mui/icons-material/Visibility';
 import PersonIcon from '@mui/icons-material/Person';
 import DeleteIcon from '@mui/icons-material/Delete';
 import PrintIcon from '@mui/icons-material/Print';
+import BarChartIcon from '@mui/icons-material/BarChart';
 import Swal from 'sweetalert2';
 import "./ReportesPage.css";
 import FiltrosReportes from "./FiltrosReportes";
@@ -116,6 +123,10 @@ const ReportesPage = () => {
   // Cache para evitar recargas innecesarias
   const reportesCacheRef = useRef({});
   const lastOwnerIdRef = useRef(null);
+  
+  // Estados para tabs y análisis
+  const [tabValue, setTabValue] = useState(0);
+  const [selectedFormulario, setSelectedFormulario] = useState('');
 
   // Estilos responsivos
   const mobileBoxStyle = {
@@ -165,6 +176,95 @@ const ReportesPage = () => {
     });
     return Array.from(formulariosMap.values());
   }, [reportes]);
+
+  // Helper para tab change
+  const handleTabChange = (event, newValue) => {
+    setTabValue(newValue);
+  };
+
+  // Calcular datos de análisis para el formulario seleccionado
+  const datosAnalisis = useMemo(() => {
+    if (!selectedFormulario || !reportes.length) return null;
+
+    const reportesFiltrados = reportes.filter(reporte => {
+      const nombreForm = getNombreFormulario(reporte.formulario, reporte.nombreForm);
+      return nombreForm === selectedFormulario;
+    });
+
+    if (reportesFiltrados.length === 0) return null;
+
+    // Calcular estadísticas básicas
+    let totalConformes = 0;
+    let totalNoConformes = 0;
+    let totalPuntaje = 0;
+    let conteoPuntaje = 0;
+    const preguntasNoConforme = new Map();
+
+    reportesFiltrados.forEach(reporte => {
+      // Sumar respuestas conformes y no conformes
+      if (reporte.estadisticas) {
+        totalConformes += reporte.estadisticas.Conforme || 0;
+        totalNoConformes += reporte.estadisticas['No conforme'] || 0;
+      }
+
+      // Sumar puntaje si existe
+      if (reporte.puntaje !== undefined && reporte.puntaje !== null) {
+        totalPuntaje += reporte.puntaje;
+        conteoPuntaje++;
+      }
+
+      // Contar preguntas no conformes
+      if (reporte.respuestas && reporte.formulario?.secciones) {
+        const respuestasNormalizadas = normalizarRespuestas(reporte.respuestas, reporte.formulario.secciones);
+        
+        reporte.formulario.secciones.forEach((seccion, sIdx) => {
+          if (seccion.preguntas) {
+            seccion.preguntas.forEach((pregunta, pIdx) => {
+              const respuesta = respuestasNormalizadas[sIdx]?.[pIdx];
+              if (respuesta === 'No conforme') {
+                const preguntaKey = `${seccion.nombre || 'Sección'} - ${pregunta}`;
+                preguntasNoConforme.set(preguntaKey, (preguntasNoConforme.get(preguntaKey) || 0) + 1);
+              }
+            });
+          }
+        });
+      }
+    });
+
+    // Ordenar preguntas no conformes por frecuencia
+    const rankingNoConforme = Array.from(preguntasNoConforme.entries())
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 5)
+      .map(([pregunta, count]) => ({ pregunta, count }));
+
+    return {
+      totalAuditorias: reportesFiltrados.length,
+      puntajePromedio: conteoPuntaje > 0 ? (totalPuntaje / conteoPuntaje).toFixed(1) : 0,
+      totalConformes,
+      totalNoConformes,
+      rankingNoConforme,
+      reportes: reportesFiltrados
+    };
+  }, [selectedFormulario, reportes]);
+
+  // Importar normalizarRespuestas para el análisis
+  const normalizarRespuestas = (res, secciones = []) => {
+    // Implementación simple de normalización para el análisis
+    if (!res || !secciones) return [];
+    
+    const resultado = [];
+    secciones.forEach((seccion, sIdx) => {
+      const seccionRespuestas = [];
+      if (seccion.preguntas) {
+        seccion.preguntas.forEach((pregunta, pIdx) => {
+          const clave = `seccion_${sIdx}_pregunta_${pIdx}`;
+          seccionRespuestas.push(res[clave] || 'Sin responder');
+        });
+      }
+      resultado.push(seccionRespuestas);
+    });
+    return resultado;
+  };
 
 
   // Función para formatear fecha
@@ -585,6 +685,227 @@ const ReportesPage = () => {
     </Box>
   );
 
+  // Renderizar vista de análisis global
+  const renderAnalisisGlobal = () => (
+    <Box>
+      {/* Selector de formulario */}
+      <Box sx={{ mb: 4 }}>
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 2 }}>
+          <BarChartIcon sx={{ color: 'primary.main', fontSize: 28 }} />
+          <FormControl fullWidth sx={{ maxWidth: 400 }}>
+            <InputLabel id="formulario-select-label">Seleccionar Formulario</InputLabel>
+            <Select
+              labelId="formulario-select-label"
+              value={selectedFormulario}
+              label="Seleccionar Formulario"
+              onChange={(e) => setSelectedFormulario(e.target.value)}
+            >
+            <MenuItem value="">
+              <em>Todos los formularios</em>
+            </MenuItem>
+            {formulariosDeReportes.map((formulario) => (
+              <MenuItem key={formulario} value={formulario}>
+                {formulario}
+              </MenuItem>
+            ))}
+          </Select>
+          </FormControl>
+        </Box>
+      </Box>
+
+      {selectedFormulario && datosAnalisis ? (
+        <Box>
+          {/* Cards con estadísticas */}
+          <Grid container spacing={3} sx={{ mb: 4 }}>
+            <Grid item xs={12} sm={6} md={3}>
+              <Card sx={{ 
+                bgcolor: alpha(theme.palette.primary.main, 0.1),
+                border: `2px solid ${alpha(theme.palette.primary.main, 0.2)}`,
+                borderRadius: 3
+              }}>
+                <CardContent sx={{ textAlign: 'center', py: 3 }}>
+                  <Typography variant="h4" sx={{ fontWeight: 700, color: 'primary.main' }}>
+                    {datosAnalisis.totalAuditorias}
+                  </Typography>
+                  <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
+                    Total de Auditorías
+                  </Typography>
+                </CardContent>
+              </Card>
+            </Grid>
+            
+            <Grid item xs={12} sm={6} md={3}>
+              <Card sx={{ 
+                bgcolor: alpha(theme.palette.success.main, 0.1),
+                border: `2px solid ${alpha(theme.palette.success.main, 0.2)}`,
+                borderRadius: 3
+              }}>
+                <CardContent sx={{ textAlign: 'center', py: 3 }}>
+                  <Typography variant="h4" sx={{ fontWeight: 700, color: 'success.main' }}>
+                    {datosAnalisis.puntajePromedio}
+                  </Typography>
+                  <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
+                    Puntaje Promedio
+                  </Typography>
+                </CardContent>
+              </Card>
+            </Grid>
+            
+            <Grid item xs={12} sm={6} md={3}>
+              <Card sx={{ 
+                bgcolor: alpha(theme.palette.success.main, 0.1),
+                border: `2px solid ${alpha(theme.palette.success.main, 0.2)}`,
+                borderRadius: 3
+              }}>
+                <CardContent sx={{ textAlign: 'center', py: 3 }}>
+                  <Typography variant="h4" sx={{ fontWeight: 700, color: 'success.main' }}>
+                    {datosAnalisis.totalConformes}
+                  </Typography>
+                  <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
+                    Total Conformes
+                  </Typography>
+                </CardContent>
+              </Card>
+            </Grid>
+            
+            <Grid item xs={12} sm={6} md={3}>
+              <Card sx={{ 
+                bgcolor: alpha(theme.palette.error.main, 0.1),
+                border: `2px solid ${alpha(theme.palette.error.main, 0.2)}`,
+                borderRadius: 3
+              }}>
+                <CardContent sx={{ textAlign: 'center', py: 3 }}>
+                  <Typography variant="h4" sx={{ fontWeight: 700, color: 'error.main' }}>
+                    {datosAnalisis.totalNoConformes}
+                  </Typography>
+                  <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
+                    Total No Conformes
+                  </Typography>
+                </CardContent>
+              </Card>
+            </Grid>
+          </Grid>
+
+          {/* Ranking de preguntas no conformes */}
+          {datosAnalisis.rankingNoConforme.length > 0 && (
+            <Card sx={{ mb: 4, borderRadius: 3 }}>
+              <CardContent>
+                <Typography variant="h6" sx={{ fontWeight: 600, mb: 3, color: 'error.main' }}>
+                  🔍 Top 5 Preguntas con más "No Conforme"
+                </Typography>
+                <Box>
+                  {datosAnalisis.rankingNoConforme.map((item, index) => (
+                    <Box key={index} sx={{ 
+                      display: 'flex', 
+                      justifyContent: 'space-between', 
+                      alignItems: 'center',
+                      py: 2,
+                      borderBottom: index < datosAnalisis.rankingNoConforme.length - 1 ? 1 : 0,
+                      borderColor: 'divider'
+                    }}>
+                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                        <Box sx={{
+                          width: 32,
+                          height: 32,
+                          borderRadius: '50%',
+                          bgcolor: alpha(theme.palette.error.main, 0.1),
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          fontWeight: 600,
+                          color: 'error.main'
+                        }}>
+                          {index + 1}
+                        </Box>
+                        <Typography variant="body2" sx={{ flex: 1 }}>
+                          {item.pregunta}
+                        </Typography>
+                      </Box>
+                      <Chip 
+                        label={`${item.count} veces`} 
+                        color="error" 
+                        size="small" 
+                        sx={{ fontWeight: 600 }}
+                      />
+                    </Box>
+                  ))}
+                </Box>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Tabla de auditorías del formulario */}
+          <Card sx={{ borderRadius: 3 }}>
+            <CardContent>
+              <Typography variant="h6" sx={{ fontWeight: 600, mb: 3 }}>
+                📋 Listado de Auditorías - {selectedFormulario}
+              </Typography>
+              <TableContainer component={Paper} sx={{ borderRadius: 2, overflow: 'hidden' }}>
+                <Table>
+                  <TableHead>
+                    <TableRow sx={{ bgcolor: alpha(theme.palette.primary.main, 0.1) }}>
+                      <TableCell sx={{ fontWeight: 600 }}>Fecha</TableCell>
+                      <TableCell sx={{ fontWeight: 600 }}>Auditor</TableCell>
+                      <TableCell sx={{ fontWeight: 600 }}>Sucursal</TableCell>
+                      <TableCell sx={{ fontWeight: 600 }}>Puntaje</TableCell>
+                      <TableCell sx={{ fontWeight: 600 }}>Acciones</TableCell>
+                    </TableRow>
+                  </TableHead>
+                  <TableBody>
+                    {datosAnalisis.reportes.map((reporte) => (
+                      <TableRow key={reporte.id} hover>
+                        <TableCell>{formatFecha(reporte.fechaCreacion)}</TableCell>
+                        <TableCell>{getNombreAuditor(reporte, userProfile)}</TableCell>
+                        <TableCell>{reporte.sucursal ?? "Casa Central"}</TableCell>
+                        <TableCell>
+                          {reporte.puntaje !== undefined && reporte.puntaje !== null 
+                            ? reporte.puntaje 
+                            : 'N/A'}
+                        </TableCell>
+                        <TableCell>
+                          <Button
+                            variant="outlined"
+                            size="small"
+                            startIcon={<VisibilityIcon />}
+                            onClick={() => handleSelectReporte(reporte)}
+                          >
+                            Ver
+                          </Button>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </TableContainer>
+            </CardContent>
+          </Card>
+        </Box>
+      ) : selectedFormulario ? (
+        <Box sx={{ 
+          display: 'flex', 
+          justifyContent: 'center', 
+          alignItems: 'center', 
+          minHeight: '200px' 
+        }}>
+          <Typography variant="body1" color="text.secondary">
+            No hay datos disponibles para el formulario seleccionado.
+          </Typography>
+        </Box>
+      ) : (
+        <Box sx={{ 
+          display: 'flex', 
+          justifyContent: 'center', 
+          alignItems: 'center', 
+          minHeight: '200px' 
+        }}>
+          <Typography variant="body1" color="text.secondary">
+            Por favor, selecciona un formulario para ver el análisis.
+          </Typography>
+        </Box>
+      )}
+    </Box>
+  );
+
   const renderDesktopView = () => (
     <TableContainer component={Paper} sx={{ borderRadius: 3, overflow: 'hidden' }}>
       <Table>
@@ -721,108 +1042,159 @@ const ReportesPage = () => {
         />
       </Box>
 
-      {/* Contenido principal */}
-      <Box>
-        {loading ? (
-          <Box sx={{ 
-            display: 'flex', 
-            justifyContent: 'center', 
-            alignItems: 'center', 
-            minHeight: '200px' 
-          }}>
-            <CircularProgress />
-          </Box>
-        ) : error ? (
-          <Alert severity="error" sx={{ mb: 3 }}>
-            {error}
-          </Alert>
-        ) : filteredReportes.length === 0 ? (
-          <Box sx={{ 
-            display: 'flex', 
-            justifyContent: 'center', 
-            alignItems: 'center', 
-            minHeight: '300px' 
-          }}>
-            <Box sx={{ 
-              display: 'flex', 
-              flexDirection: 'column', 
-              alignItems: 'center', 
-              gap: 3,
-              maxWidth: '400px'
-            }}>
-              <Box sx={{ 
-                p: 3, 
-                borderRadius: '50%', 
-                bgcolor: alpha(theme.palette.info.main, 0.1),
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                border: `2px solid ${alpha(theme.palette.info.main, 0.2)}`
-              }}>
-                <AssignmentIcon 
-                  color="info" 
-                  sx={{ fontSize: isSmallMobile ? 40 : 48 }} 
-                />
-              </Box>
-              <Typography 
-                variant={isSmallMobile ? "h6" : "h5"} 
-                sx={{ 
-                  fontWeight: 700, 
-                  color: 'text.primary',
-                  mb: 2,
-                  textAlign: 'center'
-                }}
-              >
-                No hay reportes disponibles
-              </Typography>
-              <Typography 
-                variant="body1" 
-                color="text.secondary"
-                sx={{ 
-                  fontSize: isSmallMobile ? '1rem' : '1.125rem',
-                  maxWidth: '350px',
-                  lineHeight: 1.6,
-                  textAlign: 'center'
-                }}
-              >
-                {empresasSeleccionadas.length > 0 
-                  ? "No se encontraron reportes para la empresa seleccionada. Intenta con otros filtros o modifica los criterios de búsqueda."
-                  : "Aún no se han generado reportes de auditoría. Los reportes aparecerán aquí una vez que se completen las auditorías."
-                }
-              </Typography>
+      {/* Tabs system */}
+      <Box sx={{ 
+        bgcolor: 'background.paper',
+        borderRadius: 3,
+        border: `1px solid ${alpha(theme.palette.divider, 0.3)}`,
+        boxShadow: '0 4px 16px rgba(0,0,0,0.08)',
+        overflow: 'hidden'
+      }}>
+        {/* Tabs header */}
+        <Box sx={{ borderBottom: 1, borderColor: 'divider' }}>
+          <Tabs 
+            value={tabValue} 
+            onChange={handleTabChange}
+            variant="fullWidth"
+            sx={{
+              '& .MuiTab-root': {
+                textTransform: 'none',
+                fontWeight: 600,
+                fontSize: '1rem',
+                py: 2
+              }
+            }}
+          >
+            <Tab 
+              label="📊 Reportes" 
+              icon={<AssignmentIcon sx={{ mr: 1 }} />}
+              iconPosition="start"
+            />
+            <Tab 
+              label="📈 Análisis Global" 
+              icon={<BarChartIcon sx={{ mr: 1 }} />}
+              iconPosition="start"
+            />
+          </Tabs>
+        </Box>
+
+        {/* Tab content */}
+        <Box sx={{ p: isSmallMobile ? 2 : 4 }}>
+          {tabValue === 0 && (
+            // Tab 1: Reportes (vista existente)
+            <Box>
+              {loading ? (
+                <Box sx={{ 
+                  display: 'flex', 
+                  justifyContent: 'center', 
+                  alignItems: 'center', 
+                  minHeight: '200px' 
+                }}>
+                  <CircularProgress />
+                </Box>
+              ) : error ? (
+                <Alert severity="error" sx={{ mb: 3 }}>
+                  {error}
+                </Alert>
+              ) : filteredReportes.length === 0 ? (
+                <Box sx={{ 
+                  display: 'flex', 
+                  justifyContent: 'center', 
+                  alignItems: 'center', 
+                  minHeight: '300px' 
+                }}>
+                  <Box sx={{ 
+                    display: 'flex', 
+                    flexDirection: 'column', 
+                    alignItems: 'center', 
+                    gap: 3,
+                    maxWidth: '400px'
+                  }}>
+                    <Box sx={{ 
+                      p: 3, 
+                      borderRadius: '50%', 
+                      bgcolor: alpha(theme.palette.info.main, 0.1),
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      border: `2px solid ${alpha(theme.palette.info.main, 0.2)}`
+                    }}>
+                      <AssignmentIcon 
+                        color="info" 
+                        sx={{ fontSize: isSmallMobile ? 40 : 48 }} 
+                      />
+                    </Box>
+                    <Typography 
+                      variant={isSmallMobile ? "h6" : "h5"} 
+                      sx={{ 
+                        fontWeight: 700, 
+                        color: 'text.primary',
+                        mb: 2,
+                        textAlign: 'center'
+                      }}
+                    >
+                      No hay reportes disponibles
+                    </Typography>
+                    <Typography 
+                      variant="body1" 
+                      color="text.secondary"
+                      sx={{ 
+                        fontSize: isSmallMobile ? '1rem' : '1.125rem',
+                        maxWidth: '350px',
+                        lineHeight: 1.6,
+                        textAlign: 'center'
+                      }}
+                    >
+                      {empresasSeleccionadas.length > 0 
+                        ? "No se encontraron reportes para la empresa seleccionada. Intenta con otros filtros o modifica los criterios de búsqueda."
+                        : "Aún no se han generado reportes de auditoría. Los reportes aparecerán aquí una vez que se completen las auditorías."
+                      }
+                    </Typography>
+                  </Box>
+                </Box>
+              ) : (
+                <Box>
+                  {/* Contador de reportes */}
+                  <Typography 
+                    variant={isSmallMobile ? "h6" : "h5"} 
+                    sx={{ 
+                      fontWeight: 700, 
+                      color: 'primary.main',
+                      mb: isSmallMobile ? 3 : 4,
+                      textAlign: 'center',
+                      pb: 3,
+                      borderBottom: `2px solid ${alpha(theme.palette.primary.main, 0.2)}`,
+                      fontSize: isSmallMobile ? '1.25rem' : '1.5rem'
+                    }}
+                  >
+                    📊 Reportes Disponibles ({filteredReportes.length})
+                  </Typography>
+                  
+                  {/* Vista condicional */}
+                  {isMobile ? renderMobileView() : renderDesktopView()}
+                </Box>
+              )}
             </Box>
-          </Box>
-        ) : (
-          <Box>
-            {/* Contador de reportes */}
-            <Box sx={{
-              bgcolor: 'background.paper',
-              borderRadius: 3,
-              border: `1px solid ${alpha(theme.palette.divider, 0.3)}`,
-              boxShadow: '0 4px 16px rgba(0,0,0,0.08)',
-              p: isSmallMobile ? 3 : 4,
-              mb: 3
-            }}>
-              <Typography 
-                variant={isSmallMobile ? "h6" : "h5"} 
-                sx={{ 
-                  fontWeight: 700, 
-                  color: 'primary.main',
-                  mb: isSmallMobile ? 3 : 4,
-                  textAlign: 'center',
-                  pb: 3,
-                  borderBottom: `2px solid ${alpha(theme.palette.primary.main, 0.2)}`,
-                  fontSize: isSmallMobile ? '1.25rem' : '1.5rem'
-                }}
-              >
-                📊 Reportes Disponibles ({filteredReportes.length})
-              </Typography>
-              
-              {/* Vista condicional */}
-              {isMobile ? renderMobileView() : renderDesktopView()}
+          )}
+          
+          {tabValue === 1 && (
+            // Tab 2: Análisis Global
+            <Box>
+              {loading ? (
+                <Box sx={{ 
+                  display: 'flex', 
+                  justifyContent: 'center', 
+                  alignItems: 'center', 
+                  minHeight: '200px' 
+                }}>
+                  <CircularProgress />
+                </Box>
+              ) : (
+                renderAnalisisGlobal()
+              )}
             </Box>
-          </Box>
-        )}
+          )}
+        </Box>
       </Box>
 
       {/* Modal de detalles */}
