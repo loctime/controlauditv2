@@ -8,9 +8,9 @@ import { useAuth } from '@/components/context/AuthContext';
 
 /** Mapea la modalidad del nuevo sistema al tipo legacy (charla/entrenamiento/capacitacion) */
 function mapModalidadToTipo(modality) {
-  if (modality === 'online' || modality === 'virtual') return 'charla';
-  if (modality === 'on_the_job' || modality === 'practical') return 'entrenamiento';
-  return 'capacitacion';
+  if (modality === 'virtual' || modality === 'online') return 'charla';
+  if (modality === 'hybrid') return 'entrenamiento';
+  return 'capacitacion'; // in_person y cualquier otro
 }
 
 /**
@@ -94,7 +94,7 @@ const fetchTrainingSessions = async (userId, selectedEmpresa, selectedSucursal, 
           fechaCreacion: session.createdAt || null,
           activa: true,
           estado: session.status === 'closed' ? 'completada' : 'activa',
-          tipo: mapModalidadToTipo(catalogItem.modality),
+          tipo: mapModalidadToTipo(session.modality || catalogItem.modality),
           tipoRegistro: 'individual',
           empleados,
           duracionMinutos: catalogItem.recommendedDurationMinutes || 0,

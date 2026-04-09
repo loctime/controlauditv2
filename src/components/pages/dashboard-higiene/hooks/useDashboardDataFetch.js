@@ -7,9 +7,9 @@ import { useAuth } from '@/components/context/AuthContext';
 
 /** Mapea la modalidad del nuevo sistema al tipo legacy para las métricas del dashboard */
 function mapModalidadToTipo(modality) {
-  if (modality === 'online' || modality === 'virtual') return 'charla';
-  if (modality === 'on_the_job' || modality === 'practical') return 'entrenamiento';
-  return 'capacitacion';
+  if (modality === 'virtual' || modality === 'online') return 'charla';
+  if (modality === 'hybrid') return 'entrenamiento';
+  return 'capacitacion'; // in_person y cualquier otro
 }
 
 /**
@@ -323,7 +323,7 @@ export const useDashboardDataFetch = (
               nombre: catalogItem.name || session.trainingTypeId || 'Capacitación',
               fechaRealizada: session.executedDate || session.scheduledDate || null,
               estado: session.status === 'closed' ? 'completada' : 'activa',
-              tipo: mapModalidadToTipo(catalogItem.modality),
+              tipo: mapModalidadToTipo(session.modality || catalogItem.modality),
               empleados,
               duracionMinutos: catalogItem.recommendedDurationMinutes || 0,
               sucursalId: session.branchId,
