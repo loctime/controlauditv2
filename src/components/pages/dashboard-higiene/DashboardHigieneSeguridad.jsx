@@ -205,23 +205,22 @@ const DashboardHigieneSeguridad = () => {
   // Calcular años disponibles basados en los datos
   const yearsAvailable = useMemo(() => {
     const currentYear = new Date().getFullYear();
-    const years = [currentYear];
-    
+    // Rango base fijo: últimos 3 años + año actual (siempre disponibles aunque no haya datos)
+    const baseYears = [currentYear - 2, currentYear - 1, currentYear];
+
     // Buscar años en accidentes y capacitaciones
     const allDates = [
       ...(accidentes || []).map(a => a.fechaHora?.toDate ? a.fechaHora.toDate() : new Date(a.fechaHora)),
       ...(capacitaciones || []).map(c => c.fechaRealizada?.toDate ? c.fechaRealizada.toDate() : new Date(c.fechaRealizada))
     ];
-    
+
     const uniqueYears = [...new Set(allDates
       .filter(d => d && !isNaN(d.getTime()))
       .map(d => d.getFullYear())
     )];
-    
-    // Combinar año actual con años encontrados, eliminar duplicados y ordenar desc
-    const allYears = [...new Set([...uniqueYears, currentYear])].sort((a, b) => b - a);
-    
-    return allYears;
+
+    // Combinar rango base con años encontrados en datos, eliminar duplicados y ordenar desc
+    return [...new Set([...uniqueYears, ...baseYears])].sort((a, b) => b - a);
   }, [accidentes, capacitaciones]);
 
   // Ajustar año seleccionado si no está en los años disponibles
@@ -455,7 +454,7 @@ const DashboardHigieneSeguridad = () => {
         <Box sx={{ mb: 3 }}>
           <SelectoresDashboard
             selectedYear={selectedYear}
-            onYearChange={setSelectedYear}
+            onYearChange={(val) => setSelectedYear(Number(val))}
             yearsAvailable={yearsAvailable}
             deshabilitado={false}
           />

@@ -4,7 +4,14 @@ import { getDocs, query, where, orderBy, collection } from 'firebase/firestore';
 import { dbAudit } from '../../../../firebaseControlFile.js';
 import { firestoreRoutesCore } from '../../../../core/firestore/firestoreRoutes.core';
 import { useAuth } from '@/components/context/AuthContext';
-import { registrosAsistenciaService } from '../../../../services/registrosAsistenciaService';
+
+/** Mapea la modalidad del nuevo sistema al tipo legacy para las métricas del dashboard */
+function mapModalidadToTipo(modality) {
+  if (modality === 'virtual' || modality === 'online') return 'charla';
+  if (modality === 'hybrid') return 'entrenamiento';
+  return 'capacitacion'; // in_person y cualquier otro
+}
+
 /**
  * Hook para cargar datos del dashboard de seguridad
  * Usa arquitectura owner-centric: apps/auditoria/owners/{ownerId}/{coleccion}
@@ -257,95 +264,91 @@ export const useDashboardDataFetch = (
     if (!selectedSucursal || !userProfile?.ownerId) return [];
 
     try {
-      const { inicio, fin } = calcularPeriodo(selectedYear);
       const ownerId = userProfile.ownerId;
-      const capacitacionesRef = collection(dbAudit, ...firestoreRoutesCore.capacitaciones(ownerId));
-      let capacitacionesData = [];
-      
+
+      // 1. Cargar catálogo (pequeña colección, una sola vez)
+      const catalogRef = collection(dbAudit, ...firestoreRoutesCore.trainingCatalog(ownerId));
+      const catalogSnap = await getDocs(catalogRef);
+      const catalogMap = {};
+      catalogSnap.docs.forEach(d => {
+        catalogMap[d.id] = { id: d.id, ...d.data() };
+      });
+
+      // 2. Cargar training_sessions filtradas por sucursal
+      const sessionsRef = collection(dbAudit, ...firestoreRoutesCore.trainingSessions(ownerId));
+      let rawSessions = [];
+
       if (selectedSucursal === 'todas') {
-        const sucursalesIds = sucursalesFiltradas.map(s => s.id);
+        const sucursalesIds = sucursalesFiltradas.map(s => s.id).filter(Boolean);
         if (sucursalesIds.length === 0) return [];
-        
+
         const chunkSize = 10;
         for (let i = 0; i < sucursalesIds.length; i += chunkSize) {
           const chunk = sucursalesIds.slice(i, i + chunkSize);
-          const snapshot = await getDocs(
-            query(capacitacionesRef, where('sucursalId', 'in', chunk))
-          );
-          capacitacionesData.push(...snapshot.docs.map(doc => ({
-            id: doc.id,
-            ...doc.data()
-          })));
+          const snap = await getDocs(query(sessionsRef, where('branchId', 'in', chunk)));
+          rawSessions.push(...snap.docs.map(d => ({ id: d.id, ...d.data() })));
         }
-        
-        // Si inicio es null (histórico), no filtrar por fecha
-        if (inicio) {
-          capacitacionesData = capacitacionesData.filter(c => {
-            const fecha = c.fechaRealizada?.toDate ? c.fechaRealizada.toDate() : new Date(0);
-            return fecha >= inicio && fecha <= fin;
-          });
-        }
-        
-        capacitacionesData = capacitacionesData.sort((a, b) => {
-          const fechaA = a.fechaRealizada?.toDate ? a.fechaRealizada.toDate() : new Date(0);
-          const fechaB = b.fechaRealizada?.toDate ? b.fechaRealizada.toDate() : new Date(0);
-          return fechaB - fechaA;
-        });
       } else {
-        // Si inicio es null (histórico), no filtrar por fecha
-        if (inicio) {
-          const q = query(
-            capacitacionesRef,
-            where('sucursalId', '==', selectedSucursal),
-            where('fechaRealizada', '>=', inicio),
-            where('fechaRealizada', '<=', fin),
-            orderBy('fechaRealizada', 'desc')
-          );
-          const snapshot = await getDocs(q);
-          capacitacionesData = snapshot.docs.map(doc => ({
-            id: doc.id,
-            ...doc.data()
-          }));
-        } else {
-          const q = query(
-            capacitacionesRef,
-            where('sucursalId', '==', selectedSucursal),
-            orderBy('fechaRealizada', 'desc')
-          );
-          const snapshot = await getDocs(q);
-          capacitacionesData = snapshot.docs.map(doc => ({
-            id: doc.id,
-            ...doc.data()
-          }));
-        }
+        const snap = await getDocs(query(sessionsRef, where('branchId', '==', selectedSucursal)));
+        rawSessions = snap.docs.map(d => ({ id: d.id, ...d.data() }));
       }
 
-      // Enriquecer con empleados desde registrosAsistencia (fuente de verdad para asistencia)
-      // Así la sección de cumplimiento de capacitaciones cuenta correctamente los empleados capacitados
-      if (ownerId && capacitacionesData.length > 0) {
-        const enriquecidas = await Promise.all(
-          capacitacionesData.map(async (cap) => {
-            try {
-              const empleadoIds = await registrosAsistenciaService.getEmpleadosUnicosByCapacitacion(ownerId, cap.id);
-              return {
-                ...cap,
-                empleados: empleadoIds.map((empleadoId) => ({ empleadoId, asistio: true }))
-              };
-            } catch (err) {
-              logger.warn('[useDashboardDataFetch] Error enriqueciendo capacitación', cap.id, err);
-              return { ...cap, empleados: cap.empleados || [] };
-            }
-          })
-        );
-        capacitacionesData = enriquecidas;
-      }
-      
-      return capacitacionesData;
+      // 3. Filtrar en memoria: excluir eliminadas y canceladas, aplicar año
+      rawSessions = rawSessions.filter(s =>
+        !s.deletedAt &&
+        s.status !== 'cancelled' &&
+        Number(s.periodYear) === Number(selectedYear)
+      );
+
+      // 4. Por cada sesión, cargar asistencia de la subcollección
+      const sessions = await Promise.all(
+        rawSessions.map(async (session) => {
+          try {
+            const attRef = collection(dbAudit, ...firestoreRoutesCore.trainingSessionAttendance(ownerId, session.id));
+            const attSnap = await getDocs(attRef);
+
+            const empleados = attSnap.docs
+              .map(d => ({ ...d.data() }))
+              .filter(a => !a.isDeleted)
+              .map(a => ({
+                empleadoId: a.employeeId,
+                asistio: a.attendanceStatus === 'present',
+                validUntil: a.validUntil || null
+              }));
+
+            const catalogItem = catalogMap[session.trainingTypeId] || {};
+
+            return {
+              id: session.id,
+              nombre: catalogItem.name || session.trainingTypeId || 'Capacitación',
+              fechaRealizada: session.executedDate || session.scheduledDate || null,
+              estado: session.status === 'closed' ? 'completada' : 'activa',
+              tipo: mapModalidadToTipo(session.modality || catalogItem.modality),
+              empleados,
+              duracionMinutos: catalogItem.recommendedDurationMinutes || 0,
+              sucursalId: session.branchId,
+              empresaId: session.companyId,
+              trainingTypeId: session.trainingTypeId
+            };
+          } catch (err) {
+            logger.warn('[useDashboardDataFetch] Error cargando sesión', session.id, err);
+            return null;
+          }
+        })
+      );
+
+      return sessions
+        .filter(Boolean)
+        .sort((a, b) => {
+          const dateA = a.fechaRealizada?.toDate?.() || new Date(a.fechaRealizada || 0);
+          const dateB = b.fechaRealizada?.toDate?.() || new Date(b.fechaRealizada || 0);
+          return dateB - dateA;
+        });
     } catch (error) {
-      logger.error('Error cargando capacitaciones:', error);
+      logger.error('Error cargando capacitaciones (training_sessions):', error);
       return [];
     }
-  }, [selectedSucursal, selectedYear, calcularPeriodo, sucursalesFiltradas, userProfile?.ownerId]);
+  }, [selectedSucursal, selectedYear, sucursalesFiltradas, userProfile?.ownerId]);
 
   // Cargar datos de auditorías
   const cargarAuditorias = useCallback(async () => {

@@ -12,7 +12,11 @@ export const trainingCatalogService = {
       requiresEvaluation,
       requiresScore,
       status,
-      version: payload?.version || 1
+      version: payload?.version || 1,
+      modality: payload?.modality || 'in_person',
+      categoryIds: payload?.categoryIds || [],
+      recommendedDurationMinutes: payload?.recommendedDurationMinutes ?? 60,
+      description: payload?.description || ''
     });
   },
 
@@ -21,6 +25,10 @@ export const trainingCatalogService = {
 
     if ('name' in payload) updatePayload.name = payload?.name;
     if ('status' in payload) updatePayload.status = payload?.status;
+    if ('modality' in payload) updatePayload.modality = payload?.modality;
+    if ('categoryIds' in payload) updatePayload.categoryIds = payload?.categoryIds;
+    if ('recommendedDurationMinutes' in payload) updatePayload.recommendedDurationMinutes = payload?.recommendedDurationMinutes;
+    if ('description' in payload) updatePayload.description = payload?.description;
 
     if ('requiresEvaluation' in payload) {
       const nextRequiresEvaluation = payload?.requiresEvaluation === true;
