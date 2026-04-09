@@ -106,13 +106,13 @@ export default function DashboardSeguridadV2() {
     sucursalesFiltradas: sucursalesContext
   } = useGlobalSelection();
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
-  const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth() + 1);
+  const [selectedMonth, setSelectedMonth] = useState(null);
   const [targetsExpanded, setTargetsExpanded] = useState(false);
   const [accionesExpanded, setAccionesExpanded] = useState(false);
   const [goalsExpanded, setGoalsExpanded] = useState(false);
   const dataCacheKey = useMemo(() => {
     if (!selectedEmpresa || !selectedSucursal) return null;
-    const month = selectedMonth.toString().padStart(2, "0");
+    const month = selectedMonth ? selectedMonth.toString().padStart(2, "0") : "todos";
     return `dashboard-data:${selectedEmpresa}:${selectedSucursal}:${selectedYear}-${month}`;
   }, [selectedEmpresa, selectedSucursal, selectedYear, selectedMonth]);
   const shouldPrefetchAll = useMemo(

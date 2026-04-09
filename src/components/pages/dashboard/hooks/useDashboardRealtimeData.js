@@ -99,7 +99,7 @@ export const useDashboardRealtimeData = ({
     if (!Array.isArray(userEmpresas) || userEmpresas.length === 0) return;
     if (typeof window === "undefined") return;
 
-    const month = selectedMonth.toString().padStart(2, "0");
+    const month = selectedMonth ? selectedMonth.toString().padStart(2, "0") : "todos";
     const period = `${selectedYear}-${month}`;
     const empresasSignature = userEmpresas
       .map((empresa) => empresa.id)
@@ -204,9 +204,8 @@ export const useDashboardRealtimeData = ({
       return;
     }
     
-    const currentPeriod = `${selectedYear}-${selectedMonth
-      .toString()
-      .padStart(2, "0")}`;
+    const month = selectedMonth ? selectedMonth.toString().padStart(2, "0") : "todos";
+    const currentPeriod = `${selectedYear}-${month}`;
     const hasCachedData =
       typeof window !== "undefined" &&
       dataCacheKey &&

@@ -894,13 +894,26 @@ export const safetyDashboardService = {
         return ausencias;
       }
 
-      const [year, month] = period.split('-').map(Number);
-      if (!year || !month) {
+      const [year, month] = period.split('-');
+      const yearNum = Number(year);
+      if (!yearNum) {
         return ausencias;
       }
 
-      const periodStart = new Date(year, month - 1, 1);
-      const periodEnd = new Date(year, month, 0, 23, 59, 59, 999);
+      let periodStart, periodEnd;
+      if (month === 'todos') {
+        // Filtrar por todo el año
+        periodStart = new Date(yearNum, 0, 1); // 1 de enero
+        periodEnd = new Date(yearNum, 11, 31, 23, 59, 59, 999); // 31 de diciembre
+      } else {
+        // Filtrar por mes específico
+        const monthNum = Number(month);
+        if (!monthNum) {
+          return ausencias;
+        }
+        periodStart = new Date(yearNum, monthNum - 1, 1);
+        periodEnd = new Date(yearNum, monthNum, 0, 23, 59, 59, 999); // Último día del mes
+      }
 
       const parseDate = (value) => {
         if (!value) return null;
@@ -956,10 +969,21 @@ export const safetyDashboardService = {
     ausencias,
     period
   ) {
-    // Parsear período YYYY-MM
-    const [year, month] = period ? period.split('-').map(Number) : [new Date().getFullYear(), new Date().getMonth() + 1];
-    const periodStart = new Date(year, month - 1, 1);
-    const periodEnd = new Date(year, month, 0, 23, 59, 59, 999); // Último día del mes
+    // Parsear período YYYY-MM o YYYY-todos
+    const [year, month] = period ? period.split('-') : [new Date().getFullYear(), new Date().getMonth() + 1];
+    const yearNum = Number(year);
+    
+    let periodStart, periodEnd;
+    if (month === 'todos') {
+      // Filtrar por todo el año
+      periodStart = new Date(yearNum, 0, 1); // 1 de enero
+      periodEnd = new Date(yearNum, 11, 31, 23, 59, 59, 999); // 31 de diciembre
+    } else {
+      // Filtrar por mes específico
+      const monthNum = Number(month);
+      periodStart = new Date(yearNum, monthNum - 1, 1);
+      periodEnd = new Date(yearNum, monthNum, 0, 23, 59, 59, 999); // Último día del mes
+    }
     const now = new Date();
     const ausenciasList = Array.isArray(ausencias) ? ausencias : [];
     

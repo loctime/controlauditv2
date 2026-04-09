@@ -195,7 +195,10 @@ export const generarReporteDashboard = async ({
   // Línea final: Período de análisis (lado a lado) - siempre visible
   doc.setFontSize(12);
   doc.setFont('helvetica', 'bold');
-  doc.text(`Año: ${año}`, margin + 8, yPos + 5);
+  const periodoTexto = selectedMonth 
+    ? `Año: ${año} - Mes: ${new Date(año, selectedMonth - 1).toLocaleString('es-ES', { month: 'long' })}`
+    : `Año: ${año} - Período: COMPLETO`;
+  doc.text(periodoTexto, margin + 8, yPos + 5);
   doc.setFont('helvetica', 'normal');
   doc.setFontSize(11);
   doc.text(`Fecha: ${fechaGeneracion}`, pageWidth - margin - 8, yPos + 5, { align: 'right' });
@@ -544,7 +547,7 @@ export const generarReporteDashboard = async ({
   if (targetsProgresos && Object.keys(targetsProgresos).length > 0) {
     const mesNombre = selectedMonth 
       ? new Date(año, selectedMonth - 1).toLocaleString('es-ES', { month: 'long' })
-      : 'Actual';
+      : 'AÑO COMPLETO';
     
     addSectionTitle(`3. TARGETS MENSUALES - ${mesNombre.toUpperCase()}`, 16, 50);
 

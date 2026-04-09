@@ -76,6 +76,25 @@ export default function PeriodSelector({
               pb: { xs: 0, md: 1 }
             }}
           >
+            <Button
+              key="todos"
+              onClick={() => onMonthChange(null)}
+              size="small"
+              variant={selectedMonth === null ? 'contained' : 'outlined'}
+              sx={{
+                minWidth: '60px',
+                fontSize: '0.75rem',
+                fontWeight: 'bold',
+                backgroundColor: selectedMonth === null ? '#3b82f6' : 'transparent',
+                color: selectedMonth === null ? 'white' : '#64748b',
+                borderColor: '#d1d5db',
+                '&:hover': {
+                  backgroundColor: selectedMonth === null ? '#2563eb' : '#f3f4f6'
+                }
+              }}
+            >
+              TODOS
+            </Button>
             {months.map((month, index) => (
               <Button
                 key={month}
