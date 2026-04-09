@@ -25,7 +25,7 @@ export default function DashboardTrendCharts({
     <Paper
       elevation={0}
       sx={{
-        p: 3,
+        p: 3.75,
         backgroundColor: 'white',
         border: '1px solid #e5e7eb',
         borderRadius: '12px'
@@ -39,7 +39,7 @@ export default function DashboardTrendCharts({
             sx={{
               fontWeight: 600,
               color: '#111827',
-              fontSize: '18px'
+              fontSize: '20px'
             }}
           >
             Gráficos de Tendencia
@@ -55,7 +55,7 @@ export default function DashboardTrendCharts({
           sx={{
             textTransform: 'none',
             color: '#6b7280',
-            fontSize: '13px',
+            fontSize: '15px',
             fontWeight: 600,
             '&:hover': {
               backgroundColor: '#f9fafb',
@@ -78,7 +78,7 @@ export default function DashboardTrendCharts({
                     fontWeight: 600,
                     color: '#374151',
                     mb: 1,
-                    fontSize: '14px'
+                    fontSize: '16px'
                   }}
                 >
                   Análisis de Accidentes e Incidentes
@@ -95,7 +95,7 @@ export default function DashboardTrendCharts({
                     fontWeight: 600,
                     color: '#374151',
                     mb: 1,
-                    fontSize: '14px'
+                    fontSize: '16px'
                   }}
                 >
                   Cumplimiento de Capacitaciones

@@ -86,7 +86,7 @@ export default function DashboardKPIs({
           fontWeight: 600,
           color: '#111827',
           mb: 3,
-          fontSize: '18px'
+          fontSize: '20px'
         }}
       >
         Indicadores Clave
@@ -97,12 +97,12 @@ export default function DashboardKPIs({
           <Grid item xs={12} sm={6} md={4} lg={2} key={kpi.id}>
             <Box
               sx={{
-                p: 2,
+                p: 2.5,
                 textAlign: 'center',
                 backgroundColor: '#f9fafb',
                 border: '1px solid #e5e7eb',
                 borderRadius: '8px',
-                minHeight: '120px',
+                minHeight: '140px',
                 display: 'flex',
                 flexDirection: 'column',
                 justifyContent: 'center',
@@ -117,7 +117,7 @@ export default function DashboardKPIs({
                 variant="h4"
                 sx={{
                   fontWeight: 700,
-                  fontSize: '32px',
+                  fontSize: '48px',
                   color: getKPIColor(kpi.value, kpi.type),
                   lineHeight: 1,
                   mb: 1
@@ -135,7 +135,7 @@ export default function DashboardKPIs({
               <Typography
                 variant="caption"
                 sx={{
-                  fontSize: '12px',
+                  fontSize: '15px',
                   color: '#6b7280',
                   fontWeight: 500,
                   textTransform: 'uppercase',

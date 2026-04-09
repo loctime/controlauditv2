@@ -51,7 +51,7 @@ export default function DashboardDetailCards({
         <Paper
           elevation={0}
           sx={{
-            p: 2.5,
+            p: 3.125,
             backgroundColor: 'white',
             border: '1px solid #e5e7eb',
             borderRadius: '12px',
@@ -65,7 +65,7 @@ export default function DashboardDetailCards({
               sx={{
                 fontWeight: 600,
                 color: '#111827',
-                fontSize: '16px'
+                fontSize: '18px'
               }}
             >
               Accidentes e Incidentes
@@ -73,54 +73,54 @@ export default function DashboardDetailCards({
           </Box>
 
           <Box sx={{ mb: 2 }}>
-            <Typography variant="h4" sx={{ fontWeight: 700, color: '#ef4444', fontSize: '28px' }}>
+            <Typography variant="h4" sx={{ fontWeight: 700, color: '#ef4444', fontSize: '36px' }}>
               {accidentesData.total}
             </Typography>
-            <Typography variant="caption" sx={{ color: '#6b7280', fontSize: '12px' }}>
+            <Typography variant="caption" sx={{ color: '#6b7280', fontSize: '14px' }}>
               Total en {selectedYear}
             </Typography>
           </Box>
 
           <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5, mb: 2 }}>
             <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <Typography variant="body2" sx={{ color: '#6b7280', fontSize: '13px' }}>
+              <Typography variant="body2" sx={{ color: '#6b7280', fontSize: '15px' }}>
                 Abiertos
               </Typography>
-              <Typography variant="body2" sx={{ fontWeight: 600, color: '#ef4444', fontSize: '13px' }}>
+              <Typography variant="body2" sx={{ fontWeight: 500, color: '#ef4444', fontSize: '15px' }}>
                 {accidentesData.abiertos}
               </Typography>
             </Box>
             
             <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <Typography variant="body2" sx={{ color: '#6b7280', fontSize: '13px' }}>
+              <Typography variant="body2" sx={{ color: '#6b7280', fontSize: '15px' }}>
                 Con tiempo perdido
               </Typography>
-              <Typography variant="body2" sx={{ fontWeight: 600, color: '#f59e0b', fontSize: '13px' }}>
+              <Typography variant="body2" sx={{ fontWeight: 500, color: '#f59e0b', fontSize: '15px' }}>
                 {accidentesData.conTiempoPerdido}
               </Typography>
             </Box>
             
             <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <Typography variant="body2" sx={{ color: '#6b7280', fontSize: '13px' }}>
+              <Typography variant="body2" sx={{ color: '#6b7280', fontSize: '15px' }}>
                 Sin tiempo perdido
               </Typography>
-              <Typography variant="body2" sx={{ fontWeight: 600, color: '#3b82f6', fontSize: '13px' }}>
+              <Typography variant="body2" sx={{ fontWeight: 500, color: '#3b82f6', fontSize: '15px' }}>
                 {accidentesData.sinTiempoPerdido}
               </Typography>
             </Box>
             
             <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <Typography variant="body2" sx={{ color: '#6b7280', fontSize: '13px' }}>
+              <Typography variant="body2" sx={{ color: '#6b7280', fontSize: '15px' }}>
                 Incidentes
               </Typography>
-              <Typography variant="body2" sx={{ fontWeight: 600, color: '#8b5cf6', fontSize: '13px' }}>
+              <Typography variant="body2" sx={{ fontWeight: 500, color: '#8b5cf6', fontSize: '15px' }}>
                 {accidentesData.incidentes}
               </Typography>
             </Box>
           </Box>
 
           <Box>
-            <Typography variant="caption" sx={{ color: '#6b7280', fontSize: '11px', mb: 0.5, display: 'block' }}>
+            <Typography variant="caption" sx={{ color: '#6b7280', fontSize: '13px', mb: 0.5, display: 'block' }}>
               Tendencia mensual
             </Typography>
             <Box sx={{ height: '40px', display: 'flex', alignItems: 'flex-end', gap: 0.5 }}>
@@ -147,7 +147,7 @@ export default function DashboardDetailCards({
         <Paper
           elevation={0}
           sx={{
-            p: 2.5,
+            p: 3.125,
             backgroundColor: 'white',
             border: '1px solid #e5e7eb',
             borderRadius: '12px',
@@ -161,7 +161,7 @@ export default function DashboardDetailCards({
               sx={{
                 fontWeight: 600,
                 color: '#111827',
-                fontSize: '16px'
+                fontSize: '18px'
               }}
             >
               Capacitaciones
@@ -169,20 +169,20 @@ export default function DashboardDetailCards({
           </Box>
 
           <Box sx={{ mb: 2 }}>
-            <Typography variant="h4" sx={{ fontWeight: 700, color: '#3b82f6', fontSize: '28px' }}>
+            <Typography variant="h4" sx={{ fontWeight: 700, color: '#3b82f6', fontSize: '36px' }}>
               {capacitacionesData.cumplimiento.toFixed(1)}%
             </Typography>
-            <Typography variant="caption" sx={{ color: '#6b7280', fontSize: '12px' }}>
+            <Typography variant="caption" sx={{ color: '#6b7280', fontSize: '14px' }}>
               Cumplimiento
             </Typography>
           </Box>
 
           <Box sx={{ mb: 2 }}>
             <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
-              <Typography variant="body2" sx={{ color: '#6b7280', fontSize: '13px' }}>
+              <Typography variant="body2" sx={{ color: '#6b7280', fontSize: '15px' }}>
                 Progreso general
               </Typography>
-              <Typography variant="body2" sx={{ fontWeight: 600, color: '#111827', fontSize: '13px' }}>
+              <Typography variant="body2" sx={{ fontWeight: 500, color: '#111827', fontSize: '15px' }}>
                 {capacitacionesData.capacitados} / {capacitacionesData.totalEmpleados}
               </Typography>
             </Box>
@@ -204,28 +204,28 @@ export default function DashboardDetailCards({
 
           <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5, mb: 2 }}>
             <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <Typography variant="body2" sx={{ color: '#6b7280', fontSize: '13px' }}>
+              <Typography variant="body2" sx={{ color: '#6b7280', fontSize: '15px' }}>
                 Charlas
               </Typography>
-              <Typography variant="body2" sx={{ fontWeight: 600, color: '#8b5cf6', fontSize: '13px' }}>
+              <Typography variant="body2" sx={{ fontWeight: 500, color: '#8b5cf6', fontSize: '15px' }}>
                 {capacitacionesData.porTipo.charlas || 0}
               </Typography>
             </Box>
             
             <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <Typography variant="body2" sx={{ color: '#6b7280', fontSize: '13px' }}>
+              <Typography variant="body2" sx={{ color: '#6b7280', fontSize: '15px' }}>
                 Entrenamientos
               </Typography>
-              <Typography variant="body2" sx={{ fontWeight: 600, color: '#f59e0b', fontSize: '13px' }}>
+              <Typography variant="body2" sx={{ fontWeight: 500, color: '#f59e0b', fontSize: '15px' }}>
                 {capacitacionesData.porTipo.entrenamientos || 0}
               </Typography>
             </Box>
             
             <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <Typography variant="body2" sx={{ color: '#6b7280', fontSize: '13px' }}>
+              <Typography variant="body2" sx={{ color: '#6b7280', fontSize: '15px' }}>
                 Formales
               </Typography>
-              <Typography variant="body2" sx={{ fontWeight: 600, color: '#10b981', fontSize: '13px' }}>
+              <Typography variant="body2" sx={{ fontWeight: 500, color: '#10b981', fontSize: '15px' }}>
                 {capacitacionesData.porTipo.formales || 0}
               </Typography>
             </Box>
@@ -238,7 +238,7 @@ export default function DashboardDetailCards({
               border: '1px solid #fecaca',
               borderRadius: '6px'
             }}>
-              <Typography variant="caption" sx={{ color: '#dc2626', fontSize: '11px', fontWeight: 600 }}>
+              <Typography variant="caption" sx={{ color: '#dc2626', fontSize: '13px', fontWeight: 600 }}>
                 {capacitacionesData.vencidas} capacitaciones vencidas
               </Typography>
             </Box>
@@ -251,7 +251,7 @@ export default function DashboardDetailCards({
         <Paper
           elevation={0}
           sx={{
-            p: 2.5,
+            p: 3.125,
             backgroundColor: 'white',
             border: '1px solid #e5e7eb',
             borderRadius: '12px',
@@ -265,7 +265,7 @@ export default function DashboardDetailCards({
               sx={{
                 fontWeight: 600,
                 color: '#111827',
-                fontSize: '16px'
+                fontSize: '18px'
               }}
             >
               Salud Ocupacional
@@ -273,45 +273,45 @@ export default function DashboardDetailCards({
           </Box>
 
           <Box sx={{ mb: 2 }}>
-            <Typography variant="h4" sx={{ fontWeight: 700, color: '#10b981', fontSize: '28px' }}>
+            <Typography variant="h4" sx={{ fontWeight: 700, color: '#10b981', fontSize: '36px' }}>
               {saludData.totalAusencias}
             </Typography>
-            <Typography variant="caption" sx={{ color: '#6b7280', fontSize: '12px' }}>
+            <Typography variant="caption" sx={{ color: '#6b7280', fontSize: '14px' }}>
               Total ausencias
             </Typography>
           </Box>
 
           <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5, mb: 2 }}>
             <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <Typography variant="body2" sx={{ color: '#6b7280', fontSize: '13px' }}>
+              <Typography variant="body2" sx={{ color: '#6b7280', fontSize: '15px' }}>
                 Activas
               </Typography>
-              <Typography variant="body2" sx={{ fontWeight: 600, color: '#f59e0b', fontSize: '13px' }}>
+              <Typography variant="body2" sx={{ fontWeight: 500, color: '#f59e0b', fontSize: '15px' }}>
                 {saludData.activas}
               </Typography>
             </Box>
             
             <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <Typography variant="body2" sx={{ color: '#6b7280', fontSize: '13px' }}>
+              <Typography variant="body2" sx={{ color: '#6b7280', fontSize: '15px' }}>
                 Cerradas
               </Typography>
-              <Typography variant="body2" sx={{ fontWeight: 600, color: '#10b981', fontSize: '13px' }}>
+              <Typography variant="body2" sx={{ fontWeight: 500, color: '#10b981', fontSize: '15px' }}>
                 {saludData.cerradas}
               </Typography>
             </Box>
             
             <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <Typography variant="body2" sx={{ color: '#6b7280', fontSize: '13px' }}>
+              <Typography variant="body2" sx={{ color: '#6b7280', fontSize: '15px' }}>
                 Días perdidos
               </Typography>
-              <Typography variant="body2" sx={{ fontWeight: 600, color: '#ef4444', fontSize: '13px' }}>
+              <Typography variant="body2" sx={{ fontWeight: 500, color: '#ef4444', fontSize: '15px' }}>
                 {saludData.diasPerdidos}
               </Typography>
             </Box>
           </Box>
 
           <Box>
-            <Typography variant="caption" sx={{ color: '#6b7280', fontSize: '11px', mb: 1, display: 'block' }}>
+            <Typography variant="caption" sx={{ color: '#6b7280', fontSize: '13px', mb: 1, display: 'block' }}>
               Casos recientes
             </Typography>
             <Box sx={{ maxHeight: '80px', overflowY: 'auto' }}>
@@ -326,16 +326,16 @@ export default function DashboardDetailCards({
                     mb: 0.5
                   }}
                 >
-                  <Typography variant="caption" sx={{ color: '#111827', fontSize: '11px', fontWeight: 600, display: 'block' }}>
+                  <Typography variant="caption" sx={{ color: '#111827', fontSize: '13px', fontWeight: 600, display: 'block' }}>
                     {caso.empleadoNombre || 'Empleado'}
                   </Typography>
-                  <Typography variant="caption" sx={{ color: '#6b7280', fontSize: '10px', display: 'block' }}>
+                  <Typography variant="caption" sx={{ color: '#6b7280', fontSize: '13px', display: 'block' }}>
                     {caso.tipo || 'Ausencia'} - {caso.dias || 0} días
                   </Typography>
                 </Box>
               ))}
               {saludData.casosRecientes.length === 0 && (
-                <Typography variant="caption" sx={{ color: '#9ca3af', fontSize: '11px', fontStyle: 'italic' }}>
+                <Typography variant="caption" sx={{ color: '#9ca3af', fontSize: '13px', fontStyle: 'italic' }}>
                   No hay casos recientes
                 </Typography>
               )}

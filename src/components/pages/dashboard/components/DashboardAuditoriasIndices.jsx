@@ -68,7 +68,7 @@ export default function DashboardAuditoriasIndices({
     <Paper
       elevation={0}
       sx={{
-        p: 3,
+        p: 3.75,
         backgroundColor: 'white',
         border: '1px solid #e5e7eb',
         borderRadius: '12px'
@@ -82,7 +82,7 @@ export default function DashboardAuditoriasIndices({
             sx={{
               fontWeight: 600,
               color: '#111827',
-              fontSize: '18px'
+              fontSize: '20px'
             }}
           >
             Auditorías + Índices Técnicos
@@ -99,7 +99,7 @@ export default function DashboardAuditoriasIndices({
               fontWeight: 600,
               color: '#374151',
               mb: 2,
-              fontSize: '14px'
+              fontSize: '16px'
             }}
           >
             Auditorías del Año
@@ -107,19 +107,19 @@ export default function DashboardAuditoriasIndices({
 
           <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
             <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <Typography variant="body2" sx={{ color: '#6b7280', fontSize: '13px' }}>
+              <Typography variant="body2" sx={{ color: '#6b7280', fontSize: '17px' }}>
                 Total programadas
               </Typography>
-              <Typography variant="h6" sx={{ fontWeight: 700, color: '#8b5cf6', fontSize: '20px' }}>
+              <Typography variant="h6" sx={{ fontWeight: 700, color: '#8b5cf6', fontSize: '36px' }}>
                 {auditoriasData.total}
               </Typography>
             </Box>
 
             <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
-              <Typography variant="body2" sx={{ color: '#6b7280', fontSize: '13px' }}>
+              <Typography variant="body2" sx={{ color: '#6b7280', fontSize: '15px' }}>
                 Completadas
               </Typography>
-              <Typography variant="body2" sx={{ fontWeight: 600, color: '#10b981', fontSize: '13px' }}>
+              <Typography variant="body2" sx={{ fontWeight: 500, color: '#10b981', fontSize: '15px' }}>
                 {auditoriasData.completadas} ({auditoriasData.porcentajeCompletadas}%)
               </Typography>
             </Box>
@@ -139,19 +139,19 @@ export default function DashboardAuditoriasIndices({
             />
 
             <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <Typography variant="body2" sx={{ color: '#6b7280', fontSize: '13px' }}>
+              <Typography variant="body2" sx={{ color: '#6b7280', fontSize: '15px' }}>
                 Pendientes
               </Typography>
-              <Typography variant="body2" sx={{ fontWeight: 600, color: '#f59e0b', fontSize: '13px' }}>
+              <Typography variant="body2" sx={{ fontWeight: 500, color: '#f59e0b', fontSize: '15px' }}>
                 {auditoriasData.pendientes}
               </Typography>
             </Box>
 
             <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <Typography variant="body2" sx={{ color: '#6b7280', fontSize: '13px' }}>
+              <Typography variant="body2" sx={{ color: '#6b7280', fontSize: '15px' }}>
                 No conformidades
               </Typography>
-              <Typography variant="body2" sx={{ fontWeight: 600, color: '#ef4444', fontSize: '13px' }}>
+              <Typography variant="body2" sx={{ fontWeight: 500, color: '#ef4444', fontSize: '15px' }}>
                 {auditoriasData.noConformes}
               </Typography>
             </Box>
@@ -165,33 +165,33 @@ export default function DashboardAuditoriasIndices({
                   fontWeight: 600,
                   color: '#374151',
                   mb: 1.5,
-                  fontSize: '13px'
+                  fontSize: '15px'
                 }}
               >
                 Clasificaciones de Hallazgos
               </Typography>
               <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
                 <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <Typography variant="body2" sx={{ color: '#6b7280', fontSize: '12px' }}>
+                  <Typography variant="body2" sx={{ color: '#6b7280', fontSize: '15px' }}>
                     Condición
                   </Typography>
-                  <Typography variant="body2" sx={{ fontWeight: 600, color: '#f59e0b', fontSize: '12px' }}>
+                  <Typography variant="body2" sx={{ fontWeight: 500, color: '#f59e0b', fontSize: '15px' }}>
                     {clasificacionesData.condicion}
                   </Typography>
                 </Box>
                 <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <Typography variant="body2" sx={{ color: '#6b7280', fontSize: '12px' }}>
+                  <Typography variant="body2" sx={{ color: '#6b7280', fontSize: '15px' }}>
                     Actitud
                   </Typography>
-                  <Typography variant="body2" sx={{ fontWeight: 600, color: '#3b82f6', fontSize: '12px' }}>
+                  <Typography variant="body2" sx={{ fontWeight: 500, color: '#3b82f6', fontSize: '15px' }}>
                     {clasificacionesData.actitud}
                   </Typography>
                 </Box>
                 <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <Typography variant="body2" sx={{ color: '#6b7280', fontSize: '12px' }}>
+                  <Typography variant="body2" sx={{ color: '#6b7280', fontSize: '15px' }}>
                     Total hallazgos
                   </Typography>
-                  <Typography variant="body2" sx={{ fontWeight: 600, color: '#8b5cf6', fontSize: '12px' }}>
+                  <Typography variant="body2" sx={{ fontWeight: 500, color: '#8b5cf6', fontSize: '15px' }}>
                     {clasificacionesData.total}
                   </Typography>
                 </Box>
@@ -208,7 +208,7 @@ export default function DashboardAuditoriasIndices({
               fontWeight: 600,
               color: '#374151',
               mb: 2,
-              fontSize: '14px'
+              fontSize: '16px'
             }}
           >
             Índices Técnicos {selectedYear}
@@ -220,12 +220,12 @@ export default function DashboardAuditoriasIndices({
                 <Typography variant="h6" sx={{ 
                   fontWeight: 700, 
                   color: getIndexColor(indicesData.tasaAusentismo, 'tasaAusentismo'), 
-                  fontSize: '24px',
+                  fontSize: '36px',
                   mb: 0.5
                 }}>
                   {indicesData.tasaAusentismo.toFixed(1)}%
                 </Typography>
-                <Typography variant="caption" sx={{ color: '#6b7280', fontSize: '11px', display: 'block' }}>
+                <Typography variant="caption" sx={{ color: '#6b7280', fontSize: '13px', display: 'block' }}>
                   Tasa de Ausentismo
                 </Typography>
               </Box>
@@ -236,12 +236,12 @@ export default function DashboardAuditoriasIndices({
                 <Typography variant="h6" sx={{ 
                   fontWeight: 700, 
                   color: getIndexColor(indicesData.indiceFrecuencia, 'indiceFrecuencia'), 
-                  fontSize: '24px',
+                  fontSize: '36px',
                   mb: 0.5
                 }}>
                   {indicesData.indiceFrecuencia.toFixed(1)}
                 </Typography>
-                <Typography variant="caption" sx={{ color: '#6b7280', fontSize: '11px', display: 'block' }}>
+                <Typography variant="caption" sx={{ color: '#6b7280', fontSize: '13px', display: 'block' }}>
                   Índice Frecuencia
                 </Typography>
               </Box>
@@ -252,12 +252,12 @@ export default function DashboardAuditoriasIndices({
                 <Typography variant="h6" sx={{ 
                   fontWeight: 700, 
                   color: getIndexColor(indicesData.indiceIncidencia, 'indiceIncidencia'), 
-                  fontSize: '24px',
+                  fontSize: '36px',
                   mb: 0.5
                 }}>
                   {indicesData.indiceIncidencia.toFixed(1)}
                 </Typography>
-                <Typography variant="caption" sx={{ color: '#6b7280', fontSize: '11px', display: 'block' }}>
+                <Typography variant="caption" sx={{ color: '#6b7280', fontSize: '13px', display: 'block' }}>
                   Índice Incidencia
                 </Typography>
               </Box>
@@ -268,12 +268,12 @@ export default function DashboardAuditoriasIndices({
                 <Typography variant="h6" sx={{ 
                   fontWeight: 700, 
                   color: getIndexColor(indicesData.indiceGravedad, 'indiceGravedad'), 
-                  fontSize: '24px',
+                  fontSize: '36px',
                   mb: 0.5
                 }}>
                   {indicesData.indiceGravedad.toFixed(1)}
                 </Typography>
-                <Typography variant="caption" sx={{ color: '#6b7280', fontSize: '11px', display: 'block' }}>
+                <Typography variant="caption" sx={{ color: '#6b7280', fontSize: '13px', display: 'block' }}>
                   Índice Gravedad
                 </Typography>
               </Box>
