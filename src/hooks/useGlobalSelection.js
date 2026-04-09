@@ -66,6 +66,7 @@ export const useGlobalSelection = () => {
   // Auto-seleccionar primera sucursal cuando la empresa cambia y la sucursal actual no es válida
   useEffect(() => {
     if (isTodasEmpresas) return;
+    if (sucursalId === 'todas') return;
 
     const sucursalValida = sucursalesDisponibles.find(s => s.id === sucursalId);
     if (sucursalValida) return; // La sucursal es válida, no hacer nada
