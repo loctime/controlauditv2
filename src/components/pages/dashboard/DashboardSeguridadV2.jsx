@@ -46,6 +46,10 @@ import { useDashboardRealtimeData } from "./hooks/useDashboardRealtimeData";
 import { useGoalsData } from "./hooks/useGoalsData";
 import { useAuditoriasManualesDashboard } from "./hooks/useAuditoriasManualesDashboard";
 import AuditoriasManualesWidget from "./components/AuditoriasManualesWidget";
+import DashboardKPIs from "./components/DashboardKPIs";
+import DashboardDetailCards from "./components/DashboardDetailCards";
+import DashboardAuditoriasIndices from "./components/DashboardAuditoriasIndices";
+import DashboardTrendCharts from "./components/DashboardTrendCharts";
 import InfoIcon from "@mui/icons-material/Info";
 import ReportProblemIcon from "@mui/icons-material/ReportProblem";
 import SchoolIcon from "@mui/icons-material/School";
@@ -106,15 +110,13 @@ export default function DashboardSeguridadV2() {
     sucursalesFiltradas: sucursalesContext
   } = useGlobalSelection();
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
-  const [selectedMonth, setSelectedMonth] = useState(null);
   const [targetsExpanded, setTargetsExpanded] = useState(false);
   const [accionesExpanded, setAccionesExpanded] = useState(false);
   const [goalsExpanded, setGoalsExpanded] = useState(false);
   const dataCacheKey = useMemo(() => {
     if (!selectedEmpresa || !selectedSucursal) return null;
-    const month = selectedMonth ? selectedMonth.toString().padStart(2, "0") : "todos";
-    return `dashboard-data:${selectedEmpresa}:${selectedSucursal}:${selectedYear}-${month}`;
-  }, [selectedEmpresa, selectedSucursal, selectedYear, selectedMonth]);
+    return `dashboard-data:${selectedEmpresa}:${selectedSucursal}:${selectedYear}-todos`;
+  }, [selectedEmpresa, selectedSucursal, selectedYear]);
   const shouldPrefetchAll = useMemo(
     () =>
       Array.isArray(userEmpresas) &&
@@ -127,11 +129,11 @@ export default function DashboardSeguridadV2() {
     selectedEmpresa,
     selectedSucursal,
     selectedYear,
-    selectedMonth,
+    selectedMonth: null,
     setSelectedEmpresa,
     setSelectedSucursal,
     setSelectedYear,
-    setSelectedMonth,
+    setSelectedMonth: () => {},
     userEmpresas,
     userSucursales,
     shouldPrefetchAll,
@@ -208,7 +210,7 @@ export default function DashboardSeguridadV2() {
     auditorias: auditoriasMemo,
     accidentes: accidentesMemo,
     año: selectedYear,
-    periodo: { mes: selectedMonth, año: selectedYear }
+    periodo: { mes: null, año: selectedYear }
   });
 
   const { auditoriasManuales, total: totalAuditoriasManuales, loading: auditoriasManualesLoading } = useAuditoriasManualesDashboard({
@@ -650,7 +652,7 @@ export default function DashboardSeguridadV2() {
         goalsAuditorias,
         goalsAccidentes,
         sucursalesBase,
-        selectedMonth,
+        selectedMonth: null,
         // Nuevos parámetros para secciones del dashboard
         saludOcupacional: saludOcupacionalDatos,
         auditoriasMetrics,
@@ -713,9 +715,7 @@ export default function DashboardSeguridadV2() {
 
       <DashboardFilters
         selectedYear={selectedYear}
-        selectedMonth={selectedMonth}
         onYearChange={setSelectedYear}
-        onMonthChange={setSelectedMonth}
       />
 
       <DashboardSummaryCard
@@ -799,28 +799,40 @@ export default function DashboardSeguridadV2() {
 
       <Box
         data-graficos-dashboard
-        sx={{ display: "flex", flexDirection: "column", gap: 1.5, mt: 1.5 }}
+        sx={{ display: "flex", flexDirection: "column", gap: 2, mt: 2 }}
       >
-        <Suspense fallback={<AnalyticsFallback />}>
-          {analyticsLoading ? (
-            <AnalyticsFallback />
-          ) : datos.metricas.totalEmpleados > 0 ? (
-            <DashboardSection
-              title="Resumen Integrado"
-              dataSection="resumen-integrado"
-              showTitle={false}
-              removePadding={true}
-            >
-              <DashboardAnalyticsSection
-                metricas={datos.metricas}
-                auditoriasMetrics={auditoriasMetrics}
-              />
-            </DashboardSection>
-          ) : (
-            <DashboardNoDataCard />
-          )}
-        </Suspense>
+        {/* ZONA 1 - Fila de 6 KPIs */}
+        <DashboardKPIs
+          metricas={datos.metricas}
+          indices={datos.indices}
+          capacitacionesMetrics={capacitacionesMetrics}
+          saludOcupacional={saludOcupacionalDatos}
+        />
 
+        {/* ZONA 2 - 3 tarjetas de detalle en grid horizontal */}
+        <DashboardDetailCards
+          accidentesAnalysis={accidentesAnalysis}
+          capacitacionesMetrics={capacitacionesMetrics}
+          saludOcupacional={saludOcupacionalDatos}
+          selectedYear={selectedYear}
+        />
+
+        {/* ZONA 3 - Auditorías + índices técnicos completos */}
+        <DashboardAuditoriasIndices
+          auditoriasMetrics={auditoriasMetrics}
+          auditoriasClasificaciones={auditoriasClasificaciones}
+          datos={datos}
+          selectedYear={selectedYear}
+        />
+
+        {/* ZONA 4 - Gráficos de tendencia, colapsados por defecto */}
+        <DashboardTrendCharts
+          accidentesAnalysis={accidentesAnalysis}
+          capacitacionesMetrics={capacitacionesMetrics}
+          selectedYear={selectedYear}
+        />
+
+        {/* Secciones adicionales (mantener funcionalidad existente) */}
         <DashboardSection
           title="Auditorías manuales"
           dataSection="auditorias-manuales"
@@ -844,37 +856,6 @@ export default function DashboardSeguridadV2() {
             capacitacionesMetas={goalsCapacitaciones}
           />
         </DashboardSection>
-
-        {datos.metricas.totalEmpleados > 0 && (
-          <Suspense fallback={<AnalyticsFallback />}>
-            <DashboardSection
-              title="Análisis de Accidentes e Incidentes"
-              dataSection="accidentes"
-              showTitle={false}
-              removePadding={true}
-            >
-              <AccidentesBreakdown analysis={accidentesAnalysis} />
-            </DashboardSection>
-
-            <DashboardSection
-              title="Cumplimiento de Capacitaciones"
-              dataSection="capacitaciones"
-              showTitle={false}
-              removePadding={true}
-            >
-              <CapacitacionesMetrics metrics={capacitacionesMetrics} />
-            </DashboardSection>
-
-            <DashboardSection
-              title="Índices Técnicos"
-              dataSection="indices"
-              showTitle={false}
-              removePadding={true}
-            >
-              <GraficoIndices datos={datos} periodo={selectedYear} />
-            </DashboardSection>
-          </Suspense>
-        )}
       </Box>
 
       <DashboardAlertsPopover
@@ -894,7 +875,7 @@ export default function DashboardSeguridadV2() {
         empresaSeleccionada={empresaSeleccionada}
         sucursalSeleccionada={sucursalSeleccionada}
         selectedYear={selectedYear}
-        selectedMonth={selectedMonth}
+        selectedMonth={null}
       />
 
       <Backdrop

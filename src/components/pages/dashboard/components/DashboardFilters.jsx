@@ -4,17 +4,13 @@ import PeriodSelector from "../../../dashboard-seguridad/PeriodSelector";
 
 export default function DashboardFilters({
   selectedYear,
-  selectedMonth,
-  onYearChange,
-  onMonthChange
+  onYearChange
 }) {
   return (
     <Box sx={{ mb: 2 }}>
       <PeriodSelector
         selectedYear={selectedYear}
-        selectedMonth={selectedMonth}
         onYearChange={onYearChange}
-        onMonthChange={onMonthChange}
       />
     </Box>
   );
