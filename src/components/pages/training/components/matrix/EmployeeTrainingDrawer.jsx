@@ -99,8 +99,20 @@ export default function EmployeeTrainingDrawer({
 
     (async () => {
       try {
+        console.log('?? Llamando con ownerId:', ownerId, 'empleadoId:', empleadoId);
         const list = await trainingAttendanceService.listAttendanceByEmployee(ownerId, empleadoId);
+        console.log('?? Total sin filtro:', list?.length);
         setRecords(Array.isArray(list) ? list : []);
+        
+        // Logs de diagnóstico para identificar problema con filtro de año
+        console.log('?? Records cargados:', list?.length, 'año buscado:', year);
+        console.log('?? Muestra de campos:', list?.slice(0, 3).map(r => ({
+          id: r.id,
+          periodYear: r.periodYear,
+          periodMonth: r.periodMonth,
+          periodKey: r.periodKey,
+          employeeId: r.employeeId
+        })));
       } catch (err) {
         setError(err?.message || 'Error al cargar capacitaciones del empleado.');
         setRecords([]);

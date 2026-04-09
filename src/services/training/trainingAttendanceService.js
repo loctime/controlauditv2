@@ -420,6 +420,7 @@ export const trainingAttendanceService = {
   async listAttendanceByEmployee(ownerId, employeeId) {
     const ref = attendanceByEmployeeCollection(ownerId);
     const snap = await getDocs(query(ref, where('employeeId', '==', employeeId), orderBy('updatedAt', 'desc')));
+    console.log('?? [service] attendanceByEmployee snap size:', snap.size, 'empleadoId buscado:', employeeId);
     return snap.docs.map((d) => ({ id: d.id, ...d.data() }));
   },
 
