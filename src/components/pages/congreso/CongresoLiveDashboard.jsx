@@ -432,17 +432,13 @@ function PreguntaCard({ pregunta }) {
     return count > maxCount ? tipo : max;
   }, tiposConCount[0]);
 
-  // Datos para el gráfico de torta
-  const labels = ['Conforme','No conforme','Nec. mejora','No aplica'];
-  const dataKeys = ['Conforme','No conforme','Necesita mejora','No aplica'];
-  const data = dataKeys.map((l) => conteo[l] || 0);
-  const colors = [T.green, T.red, T.amber, T.gray];
-
-  const chartData = { labels, datasets:[{ data, backgroundColor:colors, borderColor:'#fff', borderWidth:2, hoverOffset:4 }] };
-  const options = {
-    responsive:true, maintainAspectRatio:false, cutout:'60%',
-    plugins: { legend:{display:false}, tooltip:{enabled:false} },
-  };
+  // Datos para el gráfico de bloques
+  const tiposBloques = [
+    { key:'Conforme', color:T.green, label:'CONFORME' },
+    { key:'No conforme', color:T.red, label:'NO CONF' },
+    { key:'Necesita mejora', color:T.amber, label:'MEJORA' },
+    { key:'No aplica', color:T.gray, label:'N/A' }
+  ];
 
   return (
     <div style={{
@@ -458,19 +454,19 @@ function PreguntaCard({ pregunta }) {
     }}>
       {/* Sección */}
       <div style={{
-        fontSize:10,
+        fontSize:12,
         color:T.blue,
         fontWeight:700,
         textTransform:'uppercase',
         letterSpacing:.8,
-        marginBottom:6
+        marginBottom:8
       }}>
         {seccion}
       </div>
 
       {/* Texto de la pregunta */}
       <div style={{
-        fontSize:13,
+        fontSize:15,
         fontWeight:600,
         color:T.text,
         lineHeight:1.3,
@@ -483,22 +479,88 @@ function PreguntaCard({ pregunta }) {
         {texto}
       </div>
 
-      {/* Gráfico de torta */}
+      {/* Gráfico de barras verticales (edificios) */}
       <div style={{
         display:'flex',
         justifyContent:'center',
-        alignItems:'center',
+        alignItems:'flex-end',
         marginBottom:8,
-        flex:1
+        flex:1,
+        height:90,
+        gap:2,
+        padding:'0 0px'
       }}>
-        <div style={{ position:'relative', width:90, height:90 }}>
-          <Doughnut data={chartData} options={options} />
-        </div>
+        {tiposBloques.map(({ key, color, label }) => {
+          const count = conteo[key] || 0;
+          const maxCount = Math.max(...tiposBloques.map(t => conteo[t.key] || 0), 1);
+          const height = maxCount > 0 ? (count / maxCount * 70) : 0;
+          const isVisible = count > 0;
+          
+          return (
+            <div
+              key={key}
+              style={{
+                display:'flex',
+                flexDirection:'column',
+                alignItems:'center',
+                flex:1,
+                maxWidth:80
+              }}
+            >
+              {/* Barra vertical */}
+              <div
+                style={{
+                  width:'100%',
+                  height:height,
+                  background:isVisible ? color : '#f1f5f9',
+                  borderRadius:'4px 4px 0 0',
+                  border:isVisible ? 'none' : `1px solid ${T.border}`,
+                  marginBottom:4,
+                  minHeight:isVisible ? 4 : 0,
+                  transition:'height 0.3s ease',
+                  position:'relative',
+                  display:'flex',
+                  alignItems:'center',
+                  justifyContent:'center'
+                }}
+              >
+                {/* Count dentro de la barra */}
+                {isVisible && (
+                  <div style={{
+                    fontSize:14,
+                    fontWeight:700,
+                    color:'#fff',
+                    textAlign:'center',
+                    position:'absolute',
+                    top:height > 20 ? '50%' : 'auto',
+                    bottom:height <= 20 ? '5px' : 'auto',
+                    transform:height > 20 ? 'translate(-50%, -50%)' : 'translateX(-50%)',
+                    left:'50%',
+                    textShadow:'0 1px 2px rgba(0,0,0,0.3)'
+                  }}>
+                    {count}
+                  </div>
+                )}
+              </div>
+              {/* Etiqueta */}
+              <div style={{
+                fontSize:12,
+                fontWeight:700,
+                color:isVisible ? color : T.textDim,
+                textAlign:'center',
+                lineHeight:1,
+                textTransform:'uppercase'
+              }}>
+                {label}
+              </div>
+            </div>
+          );
+        })}
       </div>
 
       {/* Total de respuestas */}
       <div style={{
-        fontSize:11,
+        fontSize:13,
         color:T.textDim,
         textAlign:'center',
         fontFamily:T.fontMono,
