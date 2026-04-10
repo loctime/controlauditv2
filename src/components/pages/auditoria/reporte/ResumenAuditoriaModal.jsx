@@ -353,7 +353,7 @@ const ResumenAuditoriaModal = ({
                           pb: 1,
                           borderBottom: `2px solid ${alpha(theme.palette.primary.main, 0.2)}`
                         }}>
-                          {seccion.nombre}
+                          {typeof seccion.nombre === 'string' ? seccion.nombre : (seccion?.texto || seccion?.text || `Sección ${seccionIndex + 1}`)}
                         </Typography>
                         
                         {seccion.preguntas.map((pregunta, preguntaIndex) => {

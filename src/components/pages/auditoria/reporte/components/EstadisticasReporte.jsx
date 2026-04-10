@@ -101,11 +101,13 @@ const EstadisticasReporte = ({
             if (!sectionChartRefs.current[idx]) sectionChartRefs.current[idx] = React.createRef();
             return (
               <Box key={idx} mt={2}>
-                <Typography variant="subtitle1" gutterBottom>{seccion.nombre}</Typography>
+                <Typography variant="subtitle1" gutterBottom>
+                  {typeof seccion.nombre === 'string' ? seccion.nombre : (seccion?.texto || seccion?.text || `Sección ${idx + 1}`)}
+                </Typography>
                 <EstadisticasChartSimple
                   ref={sectionChartRefs.current[idx]}
                   estadisticas={conteo}
-                  title={`Sección: ${seccion.nombre}`}
+                  title={`Sección: ${typeof seccion.nombre === 'string' ? seccion.nombre : (seccion?.texto || seccion?.text || `Sección ${idx + 1}`)}`}
                 />
               </Box>
             );

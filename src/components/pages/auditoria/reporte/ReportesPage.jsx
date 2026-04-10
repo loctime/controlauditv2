@@ -222,7 +222,7 @@ const ReportesPage = () => {
               const respuesta = respuestasNormalizadas[sIdx]?.[pIdx];
               if (respuesta === 'No conforme') {
                 const preguntaText = typeof pregunta === 'string' ? pregunta : pregunta?.texto || pregunta?.text || '';
-                const preguntaKey = `${seccion.nombre || 'Sección'} - ${preguntaText}`;
+                const preguntaKey = `${typeof seccion.nombre === 'string' ? seccion.nombre : (seccion?.texto || seccion?.text || 'Sección')} - ${preguntaText}`;
                 preguntasNoConforme.set(preguntaKey, (preguntasNoConforme.get(preguntaKey) || 0) + 1);
               }
             });

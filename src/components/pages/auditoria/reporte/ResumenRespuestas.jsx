@@ -28,7 +28,7 @@ const ResumenRespuestas = ({ respuestas, secciones }) => {
       <Box mt={2}>
         {Object.keys(datosEstadisticos).map((key) => (
           <Typography key={key} variant="h6">
-            {key}: {datosEstadisticos[key]}
+            {key}: {typeof datosEstadisticos[key] === 'object' ? JSON.stringify(datosEstadisticos[key]) : datosEstadisticos[key]}
           </Typography>
         ))}
       </Box>

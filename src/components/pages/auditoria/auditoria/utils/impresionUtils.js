@@ -131,9 +131,10 @@ const generarSeccionesHTML = (secciones, respuestas, comentarios, imagenes, clas
             ? `<div class="clasificacion" style="margin-left: 20px; margin-top: 5px; font-size: 12px; color: #666;"><strong>Clasificación:</strong> ${clasificacionText.join(', ')}</div>` 
             : '';
 
+          const preguntaTexto = typeof pregunta === 'string' ? pregunta : (pregunta?.texto || pregunta?.text || `Pregunta ${preguntaIndex + 1}`);
           contenido += `
             <div class="pregunta">
-              <div class="pregunta-texto">${preguntaIndex + 1}. ${pregunta}</div>
+              <div class="pregunta-texto">${preguntaIndex + 1}. ${preguntaTexto}</div>
               <div class="respuesta"><strong>Respuesta:</strong> ${respuesta}</div>
               ${clasificacionHTML}
               ${comentario && comentario.trim() !== '' ? `<div class="comentario"><strong>Comentario:</strong> ${comentario}</div>` : ''}

@@ -65,8 +65,8 @@ export default function ImagenesTable({ secciones, imagenes, comentarios }) {
               const comentario = comentarios?.[seccionIndex]?.[preguntaIndex];
 
               return (
-                <TableRow key={`${seccion.nombre}-${preguntaIndex}`}>
-                  <TableCell>{seccion.nombre}</TableCell>
+                <TableRow key={`${typeof seccion.nombre === 'string' ? seccion.nombre : (seccion?.texto || seccion?.text || `Seccion-${seccionIndex}`)}-${preguntaIndex}`}>
+                  <TableCell>{typeof seccion.nombre === 'string' ? seccion.nombre : (seccion?.texto || seccion?.text || `Sección ${seccionIndex + 1}`)}</TableCell>
                   <TableCell>{typeof pregunta === 'string' ? pregunta : pregunta?.texto || pregunta?.text || ''}</TableCell>
                   <TableCell>
                     {fileList.length > 0 ? (

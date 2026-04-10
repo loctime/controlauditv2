@@ -326,6 +326,18 @@ const AuditoriaRefactorizada = () => {
     showConfirmation: true
   });
 
+  // Estabilizar dependencias para detección de cambios
+  const datosAuditoriaEstables = useMemo(() => ({
+    empresaId: empresaSeleccionada?.id,
+    sucursal: sucursalSeleccionada,
+    formulario: formularioSeleccionadoId,
+    respuestasHash: JSON.stringify(respuestas),
+    comentariosHash: JSON.stringify(comentarios),
+    imagenesHash: JSON.stringify(imagenes),
+    clasificacionesHash: JSON.stringify(clasificaciones),
+    accionesRequeridasHash: JSON.stringify(accionesRequeridas)
+  }), [empresaSeleccionada, sucursalSeleccionada, formularioSeleccionadoId, respuestas, comentarios, imagenes, clasificaciones, accionesRequeridas]);
+
   // Detectar cambios en los datos de auditoría
   useEffect(() => {
     const hasData = empresaSeleccionada || sucursalSeleccionada || formularioSeleccionadoId || 
@@ -339,7 +351,7 @@ const AuditoriaRefactorizada = () => {
     if (hasData) {
       setHasUnsavedChanges(prev => prev === false ? true : prev);
     }
-  }, [empresaSeleccionada, sucursalSeleccionada, formularioSeleccionadoId, respuestas, comentarios, imagenes, clasificaciones, accionesRequeridas]);
+  }, [datosAuditoriaEstables]);
 
   // Refs para evitar bucle infinito en restauración
   const restoreAttemptedRef = useRef(false);
@@ -589,6 +601,13 @@ const AuditoriaRefactorizada = () => {
   const prevEmpresaRef = useRef();
   const prevFormularioRef = useRef();
 
+  // Estabilizar dependencias para verificación de cambios
+  const datosVerificacionEstables = useMemo(() => ({
+    respuestasHash: JSON.stringify(respuestas),
+    empresaId: empresaSeleccionada?.id,
+    formulario: formularioSeleccionadoId
+  }), [respuestas, empresaSeleccionada, formularioSeleccionadoId]);
+
   // Verificar cambios reales en respuestas usando comparación profunda
   useEffect(() => {
     // Comparar serializando para detectar cambios reales en el contenido
@@ -609,7 +628,7 @@ const AuditoriaRefactorizada = () => {
       // Este efecto ya no hace logs para evitar spam en consola
       // El botón "Siguiente" se actualiza automáticamente por React cuando cambian las props
     }
-  }, [respuestas, empresaSeleccionada, formularioSeleccionadoId]);
+  }, [datosVerificacionEstables]);
 
   // Guardar antes de cerrar/refrescar la página
   useEffect(() => {

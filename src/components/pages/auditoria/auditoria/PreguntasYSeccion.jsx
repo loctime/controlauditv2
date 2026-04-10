@@ -82,6 +82,16 @@ export default function PreguntasYSeccion({
   const [currentImagePregunta, setCurrentImagePregunta] = useState(null);
   const [openPreguntasNoContestadas, setOpenPreguntasNoContestadas] = useState(false);
 
+  // Estabilizar dependencias para evitar loop infinito
+  const dependenciasEstables = useMemo(() => ({
+    seccionesKey: secciones.map(s => s?.preguntas?.length || 0).join(','),
+    respuestasKey: JSON.stringify(respuestasExistentes),
+    comentariosKey: JSON.stringify(comentariosExistentes),
+    imagenesKey: JSON.stringify(imagenesExistentes),
+    clasificacionesKey: JSON.stringify(clasificacionesExistentes),
+    accionesKey: JSON.stringify(accionesRequeridasExistentes)
+  }), [secciones, respuestasExistentes, comentariosExistentes, imagenesExistentes, clasificacionesExistentes, accionesRequeridasExistentes]);
+
   useEffect(() => {
     if (!secciones.length) return;
 
@@ -123,14 +133,7 @@ export default function PreguntasYSeccion({
           .map((_, preguntaIndex) => accionesRequeridasExistentes?.[seccionIndex]?.[preguntaIndex] || null)
       )
     );
-  }, [
-    secciones,
-    respuestasExistentes,
-    comentariosExistentes,
-    imagenesExistentes,
-    clasificacionesExistentes,
-    accionesRequeridasExistentes
-  ]);
+  }, [dependenciasEstables]);
 
   const handleRespuestaChange = (seccionIndex, preguntaIndex, value) => {
     const next = respuestas.map((seccion, idx) =>
@@ -290,7 +293,7 @@ export default function PreguntasYSeccion({
       {secciones.map((seccion, seccionIndex) => (
         <Box key={seccionIndex} mb={isMobile ? 2 : 4}>
           <Typography variant={isMobile ? 'h6' : 'h5'} sx={{ mb: isMobile ? 1.5 : 2, fontWeight: 'bold', color: 'primary.main' }}>
-            {seccionIndex + 1}. {seccion.nombre}
+            {seccionIndex + 1}. {typeof seccion.nombre === 'string' ? seccion.nombre : (seccion?.texto || seccion?.text || `Sección ${seccionIndex + 1}`)}
           </Typography>
 
           <Stack spacing={isMobile ? 2 : 3}>

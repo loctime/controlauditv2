@@ -48,7 +48,7 @@ export default function PreguntasRespuestasList({ secciones = [], respuestas = [
       {secciones.map((seccion, sIdx) => (
         <Paper key={seccion.nombre || sIdx} sx={{ p: 2, mb: 3 }} elevation={2}>
           <Typography variant="h6" color="primary" gutterBottom>
-            {seccion.nombre}
+            {typeof seccion.nombre === 'string' ? seccion.nombre : (seccion?.texto || seccion?.text || `Sección ${sIdx + 1}`)}
           </Typography>
           <Divider sx={{ mb: 2 }} />
           {Array.isArray(seccion.preguntas) && seccion.preguntas.length > 0 ? (
@@ -61,7 +61,7 @@ export default function PreguntasRespuestasList({ secciones = [], respuestas = [
               return (
                 <Box key={pIdx} sx={{ mb: 2, pl: 1, borderLeft: '3px solid #1976d2' }}>
                   <Typography variant="subtitle1" fontWeight={600}>
-                    {pIdx + 1}. {pregunta}
+                    {pIdx + 1}. {typeof pregunta === 'string' ? pregunta : (pregunta?.texto || pregunta?.text || `Pregunta ${pIdx + 1}`)}
                   </Typography>
                   <Typography variant="body2" sx={{ mb: 0.5 }}>
                     <strong>Respuesta:</strong> {!respuesta ? 'Sin responder' : respuesta}

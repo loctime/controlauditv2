@@ -1,7 +1,8 @@
 import logger from '@/utils/logger';
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useLocation } from "react-router-dom";
 import { useAuth } from '@/components/context/AuthContext';
+
 export const useAuditoriaState = () => {
   const location = useLocation();
   const { userProfile } = useAuth();
@@ -89,6 +90,18 @@ export const useAuditoriaState = () => {
     }
   };
 
+  // Estabilizar dependencias para evitar loop infinito
+  const dependenciasEstables = useMemo(() => ({
+    empresaId: empresaSeleccionada?.id,
+    sucursal: sucursalSeleccionada,
+    formulario: formularioSeleccionadoId,
+    respuestasHash: JSON.stringify(respuestas),
+    comentariosHash: JSON.stringify(comentarios),
+    imagenesLength: imagenes.length,
+    clasificacionesHash: JSON.stringify(clasificaciones),
+    accionesRequeridasHash: JSON.stringify(accionesRequeridas)
+  }), [empresaSeleccionada, sucursalSeleccionada, formularioSeleccionadoId, respuestas, comentarios, imagenes, clasificaciones, accionesRequeridas]);
+
   // Verificar cambios en la auditoría y reiniciar firmas si es necesario
   useEffect(() => {
     const nuevoHash = generarHashAuditoria();
@@ -99,7 +112,7 @@ export const useAuditoriaState = () => {
     }
     
     setAuditoriaHash(nuevoHash);
-  }, [empresaSeleccionada, sucursalSeleccionada, formularioSeleccionadoId, respuestas, comentarios, imagenes, clasificaciones, accionesRequeridas]);
+  }, [dependenciasEstables, firmasValidas]);
 
   // Marcar firmas como válidas cuando se completan
   useEffect(() => {
