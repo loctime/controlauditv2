@@ -232,21 +232,6 @@ function SelectorScreen({ formularios, loading, value, onChange, onStart, onBack
 // ─── Dashboard ────────────────────────────────────────────────────────────────
 function DashboardScreen({ formulario, analisis, reloj, onVolver }) {
   const sin = !analisis || analisis.totalAuditorias === 0;
-  const [preguntaIdx, setPreguntaIdx] = useState(0);
-  const carruselRef = useRef(null);
-
-  useEffect(() => {
-    if (!analisis || analisis.analisisPorPregunta.length === 0) return;
-    setPreguntaIdx(0);
-    if (carruselRef.current) clearInterval(carruselRef.current);
-    carruselRef.current = setInterval(() => {
-      setPreguntaIdx(prev => (prev + 1) % analisis.analisisPorPregunta.length);
-    }, 4000);
-    return () => clearInterval(carruselRef.current);
-  }, [analisis]);
-
-  const preguntaActual = analisis?.analisisPorPregunta[preguntaIdx];
-  const totalPreguntas = analisis?.analisisPorPregunta.length || 0;
 
   return (
     <>
@@ -277,11 +262,9 @@ function DashboardScreen({ formulario, analisis, reloj, onVolver }) {
           </div>
         </div>
 
-        {/* CARRUSEL DE PREGUNTAS */}
-        <PanelCard title={`Respuestas por pregunta — ${sin ? '0' : preguntaIdx + 1} / ${totalPreguntas}`}>
-          {sin ? <Vacio /> : (
-            <CarruselPregunta pregunta={preguntaActual} idx={preguntaIdx} total={totalPreguntas} />
-          )}
+        {/* GRILLA DE PREGUNTAS */}
+        <PanelCard title="Respuestas por pregunta">
+          {sin ? <Vacio /> : <GridPreguntas analisisPorPregunta={analisis.analisisPorPregunta} />}
         </PanelCard>
 
         {/* TENDENCIA */}
@@ -350,91 +333,178 @@ const TIPOS = [
   { key:'No aplica',       color:T.gray,   label:'No aplica'     },
 ];
 
-// ─── Carrusel de preguntas ─────────────────────────────────────────────────────
-function CarruselPregunta({ pregunta, idx, total }) {
-  if (!pregunta) return <Vacio />;
-  const { texto, conteo, totalRespuestas, seccion } = pregunta;
-  const max = Math.max(...TIPOS.map(t => conteo[t.key] || 0), 1);
-  const tiposVisibles = TIPOS.filter(t => (conteo[t.key] || 0) > 0);
-  const displayTipos = tiposVisibles.length > 0 ? tiposVisibles : TIPOS;
+// ─── Grid de Preguntas ────────────────────────────────────────────────────────
+function GridPreguntas({ analisisPorPregunta }) {
+  const [paginaActual, setPaginaActual] = useState(0);
+  const preguntasPorPagina = 6;
+  const totalPaginas = Math.ceil(analisisPorPregunta.length / preguntasPorPagina);
 
-  // Dots: mostrar máximo 20 para no desbordar
-  const dotsMax = Math.min(total, 20);
-  const dotsOffset = total > 20 ? Math.max(0, idx - 9) : 0;
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setPaginaActual(prev => (prev + 1) % totalPaginas);
+    }, 8000);
+    return () => clearInterval(interval);
+  }, [totalPaginas]);
+
+  const preguntasVisibles = analisisPorPregunta.slice(
+    paginaActual * preguntasPorPagina,
+    (paginaActual + 1) * preguntasPorPagina
+  );
+
+  const irPagina = (direccion) => {
+    if (direccion === 'anterior') {
+      setPaginaActual(prev => prev === 0 ? totalPaginas - 1 : prev - 1);
+    } else {
+      setPaginaActual(prev => (prev + 1) % totalPaginas);
+    }
+  };
 
   return (
     <div>
-      {/* Indicador: dots + texto */}
-      <div style={{ display:'flex', alignItems:'center', gap:12, marginBottom:10 }}>
-        <span style={{ fontSize:12, color:T.textDim, fontWeight:600, whiteSpace:'nowrap' }}>
-          Pregunta {idx + 1} de {total}
+      {/* Navegación */}
+      <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:16 }}>
+        <button
+          onClick={() => irPagina('anterior')}
+          style={{
+            padding:'6px 12px',
+            borderRadius:6,
+            border:`1px solid ${T.border}`,
+            background:'transparent',
+            color:T.textDim,
+            fontSize:12,
+            cursor:'pointer',
+            fontWeight:500
+          }}
+        >
+          ← Anterior
+        </button>
+        <span style={{ fontSize:13, color:T.textDim, fontWeight:600 }}>
+          Página {paginaActual + 1} de {totalPaginas}
         </span>
-        <div style={{ display:'flex', gap:4, alignItems:'center', flex:1 }}>
-          {Array.from({ length: dotsMax }).map((_, i) => {
-            const realIdx = i + dotsOffset;
-            return (
-              <div key={realIdx} style={{
-                width: 8, height: 8, borderRadius: '50%',
-                background: realIdx === idx ? T.blue : 'transparent',
-                border: `2px solid ${realIdx === idx ? T.blue : T.border}`,
-                flexShrink: 0,
-                transition: 'background .3s, border-color .3s',
-              }} />
-            );
-          })}
+        <button
+          onClick={() => irPagina('siguiente')}
+          style={{
+            padding:'6px 12px',
+            borderRadius:6,
+            border:`1px solid ${T.border}`,
+            background:'transparent',
+            color:T.textDim,
+            fontSize:12,
+            cursor:'pointer',
+            fontWeight:500
+          }}
+        >
+          Siguiente →
+        </button>
+      </div>
+
+      {/* Grilla de cards */}
+      <div style={{
+        display:'grid',
+        gridTemplateColumns:'repeat(3, 1fr)',
+        gridTemplateRows:'repeat(2, 1fr)',
+        gap:14,
+        minHeight:280
+      }}>
+        {preguntasVisibles.map((pregunta, idx) => (
+          <PreguntaCard key={`${paginaActual}-${idx}`} pregunta={pregunta} />
+        ))}
+      </div>
+    </div>
+  );
+}
+
+// ─── Card de Pregunta Individual ───────────────────────────────────────────────────
+function PreguntaCard({ pregunta }) {
+  const { texto, conteo, totalRespuestas, seccion } = pregunta;
+  
+  // Determinar color predominante para el borde superior
+  const tiposConCount = [
+    { key:'Conforme', color:T.green },
+    { key:'No conforme', color:T.red },
+    { key:'Necesita mejora', color:T.amber },
+    { key:'No aplica', color:T.gray }
+  ];
+  
+  const predominante = tiposConCount.reduce((max, tipo) => {
+    const count = conteo[tipo.key] || 0;
+    const maxCount = conteo[max.key] || 0;
+    return count > maxCount ? tipo : max;
+  }, tiposConCount[0]);
+
+  // Datos para el gráfico de torta
+  const labels = ['Conforme','No conforme','Nec. mejora','No aplica'];
+  const dataKeys = ['Conforme','No conforme','Necesita mejora','No aplica'];
+  const data = dataKeys.map((l) => conteo[l] || 0);
+  const colors = [T.green, T.red, T.amber, T.gray];
+
+  const chartData = { labels, datasets:[{ data, backgroundColor:colors, borderColor:'#fff', borderWidth:2, hoverOffset:4 }] };
+  const options = {
+    responsive:true, maintainAspectRatio:false, cutout:'60%',
+    plugins: { legend:{display:false}, tooltip:{enabled:false} },
+  };
+
+  return (
+    <div style={{
+      background:T.bgCard,
+      borderRadius:14,
+      padding:12,
+      border:`1px solid ${T.border}`,
+      boxShadow:T.shadow,
+      borderTop:`3px solid ${predominante.color}`,
+      display:'flex',
+      flexDirection:'column',
+      height:'100%'
+    }}>
+      {/* Sección */}
+      <div style={{
+        fontSize:10,
+        color:T.blue,
+        fontWeight:700,
+        textTransform:'uppercase',
+        letterSpacing:.8,
+        marginBottom:6
+      }}>
+        {seccion}
+      </div>
+
+      {/* Texto de la pregunta */}
+      <div style={{
+        fontSize:13,
+        fontWeight:600,
+        color:T.text,
+        lineHeight:1.3,
+        marginBottom:12,
+        display:'-webkit-box',
+        WebkitLineClamp:2,
+        WebkitBoxOrient:'vertical',
+        overflow:'hidden'
+      }}>
+        {texto}
+      </div>
+
+      {/* Gráfico de torta */}
+      <div style={{
+        display:'flex',
+        justifyContent:'center',
+        alignItems:'center',
+        marginBottom:8,
+        flex:1
+      }}>
+        <div style={{ position:'relative', width:90, height:90 }}>
+          <Doughnut data={chartData} options={options} />
         </div>
       </div>
 
-      {/* Barra de progreso temporal (se reinicia con key) */}
-      <div style={{ height:3, background:'#eef2f7', borderRadius:2, marginBottom:18, overflow:'hidden' }}>
-        <div key={idx} style={{
-          height:'100%', borderRadius:2,
-          background: T.blue, opacity:.7,
-          animation:'progresoTiempo 8s linear forwards',
-        }} />
-      </div>
-
-      {/* Contenido animado (key dispara fadeSlideIn en cada cambio) */}
-      <div key={idx} style={{ animation:'fadeSlideIn .35s ease both' }}>
-        {/* Sección */}
-        <div style={{ fontSize:11, color:T.blue, fontWeight:700, textTransform:'uppercase', letterSpacing:.8, marginBottom:10 }}>
-          {seccion}
-        </div>
-
-        {/* Texto de la pregunta */}
-        <div style={{ fontSize:22, fontWeight:700, color:T.text, lineHeight:1.4, marginBottom:28 }}>
-          "{texto}"
-        </div>
-
-        {/* Barras horizontales */}
-        <div style={{ display:'flex', flexDirection:'column', gap:12 }}>
-          {displayTipos.map(({ key, color, label }) => {
-            const val = conteo[key] || 0;
-            const pct = totalRespuestas > 0 ? (val / totalRespuestas * 100) : 0;
-            const barW = max > 0 ? (val / max * 100) : 0;
-            return (
-              <div key={key} style={{ display:'grid', gridTemplateColumns:'110px 1fr 48px 52px', alignItems:'center', gap:12 }}>
-                <span style={{ fontSize:13, color:T.textDim, fontWeight:600, textAlign:'right' }}>{label}</span>
-                <div style={{ height:28, background:'#eef2f7', borderRadius:6, overflow:'hidden' }}>
-                  <div style={{
-                    height:'100%', width:`${barW}%`, background:color, borderRadius:6,
-                    transition:'width .6s ease',
-                    display:'flex', alignItems:'center', justifyContent:'flex-end', paddingRight:8,
-                  }}>
-                    {barW > 20 && <span style={{ fontSize:12, fontWeight:700, color:'#fff' }}>{pct.toFixed(0)}%</span>}
-                  </div>
-                </div>
-                <span style={{ fontFamily:T.fontMono, fontSize:20, fontWeight:700, color, textAlign:'right' }}>{val}</span>
-                <span style={{ fontSize:13, color:T.textDim, textAlign:'right' }}>{pct.toFixed(1)}%</span>
-              </div>
-            );
-          })}
-        </div>
-
-        {/* Total */}
-        <div style={{ marginTop:16, fontSize:13, color:T.textDim, borderTop:`1px dashed ${T.border}`, paddingTop:10 }}>
-          Total de respuestas: <strong style={{ color:T.text, fontFamily:T.fontMono }}>{totalRespuestas}</strong>
-        </div>
+      {/* Total de respuestas */}
+      <div style={{
+        fontSize:11,
+        color:T.textDim,
+        textAlign:'center',
+        fontFamily:T.fontMono,
+        fontWeight:600
+      }}>
+        {totalRespuestas} respuestas
       </div>
     </div>
   );
