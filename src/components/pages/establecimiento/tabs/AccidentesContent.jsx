@@ -33,7 +33,9 @@ const AccidentesContent = ({ sucursalId, sucursalNombre, empresaId, navigateToPa
     
     setLoading(true);
     try {
+      logger.debug(`[AccidentesContent] Loading accidents for sucursalId: ${sucursalId}, empresaId: ${empresaId}`);
       const accidentesData = await obtenerAccidentes({ sucursalId }, userProfile);
+      logger.debug(`[AccidentesContent] Received ${accidentesData.length} accidents for sucursal ${sucursalNombre}`);
       setAccidentes(accidentesData);
     } catch (error) {
       logger.error('Error cargando accidentes:', error);

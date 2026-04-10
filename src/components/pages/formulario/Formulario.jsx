@@ -117,9 +117,9 @@ const Formulario = () => {
   };
 
   return (
-    <Box>
-      {/* Botón para galería de formularios públicos */}
-      <Box sx={{ mb: 3, display: 'flex', alignItems: 'center', gap: 2 }}>
+    <Box sx={{ mt: 4 }}>
+      {/* Botón para galería de formularios públicos - OCULTO */}
+      {/* <Box sx={{ mb: 3, display: 'flex', alignItems: 'center', gap: 2 }}>
         <Button
           variant="outlined"
           startIcon={<PublicIcon />}
@@ -131,7 +131,7 @@ const Formulario = () => {
         >
           Ver Galería de Formularios Públicos
         </Button>
-      </Box>
+      </Box> */}
       {/* Botón Volver */}
       <Box sx={{ mb: 3, display: 'flex', alignItems: 'center', gap: 2 }}>
         <Button

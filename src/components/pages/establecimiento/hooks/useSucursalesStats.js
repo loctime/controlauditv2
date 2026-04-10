@@ -26,6 +26,12 @@ export const useSucursalesStats = () => {
           getDocs(query(collection(dbAudit, ...firestoreRoutesCore.accidentes(ownerId)), where('sucursalId', '==', sucursal.id)))
         ]);
         
+        logger.debug(`[useSucursalesStats] Sucursal ${sucursal.nombre} (${sucursal.id}):`);
+        logger.debug(`[useSucursalesStats] - Accidentes found: ${accidentesSnapshot.docs.length}`);
+        if (accidentesSnapshot.docs.length > 0) {
+          logger.debug(`[useSucursalesStats] - First accident sample:`, accidentesSnapshot.docs[0].data());
+        }
+        
         // Cargar acciones requeridas desde subcolección
         let accionesRequeridasCount = 0;
         try {

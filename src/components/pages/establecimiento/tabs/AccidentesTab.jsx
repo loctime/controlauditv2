@@ -36,7 +36,9 @@ const AccidentesTab = ({ empresaId, empresaNombre }) => {
     
     setLoading(true);
     try {
+      logger.debug(`[AccidentesTab] Loading accidents for empresaId: ${empresaId}`);
       const accidentesData = await obtenerAccidentes({ empresaId }, userProfile);
+      logger.debug(`[AccidentesTab] Received ${accidentesData.length} accidents for empresa ${empresaNombre}`);
 
       // Obtener 3 registros más recientes
       const ordenados = accidentesData

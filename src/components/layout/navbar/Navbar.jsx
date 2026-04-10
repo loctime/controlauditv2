@@ -362,7 +362,34 @@ function Navbar(props) {
               flex: 1,
               flexWrap: 'nowrap'
             }}>
-              {renderGroupDropdown('gestion')}
+              {(() => {
+                const gestionItems = groupedMenu.gestion || [];
+                const calendarioRoute = gestionItems.find(item => item.id === 'panel');
+                if (calendarioRoute) {
+                  return (
+                    <Link
+                      key={calendarioRoute.id}
+                      to={calendarioRoute.path}
+                      style={{
+                        color: "#ffffff",
+                        textDecoration: "none",
+                        fontSize: "1.1rem",
+                        fontWeight: 600,
+                        padding: "10px 16px",
+                        lineHeight: 1.2,
+                        borderRadius: "6px",
+                        transition: "background-color 0.2s",
+                        '&:hover': {
+                          backgroundColor: 'rgba(255,255,255,0.15)',
+                        },
+                      }}
+                    >
+                      {calendarioRoute.label}
+                    </Link>
+                  );
+                }
+                return renderGroupDropdown('gestion');
+              })()}
               {renderGroupDropdown('empresas')}
               {renderGroupDropdown('auditorias')}
               {renderGroupDropdown('higiene')}

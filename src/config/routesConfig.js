@@ -33,7 +33,7 @@ export const routesConfig = [
     path: "/tablero",
     label: "Tablero",
     roles: ["operario", "admin", "superdev"],
-    showInMenu: true,
+    showInMenu: false,
     topNav: true,
     section: "main",
     order: 1,
@@ -42,7 +42,7 @@ export const routesConfig = [
   {
     id: "panel",
     path: "/panel",
-    label: "Panel",
+    label: "Calendario",
     roles: ["admin", "superdev"],
     showInMenu: true,
     topNav: true,

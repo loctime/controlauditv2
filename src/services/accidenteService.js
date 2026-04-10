@@ -112,7 +112,8 @@ export const crearAccidente = async (accidenteData, empleadosSeleccionados, imag
       sucursalId: accidenteData.sucursalId,
       tipo: 'accidente',
       empleadosInvolucrados,
-      descripcion: accidenteData.descripcion || '',
+      descripcion: accidenteData.descripcion || '',
+
       fecha: fechaAccidente,
       fechaHora: fechaAccidente,
       creadoPor: actorId,
@@ -139,7 +140,8 @@ export const crearAccidente = async (accidenteData, empleadosSeleccionados, imag
         contextEventName: accidenteData.contextEventName,
         empresaNombre: accidenteData.empresaNombre,
         sucursalNombre: accidenteData.sucursalNombre
-      });
+      });
+
     }
 
     // Actualizar estado de empleados con dÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â­as de reposo
@@ -231,7 +233,8 @@ export const crearIncidente = async (incidenteData, testigos = [], imagenes = []
       tipo: 'incidente',
       testigos: testigosArray,
       empleadosInvolucrados: [], // Los incidentes no tienen empleados con reposo
-      descripcion: incidenteData.descripcion || '',
+      descripcion: incidenteData.descripcion || '',
+
       fecha: fechaIncidente,
       fechaHora: fechaIncidente,
       creadoPor: actorId,
@@ -257,7 +260,8 @@ export const crearIncidente = async (incidenteData, testigos = [], imagenes = []
         contextEventName: incidenteData.contextEventName,
         empresaNombre: incidenteData.empresaNombre,
         sucursalNombre: incidenteData.sucursalNombre
-      });
+      });
+
     }
 
     // Registrar log (registrarAccionSistema maneja la ruta internamente)
@@ -336,7 +340,8 @@ const subirImagenesNew = async (accidenteId, imagenes, companyId = 'system', opt
       entityCollection: 'accidentes',
       contextEventName,
       sucursalId: sucursalNombre
-    });
+    });
+
 
     // Espejo legacy temporal para mantener pantallas existentes.
     return uploadResult.fileRefs;
@@ -378,13 +383,28 @@ export const obtenerAccidentes = async (filtros = {}, userProfile) => {
 
     let q;
     if (conditions.length > 0) {
-      q = query(accidentesRef, ...conditions, orderBy('fecha', 'desc'));
+      q = query(accidentesRef, ...conditions);
     } else {
-      q = query(accidentesRef, orderBy('fecha', 'desc'));
+      q = query(accidentesRef);
     }
+
+    logger.debug(`[accidenteService] Query conditions:`, conditions);
+    logger.debug(`[accidenteService] Collection path:`, ...firestoreRoutesCore.accidentes(ownerId));
 
     const snapshot = await getDocs(q);
     const rows = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+    rows.sort((a, b) => {
+      const fechaA = a.fecha?.toMillis?.() ?? a.fechaHora?.toMillis?.() ?? 0;
+      const fechaB = b.fecha?.toMillis?.() ?? b.fechaHora?.toMillis?.() ?? 0;
+      return fechaB - fechaA;
+    });
+    
+    logger.debug(`[accidenteService] Query with filters:`, filtros);
+    logger.debug(`[accidenteService] Found ${rows.length} accidents`);
+    if (rows.length > 0) {
+      logger.debug(`[accidenteService] First accident data sample:`, rows[0]);
+    }
+    
     return await Promise.all(rows.map((row) => enrichAccidenteWithCanonicalFiles(row, ownerId)));
   } catch (error) {
     logger.error('Error al obtener accidentes:', error);
