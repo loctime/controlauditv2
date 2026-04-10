@@ -81,6 +81,12 @@ export const routesConfig = [
     icon: "PictureAsPdf",
   },
   {
+    id: "congreso-live",
+    path: "/congreso-live",
+    roles: ["admin", "superdev"],
+    showInMenu: false,
+  },
+  {
     id: "establecimiento",
     path: "/establecimiento",
     label: "Establecimientos",

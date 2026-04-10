@@ -1,5 +1,6 @@
 import logger from '@/utils/logger';
 import React, { useState, useEffect, useRef, useMemo } from "react";
+import { collection, query, where, onSnapshot } from 'firebase/firestore';
 import { reporteService } from "../../../../services/reporteService";
 import { db } from "../../../../firebaseControlFile";
 import { useLocation, useNavigate } from 'react-router-dom';
@@ -38,6 +39,7 @@ import {
   MenuItem,
   FormControl,
   InputLabel,
+  LinearProgress,
 } from "@mui/material";
 import syncQueueService from '../../../../services/syncQueue';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
@@ -128,6 +130,13 @@ const ReportesPage = () => {
   // Estados para tabs y análisis
   const [tabValue, setTabValue] = useState(0);
   const [selectedFormulario, setSelectedFormulario] = useState('');
+  
+  // Estados para dashboard en tiempo real
+  const [reportesTiempoReal, setReportesTiempoReal] = useState([]);
+  const [preguntasFormulario, setPreguntasFormulario] = useState([]);
+  const [analisisTiempoReal, setAnalisisTiempoReal] = useState(null);
+  const [loadingAnalisis, setLoadingAnalisis] = useState(false);
+  const unsubscribeRef = useRef(null);
 
   // Estilos responsivos
   const mobileBoxStyle = {
@@ -171,11 +180,20 @@ const ReportesPage = () => {
     const formulariosMap = new Map();
     reportes.forEach(reporte => {
       const nombreForm = getNombreFormulario(reporte);
+      logger.debug('[DEBUG] Formulario encontrado en reporte:', {
+        id: reporte.id,
+        formularioNombre: reporte.formularioNombre,
+        nombreForm: reporte.nombreForm,
+        formulario: reporte.formulario,
+        nombreFinal: nombreForm
+      });
       if (nombreForm && !formulariosMap.has(nombreForm)) {
         formulariosMap.set(nombreForm, nombreForm);
       }
     });
-    return Array.from(formulariosMap.values());
+    const formulariosArray = Array.from(formulariosMap.values());
+    logger.debug('[DEBUG] Formularios únicos disponibles:', formulariosArray);
+    return formulariosArray;
   }, [reportes]);
 
   // Helper para tab change
@@ -183,69 +201,304 @@ const ReportesPage = () => {
     setTabValue(newValue);
   };
 
-  // Calcular datos de análisis para el formulario seleccionado
-  const datosAnalisis = useMemo(() => {
-    if (!selectedFormulario || !reportes.length) return null;
+  // Listener en tiempo real para reportes del formulario seleccionado
+  useEffect(() => {
+    const setupListener = async () => {
+      if (!selectedFormulario || !userProfile?.ownerId) {
+        // Limpiar listener si no hay formulario seleccionado
+        if (unsubscribeRef.current) {
+          unsubscribeRef.current();
+          unsubscribeRef.current = null;
+        }
+        setReportesTiempoReal([]);
+        setPreguntasFormulario([]);
+        setAnalisisTiempoReal(null);
+        return;
+      }
 
-    const reportesFiltrados = reportes.filter(reporte => {
-      const nombreForm = getNombreFormulario(reporte);
-      return nombreForm === selectedFormulario;
+      setLoadingAnalisis(true);
+      
+      // Crear query para la colección de reportes
+      const reportesRef = collection(db, 'apps', 'auditoria', 'owners', userProfile.ownerId, 'reportes');
+      
+      // Debug: mostrar el formulario seleccionado
+      logger.debug('[DEBUG] Formulario seleccionado:', selectedFormulario);
+      
+      // Función para intentar el query con diferentes campos
+      const intentarQuery = async (campo) => {
+        logger.debug(`[DEBUG] Intentando query con campo: ${campo}`);
+        const q = query(reportesRef, where(campo, '==', selectedFormulario));
+        
+        return new Promise((resolve, reject) => {
+          const unsubscribe = onSnapshot(q, (snapshot) => {
+            logger.debug(`[DEBUG] Query con ${campo} encontró ${snapshot.size} documentos`);
+            resolve({ snapshot, unsubscribe, campo });
+          }, (error) => {
+            logger.error(`[DEBUG] Error con campo ${campo}:`, error);
+            unsubscribe();
+            reject(error);
+          });
+        });
+      };
+
+      // Intentar con diferentes campos en orden de prioridad
+      const campos = ['formularioNombre', 'nombreForm', 'formulario'];
+      let resultado = null;
+      
+      for (const campo of campos) {
+        try {
+          resultado = await intentarQuery(campo);
+          if (resultado.snapshot.size > 0) {
+            logger.debug(`[DEBUG] Éxito con campo: ${campo}`);
+            break;
+          } else {
+            resultado.unsubscribe();
+            resultado = null;
+          }
+        } catch (error) {
+          logger.debug(`[DEBUG] Falló campo ${campo}, intentando siguiente...`);
+        }
+      }
+
+      if (!resultado) {
+        logger.debug('[DEBUG] No se encontraron reportes con ningún campo');
+        setLoadingAnalisis(false);
+        return;
+      }
+
+      // Suscribirse a cambios en tiempo real con el campo que funcionó
+      const unsubscribe = onSnapshot(query(reportesRef, where(resultado.campo, '==', selectedFormulario)), (snapshot) => {
+        logger.debug('[DEBUG] Snapshot recibido, docs:', snapshot.size);
+        
+        const reportesData = [];
+        let preguntasEncontradas = [];
+        
+        snapshot.forEach((doc) => {
+          const reporte = { id: doc.id, ...doc.data() };
+          logger.debug('[DEBUG] Reporte encontrado:', {
+            id: reporte.id,
+            formularioNombre: reporte.formularioNombre,
+            nombreForm: reporte.nombreForm,
+            formulario: reporte.formulario,
+            secciones: reporte.secciones ? 'tiene secciones' : 'sin secciones'
+          });
+          reportesData.push(reporte);
+          
+          // Obtener preguntas del primer reporte disponible
+          if (preguntasEncontradas.length === 0 && reporte.secciones) {
+            preguntasEncontradas = extraerPreguntasDeSecciones(reporte.secciones);
+            logger.debug('[DEBUG] Preguntas extraídas:', preguntasEncontradas.length);
+          }
+        });
+
+        logger.debug('[DEBUG] Total reportes:', reportesData.length);
+        logger.debug('[DEBUG] Total preguntas:', preguntasEncontradas.length);
+
+        setReportesTiempoReal(reportesData);
+        setPreguntasFormulario(preguntasEncontradas);
+        
+        // Calcular análisis en tiempo real
+        if (reportesData.length > 0 && preguntasEncontradas.length > 0) {
+          const analisis = calcularAnalisisTiempoReal(reportesData, preguntasEncontradas);
+          setAnalisisTiempoReal(analisis);
+          logger.debug('[DEBUG] Análisis calculado:', analisis);
+        } else {
+          logger.debug('[DEBUG] No se puede calcular análisis - reportes:', reportesData.length, 'preguntas:', preguntasEncontradas.length);
+          setAnalisisTiempoReal(null);
+        }
+        
+        setLoadingAnalisis(false);
+      }, (error) => {
+        logger.error('Error en listener de tiempo real:', error);
+        setLoadingAnalisis(false);
+      });
+
+      unsubscribeRef.current = unsubscribe;
+
+      return () => {
+        if (unsubscribeRef.current) {
+          unsubscribeRef.current();
+          unsubscribeRef.current = null;
+        }
+      };
+    };
+
+    setupListener();
+  }, [selectedFormulario, userProfile?.ownerId]);
+
+  // Función para extraer preguntas de las secciones
+  const extraerPreguntasDeSecciones = (secciones) => {
+    const preguntas = [];
+    if (!secciones || !Array.isArray(secciones)) return preguntas;
+    
+    secciones.forEach((seccion, sIdx) => {
+      if (seccion.preguntas && Array.isArray(seccion.preguntas)) {
+        seccion.preguntas.forEach((pregunta, pIdx) => {
+          const preguntaText = typeof pregunta === 'string' ? pregunta : pregunta?.texto || pregunta?.text || `Pregunta ${pIdx + 1}`;
+          preguntas.push({
+            id: `preg-${sIdx + 1}-${pIdx + 1}`,
+            texto: preguntaText,
+            seccion: seccion.nombre || `Sección ${sIdx + 1}`,
+            seccionIndex: sIdx,
+            preguntaIndex: pIdx
+          });
+        });
+      }
     });
+    
+    return preguntas;
+  };
 
-    if (reportesFiltrados.length === 0) return null;
-
-    // Calcular estadísticas básicas
+  // Función para calcular análisis en tiempo real
+  const calcularAnalisisTiempoReal = (reportes, preguntas) => {
     let totalConformes = 0;
     let totalNoConformes = 0;
     let totalPuntaje = 0;
     let conteoPuntaje = 0;
-    const preguntasNoConforme = new Map();
 
-    reportesFiltrados.forEach(reporte => {
-      // Sumar respuestas conformes y no conformes
-      totalConformes += reporte.respuestasConformes || 0;
-      totalNoConformes += reporte.respuestasNoConformes || 0;
-
-      // Sumar puntaje si existe
+    // Calcular estadísticas generales basándonos en las respuestas reales
+    reportes.forEach((reporte, idx) => {
+      logger.debug(`[DEBUG] Reporte ${idx} - estadísticas:`, {
+        respuestasConformes: reporte.respuestasConformes,
+        respuestasNoConformes: reporte.respuestasNoConformes,
+        puntaje: reporte.puntaje
+      });
+      
+      // Si los campos pre-calculados no existen, calcularlos desde las respuestas
+      let conformesReporte = 0;
+      let noConformesReporte = 0;
+      let puntajeReporte = 0;
+      
+      if (reporte.respuestas && Object.keys(reporte.respuestas).length > 0) {
+        // Contar respuestas conformes y no conformes desde el mapa de respuestas
+        Object.values(reporte.respuestas).forEach(respuesta => {
+          if (typeof respuesta === 'string') {
+            const respuestaNormalizada = respuesta.trim();
+            if (respuestaNormalizada === 'Conforme') {
+              conformesReporte++;
+            } else if (respuestaNormalizada === 'No conforme') {
+              noConformesReporte++;
+            }
+          }
+        });
+        
+        // Calcular puntaje basado en el porcentaje de conformes
+        const totalRespuestasValidas = conformesReporte + noConformesReporte;
+        if (totalRespuestasValidas > 0) {
+          puntajeReporte = Math.round((conformesReporte / totalRespuestasValidas) * 100);
+        }
+      }
+      
+      // Usar valores pre-calculados si existen, si no usar los calculados
+      totalConformes += reporte.respuestasConformes || conformesReporte;
+      totalNoConformes += reporte.respuestasNoConformes || noConformesReporte;
+      
       if (reporte.puntaje !== undefined && reporte.puntaje !== null) {
         totalPuntaje += reporte.puntaje;
         conteoPuntaje++;
+      } else if (puntajeReporte > 0) {
+        totalPuntaje += puntajeReporte;
+        conteoPuntaje++;
       }
-
-      // Contar preguntas no conformes
-      if (reporte.respuestas && reporte.formulario?.secciones) {
-        const respuestasNormalizadas = normalizarRespuestas(reporte.respuestas, reporte.formulario.secciones);
-        
-        reporte.formulario.secciones.forEach((seccion, sIdx) => {
-          if (seccion.preguntas) {
-            seccion.preguntas.forEach((pregunta, pIdx) => {
-              const respuesta = respuestasNormalizadas[sIdx]?.[pIdx];
-              if (respuesta === 'No conforme') {
-                const preguntaText = typeof pregunta === 'string' ? pregunta : pregunta?.texto || pregunta?.text || '';
-                const preguntaKey = `${typeof seccion.nombre === 'string' ? seccion.nombre : (seccion?.texto || seccion?.text || 'Sección')} - ${preguntaText}`;
-                preguntasNoConforme.set(preguntaKey, (preguntasNoConforme.get(preguntaKey) || 0) + 1);
-              }
-            });
-          }
-        });
-      }
+      
+      logger.debug(`[DEBUG] Reporte ${idx} - cálculo real:`, {
+        conformesCalculados: conformesReporte,
+        noConformesCalculados: noConformesReporte,
+        puntajeCalculado: puntajeReporte
+      });
     });
 
-    // Ordenar preguntas no conformes por frecuencia
-    const rankingNoConforme = Array.from(preguntasNoConforme.entries())
-      .sort((a, b) => b[1] - a[1])
-      .slice(0, 5)
-      .map(([pregunta, count]) => ({ pregunta, count }));
+    logger.debug('[DEBUG] Estadísticas generales calculadas:', {
+      totalConformes,
+      totalNoConformes,
+      totalPuntaje,
+      conteoPuntaje,
+      totalReportes: reportes.length
+    });
+
+    // Calcular distribución de respuestas por pregunta
+    const analisisPorPregunta = preguntas.map(pregunta => {
+      const conteo = {
+        'Conforme': 0,
+        'No conforme': 0,
+        'Necesita mejora': 0,
+        'No aplica': 0,
+        'Sin responder': 0
+      };
+
+      reportes.forEach((reporte, rIdx) => {
+        if (reporte.respuestas) {
+          logger.debug(`[DEBUG] Reporte ${rIdx} - respuestas disponibles:`, Object.keys(reporte.respuestas));
+          logger.debug(`[DEBUG] Buscando clave "${pregunta.id}" en reporte ${rIdx}`);
+          
+          const claveRespuesta = pregunta.id;
+          const respuesta = reporte.respuestas[claveRespuesta];
+          
+          logger.debug(`[DEBUG] Reporte ${rIdx} - clave "${claveRespuesta}":`, respuesta);
+          
+          // Si no encuentra con el formato esperado, intentar otros formatos
+          let respuestaFinal = respuesta;
+          if (!respuesta) {
+            // Intentar otros posibles formatos de clave
+            const clavesAlternativas = [
+              `preg-${pregunta.seccionIndex + 1}-${pregunta.preguntaIndex + 1}`,
+              `pregunta_${pregunta.seccionIndex + 1}_${pregunta.preguntaIndex + 1}`,
+              `seccion_${pregunta.seccionIndex}_pregunta_${pregunta.preguntaIndex}`,
+              `${pregunta.seccionIndex + 1}-${pregunta.preguntaIndex + 1}`
+            ];
+            
+            for (const altClave of clavesAlternativas) {
+              if (reporte.respuestas[altClave]) {
+                respuestaFinal = reporte.respuestas[altClave];
+                logger.debug(`[DEBUG] Encontrado con clave alternativa "${altClave}":`, respuestaFinal);
+                break;
+              }
+            }
+          }
+          
+          if (respuestaFinal && typeof respuestaFinal === 'string') {
+            const respuestaNormalizada = respuestaFinal.trim();
+            logger.debug(`[DEBUG] Respuesta normalizada: "${respuestaNormalizada}"`);
+            if (conteo.hasOwnProperty(respuestaNormalizada)) {
+              conteo[respuestaNormalizada]++;
+              logger.debug(`[DEBUG] Contado como: ${respuestaNormalizada}`);
+            } else {
+              conteo['Sin responder']++;
+              logger.debug(`[DEBUG] Respuesta no reconocida, contado como Sin responder`);
+            }
+          } else {
+            conteo['Sin responder']++;
+            logger.debug(`[DEBUG] Sin respuesta válida, contado como Sin responder`);
+          }
+        } else {
+          conteo['Sin responder']++;
+          logger.debug(`[DEBUG] Reporte sin campo respuestas, contado como Sin responder`);
+        }
+      });
+
+      const totalRespuestas = Object.values(conteo).reduce((sum, val) => sum + val, 0);
+
+      logger.debug(`[DEBUG] Pregunta "${pregunta.texto}" - conteo final:`, conteo);
+
+      return {
+        ...pregunta,
+        conteo,
+        totalRespuestas,
+        porcentajes: Object.keys(conteo).reduce((acc, key) => {
+          acc[key] = totalRespuestas > 0 ? (conteo[key] / totalRespuestas * 100).toFixed(1) : 0;
+          return acc;
+        }, {})
+      };
+    });
 
     return {
-      totalAuditorias: reportesFiltrados.length,
+      totalAuditorias: reportes.length,
       puntajePromedio: conteoPuntaje > 0 ? (totalPuntaje / conteoPuntaje).toFixed(1) : 0,
       totalConformes,
       totalNoConformes,
-      rankingNoConforme,
-      reportes: reportesFiltrados
+      analisisPorPregunta
     };
-  }, [selectedFormulario, reportes]);
+  };
 
   // Importar normalizarRespuestas para el análisis
   const normalizarRespuestas = (res, secciones = []) => {
@@ -685,7 +938,7 @@ const ReportesPage = () => {
     </Box>
   );
 
-  // Renderizar vista de análisis global
+  // Renderizar vista de análisis global en tiempo real
   const renderAnalisisGlobal = () => (
     <Box>
       {/* Selector de formulario */}
@@ -713,9 +966,18 @@ const ReportesPage = () => {
         </Box>
       </Box>
 
-      {selectedFormulario && datosAnalisis ? (
+      {loadingAnalisis ? (
+        <Box sx={{ 
+          display: 'flex', 
+          justifyContent: 'center', 
+          alignItems: 'center', 
+          minHeight: '200px' 
+        }}>
+          <CircularProgress />
+        </Box>
+      ) : selectedFormulario && analisisTiempoReal ? (
         <Box>
-          {/* Cards con estadísticas */}
+          {/* Cards con estadísticas en tiempo real */}
           <Grid container spacing={3} sx={{ mb: 4 }}>
             <Grid item xs={12} sm={6} md={3}>
               <Card sx={{ 
@@ -725,7 +987,7 @@ const ReportesPage = () => {
               }}>
                 <CardContent sx={{ textAlign: 'center', py: 3 }}>
                   <Typography variant="h4" sx={{ fontWeight: 700, color: 'primary.main' }}>
-                    {datosAnalisis.totalAuditorias}
+                    {analisisTiempoReal.totalAuditorias}
                   </Typography>
                   <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
                     Total de Auditorías
@@ -742,7 +1004,7 @@ const ReportesPage = () => {
               }}>
                 <CardContent sx={{ textAlign: 'center', py: 3 }}>
                   <Typography variant="h4" sx={{ fontWeight: 700, color: 'success.main' }}>
-                    {datosAnalisis.puntajePromedio}
+                    {analisisTiempoReal.puntajePromedio}
                   </Typography>
                   <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
                     Puntaje Promedio
@@ -759,7 +1021,7 @@ const ReportesPage = () => {
               }}>
                 <CardContent sx={{ textAlign: 'center', py: 3 }}>
                   <Typography variant="h4" sx={{ fontWeight: 700, color: 'success.main' }}>
-                    {datosAnalisis.totalConformes}
+                    {analisisTiempoReal.totalConformes}
                   </Typography>
                   <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
                     Total Conformes
@@ -776,7 +1038,7 @@ const ReportesPage = () => {
               }}>
                 <CardContent sx={{ textAlign: 'center', py: 3 }}>
                   <Typography variant="h4" sx={{ fontWeight: 700, color: 'error.main' }}>
-                    {datosAnalisis.totalNoConformes}
+                    {analisisTiempoReal.totalNoConformes}
                   </Typography>
                   <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
                     Total No Conformes
@@ -786,99 +1048,156 @@ const ReportesPage = () => {
             </Grid>
           </Grid>
 
-          {/* Ranking de preguntas no conformes */}
-          {datosAnalisis.rankingNoConforme.length > 0 && (
-            <Card sx={{ mb: 4, borderRadius: 3 }}>
+          {/* Dashboard de análisis por pregunta */}
+          <Typography variant="h6" sx={{ fontWeight: 600, mb: 3, color: 'primary.main' }}>
+            📊 Análisis Detallado por Pregunta
+          </Typography>
+          
+          {analisisTiempoReal.analisisPorPregunta.map((preguntaAnalisis, index) => (
+            <Card key={preguntaAnalisis.id} sx={{ mb: 3, borderRadius: 3 }}>
               <CardContent>
-                <Typography variant="h6" sx={{ fontWeight: 600, mb: 3, color: 'error.main' }}>
-                  🔍 Top 5 Preguntas con más "No Conforme"
-                </Typography>
-                <Box>
-                  {datosAnalisis.rankingNoConforme.map((item, index) => (
-                    <Box key={index} sx={{ 
-                      display: 'flex', 
-                      justifyContent: 'space-between', 
-                      alignItems: 'center',
-                      py: 2,
-                      borderBottom: index < datosAnalisis.rankingNoConforme.length - 1 ? 1 : 0,
-                      borderColor: 'divider'
-                    }}>
-                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                        <Box sx={{
-                          width: 32,
-                          height: 32,
-                          borderRadius: '50%',
-                          bgcolor: alpha(theme.palette.error.main, 0.1),
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          fontWeight: 600,
-                          color: 'error.main'
-                        }}>
-                          {index + 1}
-                        </Box>
-                        <Typography variant="body2" sx={{ flex: 1 }}>
-                          {typeof item.pregunta === 'string' ? item.pregunta : item.pregunta?.texto || item.pregunta?.text || ''}
+                {/* Título de la pregunta */}
+                <Box sx={{ mb: 2 }}>
+                  <Typography variant="subtitle1" sx={{ fontWeight: 600, color: 'text.primary' }}>
+                    {preguntaAnalisis.texto}
+                  </Typography>
+                  <Typography variant="caption" color="text.secondary">
+                    {preguntaAnalisis.seccion} • {preguntaAnalisis.totalRespuestas} respuestas recibidas
+                  </Typography>
+                </Box>
+
+                {/* Barras de progreso para cada tipo de respuesta */}
+                <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                  {/* Conforme - Verde */}
+                  <Box>
+                    <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 0.5 }}>
+                      <Typography variant="body2" sx={{ fontWeight: 500, color: 'success.main' }}>
+                        ✅ Conforme
+                      </Typography>
+                      <Typography variant="body2" sx={{ fontWeight: 500 }}>
+                        {preguntaAnalisis.porcentajes['Conforme']}% ({preguntaAnalisis.conteo['Conforme']})
+                      </Typography>
+                    </Box>
+                    <LinearProgress
+                      variant="determinate"
+                      value={parseFloat(preguntaAnalisis.porcentajes['Conforme'])}
+                      sx={{
+                        height: 8,
+                        borderRadius: 4,
+                        backgroundColor: alpha(theme.palette.success.main, 0.1),
+                        '& .MuiLinearProgress-bar': {
+                          backgroundColor: theme.palette.success.main,
+                          borderRadius: 4,
+                        }
+                      }}
+                    />
+                  </Box>
+
+                  {/* No conforme - Rojo */}
+                  <Box>
+                    <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 0.5 }}>
+                      <Typography variant="body2" sx={{ fontWeight: 500, color: 'error.main' }}>
+                        ❌ No conforme
+                      </Typography>
+                      <Typography variant="body2" sx={{ fontWeight: 500 }}>
+                        {preguntaAnalisis.porcentajes['No conforme']}% ({preguntaAnalisis.conteo['No conforme']})
+                      </Typography>
+                    </Box>
+                    <LinearProgress
+                      variant="determinate"
+                      value={parseFloat(preguntaAnalisis.porcentajes['No conforme'])}
+                      sx={{
+                        height: 8,
+                        borderRadius: 4,
+                        backgroundColor: alpha(theme.palette.error.main, 0.1),
+                        '& .MuiLinearProgress-bar': {
+                          backgroundColor: theme.palette.error.main,
+                          borderRadius: 4,
+                        }
+                      }}
+                    />
+                  </Box>
+
+                  {/* Necesita mejora - Amarillo */}
+                  <Box>
+                    <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 0.5 }}>
+                      <Typography variant="body2" sx={{ fontWeight: 500, color: 'warning.main' }}>
+                        ⚠️ Necesita mejora
+                      </Typography>
+                      <Typography variant="body2" sx={{ fontWeight: 500 }}>
+                        {preguntaAnalisis.porcentajes['Necesita mejora']}% ({preguntaAnalisis.conteo['Necesita mejora']})
+                      </Typography>
+                    </Box>
+                    <LinearProgress
+                      variant="determinate"
+                      value={parseFloat(preguntaAnalisis.porcentajes['Necesita mejora'])}
+                      sx={{
+                        height: 8,
+                        borderRadius: 4,
+                        backgroundColor: alpha(theme.palette.warning.main, 0.1),
+                        '& .MuiLinearProgress-bar': {
+                          backgroundColor: theme.palette.warning.main,
+                          borderRadius: 4,
+                        }
+                      }}
+                    />
+                  </Box>
+
+                  {/* No aplica - Gris */}
+                  <Box>
+                    <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 0.5 }}>
+                      <Typography variant="body2" sx={{ fontWeight: 500, color: 'text.secondary' }}>
+                        ⏭️ No aplica
+                      </Typography>
+                      <Typography variant="body2" sx={{ fontWeight: 500 }}>
+                        {preguntaAnalisis.porcentajes['No aplica']}% ({preguntaAnalisis.conteo['No aplica']})
+                      </Typography>
+                    </Box>
+                    <LinearProgress
+                      variant="determinate"
+                      value={parseFloat(preguntaAnalisis.porcentajes['No aplica'])}
+                      sx={{
+                        height: 8,
+                        borderRadius: 4,
+                        backgroundColor: alpha(theme.palette.text.secondary, 0.1),
+                        '& .MuiLinearProgress-bar': {
+                          backgroundColor: theme.palette.text.secondary,
+                          borderRadius: 4,
+                        }
+                      }}
+                    />
+                  </Box>
+
+                  {/* Sin responder - Gris claro */}
+                  {preguntaAnalisis.conteo['Sin responder'] > 0 && (
+                    <Box>
+                      <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 0.5 }}>
+                        <Typography variant="body2" sx={{ fontWeight: 500, color: 'grey.500' }}>
+                          📝 Sin responder
+                        </Typography>
+                        <Typography variant="body2" sx={{ fontWeight: 500 }}>
+                          {preguntaAnalisis.porcentajes['Sin responder']}% ({preguntaAnalisis.conteo['Sin responder']})
                         </Typography>
                       </Box>
-                      <Chip 
-                        label={`${item.count} veces`} 
-                        color="error" 
-                        size="small" 
-                        sx={{ fontWeight: 600 }}
+                      <LinearProgress
+                        variant="determinate"
+                        value={parseFloat(preguntaAnalisis.porcentajes['Sin responder'])}
+                        sx={{
+                          height: 8,
+                          borderRadius: 4,
+                          backgroundColor: alpha(theme.palette.grey[300], 0.3),
+                          '& .MuiLinearProgress-bar': {
+                            backgroundColor: theme.palette.grey[400],
+                            borderRadius: 4,
+                          }
+                        }}
                       />
                     </Box>
-                  ))}
+                  )}
                 </Box>
               </CardContent>
             </Card>
-          )}
-
-          {/* Tabla de auditorías del formulario */}
-          <Card sx={{ borderRadius: 3 }}>
-            <CardContent>
-              <Typography variant="h6" sx={{ fontWeight: 600, mb: 3 }}>
-                📋 Listado de Auditorías - {selectedFormulario}
-              </Typography>
-              <TableContainer component={Paper} sx={{ borderRadius: 2, overflow: 'hidden' }}>
-                <Table>
-                  <TableHead>
-                    <TableRow sx={{ bgcolor: alpha(theme.palette.primary.main, 0.1) }}>
-                      <TableCell sx={{ fontWeight: 600 }}>Fecha</TableCell>
-                      <TableCell sx={{ fontWeight: 600 }}>Auditor</TableCell>
-                      <TableCell sx={{ fontWeight: 600 }}>Sucursal</TableCell>
-                      <TableCell sx={{ fontWeight: 600 }}>Puntaje</TableCell>
-                      <TableCell sx={{ fontWeight: 600 }}>Acciones</TableCell>
-                    </TableRow>
-                  </TableHead>
-                  <TableBody>
-                    {datosAnalisis.reportes.map((reporte) => (
-                      <TableRow key={reporte.id} hover>
-                        <TableCell>{formatFecha(reporte.fechaCreacion)}</TableCell>
-                        <TableCell>{getNombreAuditor(reporte, userProfile)}</TableCell>
-                        <TableCell>{reporte.sucursal ?? "Casa Central"}</TableCell>
-                        <TableCell>
-                          {reporte.puntaje !== undefined && reporte.puntaje !== null 
-                            ? reporte.puntaje 
-                            : 'N/A'}
-                        </TableCell>
-                        <TableCell>
-                          <Button
-                            variant="outlined"
-                            size="small"
-                            startIcon={<VisibilityIcon />}
-                            onClick={() => handleSelectReporte(reporte)}
-                          >
-                            Ver
-                          </Button>
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </TableContainer>
-            </CardContent>
-          </Card>
+          ))}
         </Box>
       ) : selectedFormulario ? (
         <Box sx={{ 
@@ -899,7 +1218,7 @@ const ReportesPage = () => {
           minHeight: '200px' 
         }}>
           <Typography variant="body1" color="text.secondary">
-            Por favor, selecciona un formulario para ver el análisis.
+            Por favor, selecciona un formulario para ver el análisis en tiempo real.
           </Typography>
         </Box>
       )}
@@ -1015,13 +1334,23 @@ const ReportesPage = () => {
         >
           📊 Reportes de Auditoría
         </Typography>
-        <Typography 
-          variant="body1" 
+        <Typography
+          variant="body1"
           color="text.secondary"
           sx={{ lineHeight: 1.6 }}
         >
           Gestiona y visualiza todos los reportes de auditoría del sistema
         </Typography>
+        <Box sx={{ mt: 2 }}>
+          <Button
+            variant="outlined"
+            startIcon={<BarChartIcon />}
+            onClick={() => navigate('/congreso-live')}
+            sx={{ borderRadius: 2, fontWeight: 600 }}
+          >
+            Modo Congreso
+          </Button>
+        </Box>
       </Box>
 
       {/* Filtros */}

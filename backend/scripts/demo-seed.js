@@ -27,7 +27,7 @@ const require = createRequire(import.meta.url);
 const serviceAccount = require('./serviceAccountKey-controlfile.json');
 
 // ─── CONFIG ─────────────────────────────────────────────────
-const OWNER_ID      = 'oemyRkkbneaYgG45I1PPiv99z9B3';
+const OWNER_ID      = 'F8znUHWDrgZn9dCp2zHKCBBRLCL2';
 const APP_ID        = 'auditoria';
 const BASE          = `apps/${APP_ID}/owners/${OWNER_ID}`;
 const EMPRESA_ID    = 'empresa-constructora-demo';
@@ -455,46 +455,166 @@ async function seed() {
     const sucNombre   = def.suc === SUCURSAL_1
       ? 'Obra Norte — Complejo Residencial'
       : 'Obra Sur — Centro Comercial';
-    const puntaje   = 62 + Math.floor(Math.random() * 36);
-    const conformes = Math.round((puntaje / 100) * todasLasPreguntas.length);
-    const d         = fecha(def.y, def.m, def.d);
+    const d = fecha(def.y, def.m, def.d);
 
+    // Generar respuestas variadas y realistas
+    const opciones = ['Conforme', 'No conforme', 'Necesita mejora', 'No aplica'];
     const respuestas = {};
+    const comentarios = {};
+    
+    // Determinar distribución para esta auditoría (50-85% Conforme)
+    const porcentajeConforme = 50 + Math.floor(Math.random() * 36); // 50-85%
+    const totalPreguntas = todasLasPreguntas.length;
+    const cantidadConforme = Math.floor((porcentajeConforme / 100) * totalPreguntas);
+    
+    // Generar respuestas aleatorias con la distribución deseada
+    const respuestasArray = [];
+    for (let i = 0; i < totalPreguntas; i++) {
+      if (i < cantidadConforme) {
+        respuestasArray.push('Conforme');
+      } else {
+        // Distribuir el resto entre No conforme, Necesita mejora y ocasionalmente No aplica
+        const resto = totalPreguntas - cantidadConforme;
+        if (Math.random() < 0.1 && resto > 2) { // 10% chance de No aplica
+          respuestasArray.push('No aplica');
+        } else {
+          respuestasArray.push(Math.random() < 0.6 ? 'No conforme' : 'Necesita mejora');
+        }
+      }
+    }
+    
+    // Mezclar las respuestas para que no estén agrupadas
+    for (let i = respuestasArray.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [respuestasArray[i], respuestasArray[j]] = [respuestasArray[j], respuestasArray[i]];
+    }
+    
+    // Asignar respuestas con claves seccion_X_pregunta_Y
     todasLasPreguntas.forEach((preg, idx) => {
-      respuestas[preg.id] = {
-        respuesta:  idx < conformes ? 'Conforme' : 'No Conforme',
-        comentario: idx < conformes ? '' : 'Requiere corrección. Acción correctiva iniciada.',
-        seccionId:  preg.seccionId,
-      };
+      // Extraer índice de sección del ID de pregunta (ej: preg-1-3 -> sección 0)
+      const seccionNum = parseInt(preg.id.split('-')[1]) - 1;
+      const preguntaNum = parseInt(preg.id.split('-')[2]) - 1;
+      const clave = `seccion_${seccionNum}_pregunta_${preguntaNum}`;
+      respuestas[clave] = respuestasArray[idx];
+      comentarios[clave] = respuestasArray[idx] === 'Conforme' ? '' : 
+        respuestasArray[idx] === 'No aplica' ? 'No aplica a esta sección' : 
+        'Requiere corrección inmediata';
     });
-
+    
+    // Calcular estadísticas desde las respuestas generadas
+    const conteo = {
+      'Conforme': 0,
+      'No conforme': 0,
+      'Necesita mejora': 0,
+      'No aplica': 0
+    };
+    
+    Object.values(respuestas).forEach(resp => {
+      conteo[resp]++;
+    });
+    
+    const totalSinNoAplica = totalPreguntas - conteo['No aplica'];
+    const porcentajes = {};
+    Object.keys(conteo).forEach(key => {
+      const base = key === 'No aplica' ? totalPreguntas : totalSinNoAplica;
+      porcentajes[key] = base > 0 ? ((conteo[key] / base) * 100).toFixed(2) : '0.00';
+    });
+    
+    const sinNoAplica = {
+      'Conforme': conteo['Conforme'],
+      'No conforme': conteo['No conforme'],
+      'Necesita mejora': conteo['Necesita mejora'],
+      'No aplica': 0,
+      total: totalSinNoAplica
+    };
+    
+    // Generar clasificaciones por sección
+    const clasificaciones = SECCIONES.map((sec, secIdx) => {
+      const valores = [];
+      for (let i = 0; i < 5; i++) {
+        const preguntaKey = `seccion_${secIdx}_pregunta_${i}`;
+        const respuesta = respuestas[preguntaKey] || 'Conforme';
+        const condicion = respuesta === 'No conforme' ? Math.random() < 0.7 : Math.random() < 0.1;
+        const actitud = respuesta === 'No conforme' ? Math.random() < 0.5 : Math.random() < 0.05;
+        valores.push({ condicion, actitud });
+      }
+      return { seccion: secIdx, valores };
+    });
+    
     const ref = db.collection(p('reportes')).doc();
     await ref.set({
-      id:                    ref.id,
-      formularioId:          FORMULARIO_ID,
-      formularioNombre:      'Inspección HSE — Obra en Construcción',
-      empresaId:             EMPRESA_ID,
-      empresaNombre:         'Constructora del Sur S.A.',
-      sucursalId:            def.suc,
-      sucursalNombre:        sucNombre,
-      ownerId:               OWNER_ID,
-      estado:                'completada',
-      puntaje,
-      totalPreguntas:        todasLasPreguntas.length,
-      respuestasConformes:   conformes,
-      respuestasNoConformes: todasLasPreguntas.length - conformes,
+      // Identificación
+      ownerId: OWNER_ID,
+      appId: 'auditoria',
+      version: '3.0',
+      schemaVersion: 1,
+
+      // Formulario y ubicación
+      formularioId: FORMULARIO_ID,
+      nombreForm: 'Inspección HSE - Obra en Construcción',
+      empresaId: EMPRESA_ID,
+      empresaNombre: 'Constructora del Sur S.A.',
+      sucursal: sucNombre, // string directo, NO sucursalId
+      
+      // Quién hizo la auditoría
+      creadoPor: auditorUser.uid,
+      creadoPorEmail: auditorUser.email,
+      nombreInspector: auditorUser.displayName,
+      nombreResponsable: '',
+      supervisor: auditorUser.displayName,
+
+      // Fechas
+      fechaCreacion: d.toISOString(),
+      timestamp: admin.firestore.FieldValue.serverTimestamp(),
+
+      // Estado
+      estado: 'completada',
+
+      // Campos adicionales del formulario
+      lugarSector: 'Sector principal',
+      tareaObservada: 'Inspección general',
+      numeroTrabajadores: '20',
+      equiposInvolucrados: '4',
+
+      // Secciones completas (igual que el formulario)
+      secciones: seccionesConIds, // el array completo
+
+      // Respuestas con clave seccion_X_pregunta_Y (base 0)
       respuestas,
-      auditor:               auditorUser.email,
-      auditorNombre:         auditorUser.displayName,
-      auditorUid:            auditorUser.uid,
-      createdBy:             auditorUser.uid,
-      fechaCreacion:         d.toISOString(),
-      fechaCompletada:       d.toISOString(),
-      createdAt:             ts(d),
-      completadaAt:          ts(d),
+
+      // Comentarios con misma clave
+      comentarios,
+
+      // Clasificaciones por sección
+      clasificaciones,
+
+      // Acciones requeridas (array, puede estar vacío)
+      accionesRequeridas: [],
+
+      // Imágenes (map vacío)
+      imagenes: {},
+
+      // Estadísticas calculadas desde las respuestas
+      estadisticas: {
+        conteo,
+        porcentajes,
+        sinNoAplica
+      },
+
+      // Archivos
+      filesCount: 0,
+      hasUploadFailures: false,
+      filesUploadFailures: [],
+
+      // Firmas
+      firmaAuditor: null,
+      firmaResponsable: null,
+
+      // Nombre del archivo de reporte
+      nombreArchivo: `Constructora del Sur S.A._${sucNombre.replace(/ - /g, '_')}_${def.y}-${String(def.m).padStart(2, '0')}-${String(def.d).padStart(2, '0')}`,
     });
   }
-  console.log(`  ✅ ${AUDITORIAS_DEF.length} auditorías creadas`);
+  console.log(`  ? ${AUDITORIAS_DEF.length} auditorías creadas`);
 
   // ── 7. AUDITORÍAS MANUALES ───────────────────────────────
   console.log(`\n📝 Creando ${MANUALES_DEF.length} auditorías manuales...`);

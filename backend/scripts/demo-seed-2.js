@@ -20,7 +20,7 @@ const require = createRequire(import.meta.url);
 const serviceAccount = require('./serviceAccountKey-controlfile.json');
 
 // ─── CONFIG ─────────────────────────────────────────────────
-const OWNER_ID      = 'oemyRkkbneaYgG45I1PPiv99z9B3';
+const OWNER_ID      = 'F8znUHWDrgZn9dCp2zHKCBBRLCL2';
 const APP_ID        = 'auditoria';
 const BASE          = `apps/${APP_ID}/owners/${OWNER_ID}`;
 const EMPRESA_ID    = 'empresa-constructora-demo';

@@ -9,6 +9,7 @@ const EstablecimientosContainer = lazy(() => import("../components/pages/estable
 const Auditoria = lazy(() => import("../components/pages/auditoria/auditoria/Auditoria"));
 const Formulario = lazy(() => import("../components/pages/formulario/Formulario"));
 const ReportesPage = lazy(() => import("../components/pages/auditoria/reporte/ReportesPage"));
+const CongresoLiveDashboard = lazy(() => import("../components/pages/congreso/CongresoLiveDashboard"));
 const PerfilUsuario = lazy(() => import("../components/pages/perfil/PerfilUsuario"));
 const PermissionsDebug = lazy(() => import("../components/pages/debug/PermissionsDebug"));
 const TestControlFile = lazy(() => import("../components/pages/debug/TestControlFile"));
@@ -58,6 +59,7 @@ const componentMap = {
   auditoria: Auditoria,
   formulario: Formulario,
   reporte: ReportesPage,
+  "congreso-live": CongresoLiveDashboard,
   perfil: PerfilUsuario,
   debug: PermissionsDebug,
   "test-controlfile": TestControlFile,
