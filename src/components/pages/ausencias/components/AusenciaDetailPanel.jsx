@@ -26,6 +26,7 @@ import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import HistoryIcon from '@mui/icons-material/History';
 import RestartAltIcon from '@mui/icons-material/RestartAlt';
 import LaunchIcon from '@mui/icons-material/Launch';
+import DownloadIcon from '@mui/icons-material/Download';
 import {
   getAusenciaById,
   cerrarAusencia,
@@ -257,6 +258,33 @@ export default function AusenciaDetailPanel({
     }
   };
 
+  const handleDownloadFile = async (file) => {
+    try {
+      // Crear URL de descarga directa usando el archivo
+      const downloadUrl = file.shareToken 
+        ? `/shares/${file.shareToken}`
+        : file.downloadUrl 
+        ? file.downloadUrl 
+        : file.viewUrl;
+
+      if (downloadUrl) {
+        const link = document.createElement('a');
+        link.href = downloadUrl.startsWith('http') ? downloadUrl : `${window.location.origin}${downloadUrl}`;
+        link.download = file.name || file.nombre || 'archivo';
+        link.target = '_blank';
+        link.rel = 'noopener noreferrer';
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+      } else {
+        setError('No se pudo generar la URL de descarga para este archivo.');
+      }
+    } catch (error) {
+      logger.error('Error descargando archivo:', error);
+      setError('Error al descargar el archivo. Intenta nuevamente.');
+    }
+  };
+
   const origenValue = String(ausencia?.origen || 'manual').toLowerCase();
   const origenLabel = ORIGEN_LABELS[origenValue] || origenValue;
   const canNavigateToOrigin = Boolean(
@@ -437,6 +465,18 @@ export default function AusenciaDetailPanel({
                           <UnifiedFilePreview fileRef={file} height={180} />
                         </Box>
                         <Stack direction="row" spacing={0.5}>
+                          <Tooltip title="Descargar archivo">
+                            <span>
+                              <IconButton
+                                size="small"
+                                color="primary"
+                                onClick={() => handleDownloadFile(file)}
+                                disabled={busyAction}
+                              >
+                                <DownloadIcon fontSize="small" />
+                              </IconButton>
+                            </span>
+                          </Tooltip>
                           <Tooltip title="Eliminar archivo">
                             <span>
                               <IconButton
