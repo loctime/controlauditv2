@@ -111,6 +111,9 @@ export default function PreguntaItem({
   const theme = useTheme();
   const [expandedAccion, setExpandedAccion] = useState(false);
 
+  // Extraer el texto de la pregunta (maneja tanto string como objeto)
+  const textoPregunta = typeof pregunta === 'string' ? pregunta : (pregunta?.texto || pregunta?.text || '');
+
   const accionData =
     accionRequerida || {
       requiereAccion: false,
@@ -162,7 +165,7 @@ export default function PreguntaItem({
           variant={isMobile ? 'body1' : 'subtitle1'}
           sx={{ fontWeight: 500, flex: 1, fontSize: isMobile ? '0.875rem' : '1rem' }}
         >
-          {pregunta}
+          {textoPregunta}
         </Typography>
         {preguntaContestada([respuesta], 0, 0) ? (
           <Chip icon={<CheckCircleIcon />} label="Contestada" color="success" size={isMobile ? 'small' : 'medium'} />

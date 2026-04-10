@@ -56,7 +56,7 @@ const PendingQuestionsModal = ({
                 <WarningIcon color="warning" />
               </ListItemIcon>
               <ListItemText
-                primary={item.pregunta}
+                primary={typeof item.pregunta === 'string' ? item.pregunta : (item.pregunta?.texto || item.pregunta?.text || '')}
                 secondary={`Sección: ${item.seccion}`}
                 primaryTypographyProps={{ fontWeight: 500 }}
               />

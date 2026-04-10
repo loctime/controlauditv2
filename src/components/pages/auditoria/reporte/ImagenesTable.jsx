@@ -67,7 +67,7 @@ export default function ImagenesTable({ secciones, imagenes, comentarios }) {
               return (
                 <TableRow key={`${seccion.nombre}-${preguntaIndex}`}>
                   <TableCell>{seccion.nombre}</TableCell>
-                  <TableCell>{pregunta}</TableCell>
+                  <TableCell>{typeof pregunta === 'string' ? pregunta : pregunta?.texto || pregunta?.text || ''}</TableCell>
                   <TableCell>
                     {fileList.length > 0 ? (
                       <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>

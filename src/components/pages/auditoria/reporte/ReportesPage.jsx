@@ -70,13 +70,14 @@ const getNombreEmpresa = (reporte, empresas = []) => {
   return 'Empresa no disponible';
 };
 
-const getNombreFormulario = (formulario, nombreForm) =>
-  nombreForm ||
-  (typeof formulario === "object" && formulario && formulario.nombre
-    ? formulario.nombre
-    : typeof formulario === "string"
-    ? formulario
-    : "Formulario no disponible");
+const getNombreFormulario = (reporte) => {
+  // Prioridad: formularioNombre > nombreForm > formulario objeto > formulario string
+  if (reporte.formularioNombre) return reporte.formularioNombre;
+  if (reporte.nombreForm) return reporte.nombreForm;
+  if (typeof reporte.formulario === "object" && reporte.formulario?.nombre) return reporte.formulario.nombre;
+  if (typeof reporte.formulario === "string") return reporte.formulario;
+  return "Formulario no disponible";
+};
 
 // Helper para obtener nombre del auditor
 const getNombreAuditor = (reporte, userProfile) => {
@@ -169,7 +170,7 @@ const ReportesPage = () => {
   const formulariosDeReportes = useMemo(() => {
     const formulariosMap = new Map();
     reportes.forEach(reporte => {
-      const nombreForm = getNombreFormulario(reporte.formulario, reporte.nombreForm);
+      const nombreForm = getNombreFormulario(reporte);
       if (nombreForm && !formulariosMap.has(nombreForm)) {
         formulariosMap.set(nombreForm, nombreForm);
       }
@@ -187,7 +188,7 @@ const ReportesPage = () => {
     if (!selectedFormulario || !reportes.length) return null;
 
     const reportesFiltrados = reportes.filter(reporte => {
-      const nombreForm = getNombreFormulario(reporte.formulario, reporte.nombreForm);
+      const nombreForm = getNombreFormulario(reporte);
       return nombreForm === selectedFormulario;
     });
 
@@ -202,10 +203,8 @@ const ReportesPage = () => {
 
     reportesFiltrados.forEach(reporte => {
       // Sumar respuestas conformes y no conformes
-      if (reporte.estadisticas) {
-        totalConformes += reporte.estadisticas.Conforme || 0;
-        totalNoConformes += reporte.estadisticas['No conforme'] || 0;
-      }
+      totalConformes += reporte.respuestasConformes || 0;
+      totalNoConformes += reporte.respuestasNoConformes || 0;
 
       // Sumar puntaje si existe
       if (reporte.puntaje !== undefined && reporte.puntaje !== null) {
@@ -222,7 +221,8 @@ const ReportesPage = () => {
             seccion.preguntas.forEach((pregunta, pIdx) => {
               const respuesta = respuestasNormalizadas[sIdx]?.[pIdx];
               if (respuesta === 'No conforme') {
-                const preguntaKey = `${seccion.nombre || 'Sección'} - ${pregunta}`;
+                const preguntaText = typeof pregunta === 'string' ? pregunta : pregunta?.texto || pregunta?.text || '';
+                const preguntaKey = `${seccion.nombre || 'Sección'} - ${preguntaText}`;
                 preguntasNoConforme.set(preguntaKey, (preguntasNoConforme.get(preguntaKey) || 0) + 1);
               }
             });
@@ -412,7 +412,7 @@ const ReportesPage = () => {
     // Filtro por formularios
     if (formulariosSeleccionados.length > 0) {
       filtered = filtered.filter(reporte => {
-        const nombreForm = getNombreFormulario(reporte.formulario, reporte.nombreForm);
+        const nombreForm = getNombreFormulario(reporte);
         return formulariosSeleccionados.includes(nombreForm);
       });
     }
@@ -451,7 +451,7 @@ const ReportesPage = () => {
       const term = searchTerm.toLowerCase();
       filtered = filtered.filter(reporte => {
         const empresaNombre = getNombreEmpresa(reporte, userEmpresas).toLowerCase();
-        const formularioNombre = getNombreFormulario(reporte.formulario, reporte.nombreForm).toLowerCase();
+        const formularioNombre = getNombreFormulario(reporte).toLowerCase();
         const sucursal = (reporte.sucursal || '').toLowerCase();
         const auditor = (reporte.auditor || '').toLowerCase();
         
@@ -619,7 +619,7 @@ const ReportesPage = () => {
                   whiteSpace: 'nowrap',
                   overflow: 'hidden'
                 }}>
-                  {getNombreFormulario(reporte.formulario, reporte.nombreForm)}
+                  {getNombreFormulario(reporte)}
                 </Typography>
               </Box>
 
@@ -818,7 +818,7 @@ const ReportesPage = () => {
                           {index + 1}
                         </Box>
                         <Typography variant="body2" sx={{ flex: 1 }}>
-                          {item.pregunta}
+                          {typeof item.pregunta === 'string' ? item.pregunta : item.pregunta?.texto || item.pregunta?.text || ''}
                         </Typography>
                       </Box>
                       <Chip 
@@ -924,7 +924,7 @@ const ReportesPage = () => {
             <TableRow key={reporte.id} hover>
               <TableCell>{getNombreEmpresa(reporte, userEmpresas)}</TableCell>
               <TableCell>{reporte.sucursal ?? "Casa Central"}</TableCell>
-              <TableCell>{getNombreFormulario(reporte.formulario, reporte.nombreForm)}</TableCell>
+              <TableCell>{getNombreFormulario(reporte)}</TableCell>
               <TableCell>{getNombreAuditor(reporte, userProfile)}</TableCell>
               <TableCell>{formatFecha(reporte.fechaCreacion)}</TableCell>
               <TableCell>

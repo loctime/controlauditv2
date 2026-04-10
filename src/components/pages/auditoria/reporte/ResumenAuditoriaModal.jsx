@@ -372,7 +372,7 @@ const ResumenAuditoriaModal = ({
                               <ListItemText
                                 primary={
                                   <Typography variant="body1" sx={{ fontWeight: 500, mb: 1 }}>
-                                    {pregunta}
+                                    {typeof pregunta === 'string' ? pregunta : pregunta?.texto || pregunta?.text || ''}
                                   </Typography>
                                 }
                                 secondary={

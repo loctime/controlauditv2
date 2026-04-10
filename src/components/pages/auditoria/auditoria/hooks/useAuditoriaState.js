@@ -79,7 +79,14 @@ export const useAuditoriaState = () => {
       clasificaciones: JSON.stringify(clasificaciones),
       accionesRequeridas: JSON.stringify(accionesRequeridas)
     };
-    return btoa(JSON.stringify(datos));
+    // Unicode-safe base64 encoding
+    const jsonStr = JSON.stringify(datos);
+    try {
+      return btoa(unescape(encodeURIComponent(jsonStr)));
+    } catch (error) {
+      logger.error('Error encoding hash:', error);
+      return btoa(jsonStr); // fallback for simple strings
+    }
   };
 
   // Verificar cambios en la auditoría y reiniciar firmas si es necesario
