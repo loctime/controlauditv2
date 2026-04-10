@@ -39,10 +39,7 @@ export default function UnifiedFilePreview({ fileRef, height = 240 }) {
       <Box sx={{ position: 'relative', display: 'inline-block' }}>
         <img src={finalDownloadUrl} alt={nameForExt || fileRef?.fileId || fileRef?.shareToken || 'imagen'} style={{ maxWidth: '100%', maxHeight: height, objectFit: 'contain' }} />
         <IconButton
-          href={finalDownloadUrl}
-          download={fileRef?.name || fileRef?.nombre || 'imagen'}
-          target="_blank"
-          rel="noreferrer"
+          onClick={() => handleDownloadFile(fileRef)}
           sx={{
             position: 'absolute',
             bottom: 8,
@@ -151,22 +148,66 @@ export default function UnifiedFilePreview({ fileRef, height = 240 }) {
     );
   }
 
-  return (
+  const handleDownloadFile = async (file) => {
+  try {
+    // Crear URL de descarga directa usando el archivo
+    const downloadUrl = file.shareToken 
+      ? `/shares/${file.shareToken}`
+      : file.downloadUrl 
+      ? file.downloadUrl 
+      : file.viewUrl;
+
+    if (downloadUrl) {
+      // Forzar descarga usando fetch y blob para evitar que el navegador abra archivos de Office
+      const fullUrl = downloadUrl.startsWith('http') ? downloadUrl : `${window.location.origin}${downloadUrl}`;
+      
+      fetch(fullUrl)
+        .then(response => {
+          if (!response.ok) {
+            throw new Error(`Error HTTP: ${response.status}`);
+          }
+          return response.blob();
+        })
+        .then(blob => {
+          const url = window.URL.createObjectURL(blob);
+          const link = document.createElement('a');
+          link.href = url;
+          link.download = file.name || file.nombre || 'archivo';
+          document.body.appendChild(link);
+          link.click();
+          document.body.removeChild(link);
+          window.URL.revokeObjectURL(url);
+        })
+        .catch(error => {
+          console.error('Error en fetch descargando archivo:', error);
+          // Fallback a método anterior si fetch falla
+          const link = document.createElement('a');
+          link.href = fullUrl;
+          link.download = file.name || file.nombre || 'archivo';
+          link.target = '_blank';
+          link.rel = 'noopener noreferrer';
+          document.body.appendChild(link);
+          link.click();
+          document.body.removeChild(link);
+        });
+    } else {
+      console.error('No se pudo generar la URL de descarga para este archivo.');
+    }
+  } catch (error) {
+    console.error('Error descargando archivo:', error);
+  }
+};
+
+return (
     <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
       <Typography variant="body2">Preview no disponible para este tipo de archivo.</Typography>
-      {finalDownloadUrl ? (
-        <Button 
-          variant="contained" 
-          component="a" 
-          href={finalDownloadUrl} 
-          download={fileRef?.name || fileRef?.nombre || 'archivo'}
-          target="_blank" 
-          rel="noreferrer"
-          startIcon={<DownloadIcon />}
-        >
-          Descargar archivo
-        </Button>
-      ) : null}
+      <Button 
+        variant="contained" 
+        onClick={() => handleDownloadFile(fileRef)}
+        startIcon={<DownloadIcon />}
+      >
+        Descargar archivo
+      </Button>
     </Box>
   );
 }

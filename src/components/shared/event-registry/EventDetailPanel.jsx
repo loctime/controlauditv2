@@ -479,10 +479,16 @@ const EventDetailPanel = ({
         <Box sx={{ display: 'flex', justifyContent: 'center', p: 4 }}>
           <CircularProgress />
         </Box>
-      ) : !entity && entityService ? (
+      ) : !entity ? (
         <Box sx={{ p: 3 }}>
           <Typography color="error">
             Entidad no encontrada
+          </Typography>
+        </Box>
+      ) : !entityService ? (
+        <Box sx={{ p: 3 }}>
+          <Typography color="error">
+            Servicio de entidad no configurado
           </Typography>
         </Box>
       ) : mode === 'registrar' ? (

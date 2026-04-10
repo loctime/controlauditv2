@@ -87,10 +87,17 @@ const ContenidoRegistros = ({ entityId, ownerId, registryService, refreshKey }) 
           byRegistro.get(registroId).push(fileRef);
         });
 
-        if (evidenciasSinRegistro.length > 0 && Array.isArray(data) && data.length > 0) {
-          const fallbackRegistroId = String(data[0].id);
-          if (!byRegistro.has(fallbackRegistroId)) byRegistro.set(fallbackRegistroId, []);
-          byRegistro.set(fallbackRegistroId, [...byRegistro.get(fallbackRegistroId), ...evidenciasSinRegistro]);
+        // Siempre agregar evidencias sin registro, incluso si no hay registros
+        if (evidenciasSinRegistro.length > 0) {
+          if (Array.isArray(data) && data.length > 0) {
+            const fallbackRegistroId = String(data[0].id);
+            if (!byRegistro.has(fallbackRegistroId)) byRegistro.set(fallbackRegistroId, []);
+            byRegistro.set(fallbackRegistroId, [...byRegistro.get(fallbackRegistroId), ...evidenciasSinRegistro]);
+          } else {
+            // Si no hay registros, crear un registro virtual para las evidencias
+            const virtualRegistroId = 'evidencias-directas';
+            byRegistro.set(virtualRegistroId, evidenciasSinRegistro);
+          }
         }
 
         byRegistro.forEach((list, key) => {
@@ -128,7 +135,7 @@ const ContenidoRegistros = ({ entityId, ownerId, registryService, refreshKey }) 
     );
   }
 
-  if (registros.length === 0) {
+  if (registros.length === 0 && evidenciasByRegistro.size === 0) {
     return (
       <Box sx={{ p: 3 }}>
         <Typography color="text.secondary" align="center">
@@ -141,7 +148,8 @@ const ContenidoRegistros = ({ entityId, ownerId, registryService, refreshKey }) 
   return (
     <Box sx={{ p: 2 }}>
       <Stack spacing={1.5}>
-        {registros.map((registro) => {
+        {/* Si hay registros, mostrarlos normalmente */}
+        {registros.length > 0 && registros.map((registro) => {
           const fechaStr = registro.fecha?.toDate?.()?.toLocaleDateString() || registro.fecha || 'N/A';
           const evidenciasCanonicas = evidenciasByRegistro.get(String(registro.id)) || [];
           const evidenciasLegacyRaw = Array.isArray(registro.imagenes) ? registro.imagenes : [];
@@ -186,6 +194,36 @@ const ContenidoRegistros = ({ entityId, ownerId, registryService, refreshKey }) 
             </Accordion>
           );
         })}
+
+        {/* Si no hay registros pero hay evidencias directas, mostrarlas */}
+        {registros.length === 0 && evidenciasByRegistro.has('evidencias-directas') && (
+          <Accordion key="evidencias-directas" elevation={1}>
+            <AccordionSummary expandIcon={<ExpandMoreIcon />}>
+              <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%', pr: 2 }}>
+                <Box>
+                  <Typography variant="subtitle2" sx={{ fontWeight: 600 }}>Evidencias directas</Typography>
+                  <Typography variant="caption" color="text.secondary">
+                    {evidenciasByRegistro.get('evidencias-directas').length} evidencia(s)
+                  </Typography>
+                </Box>
+              </Box>
+            </AccordionSummary>
+            <AccordionDetails>
+              <Grid container spacing={2}>
+                {evidenciasByRegistro.get('evidencias-directas').map((fileRef) => (
+                  <Grid item xs={12} sm={6} md={4} key={fileRef.id || fileRef.fileId}>
+                    <Box sx={{ border: '1px solid', borderColor: 'divider', borderRadius: 1, p: 1 }}>
+                      <Typography variant="caption" sx={{ display: 'block', mb: 1 }}>
+                        {fileRef.name}
+                      </Typography>
+                      <UnifiedFilePreview fileRef={fileRef} height={160} />
+                    </Box>
+                  </Grid>
+                ))}
+              </Grid>
+            </AccordionDetails>
+          </Accordion>
+        )}
       </Stack>
     </Box>
   );

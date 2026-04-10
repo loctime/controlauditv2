@@ -7,7 +7,7 @@ import {
   Chart as ChartJS, ArcElement, Tooltip, Legend,
   CategoryScale, LinearScale, PointElement, LineElement, Filler,
 } from 'chart.js';
-import { Doughnut, Pie, Line } from 'react-chartjs-2';
+import { Doughnut, Line } from 'react-chartjs-2';
 
 ChartJS.register(ArcElement, Tooltip, Legend, CategoryScale, LinearScale, PointElement, LineElement, Filler);
 
@@ -232,10 +232,28 @@ function SelectorScreen({ formularios, loading, value, onChange, onStart, onBack
 // ─── Dashboard ────────────────────────────────────────────────────────────────
 function DashboardScreen({ formulario, analisis, reloj, onVolver }) {
   const sin = !analisis || analisis.totalAuditorias === 0;
+  const [preguntaIdx, setPreguntaIdx] = useState(0);
+  const carruselRef = useRef(null);
+
+  useEffect(() => {
+    if (!analisis || analisis.analisisPorPregunta.length === 0) return;
+    setPreguntaIdx(0);
+    if (carruselRef.current) clearInterval(carruselRef.current);
+    carruselRef.current = setInterval(() => {
+      setPreguntaIdx(prev => (prev + 1) % analisis.analisisPorPregunta.length);
+    }, 4000);
+    return () => clearInterval(carruselRef.current);
+  }, [analisis]);
+
+  const preguntaActual = analisis?.analisisPorPregunta[preguntaIdx];
+  const totalPreguntas = analisis?.analisisPorPregunta.length || 0;
+
   return (
     <>
       <style>{`
         @keyframes livePulse{0%,100%{opacity:1;box-shadow:0 0 0 0 rgba(185,28,28,.5)}50%{opacity:.7;box-shadow:0 0 0 7px rgba(185,28,28,0)}}
+        @keyframes fadeSlideIn{from{opacity:0;transform:translateX(30px)}to{opacity:1;transform:translateX(0)}}
+        @keyframes progresoTiempo{from{width:0%}to{width:100%}}
         *{box-sizing:border-box}
         ::-webkit-scrollbar{width:5px}
         ::-webkit-scrollbar-thumb{background:${T.border};border-radius:3px}
@@ -253,19 +271,16 @@ function DashboardScreen({ formulario, analisis, reloj, onVolver }) {
           <KpiCard label="No Conformes"    value={sin?'—':analisis.totalNoConformes}  color={T.red}    />
           <KpiCard label="Nec. Mejora"     value={sin?'—':analisis.totalMejora}       color={T.amber}  />
           <KpiCard label="No Aplica"       value={sin?'—':analisis.totalNoAplica}     color={T.gray}   />
-          {/* Donut integrado */}
           <div style={{ background:T.bgCard, borderRadius:14, padding:'14px 18px', border:`1px solid ${T.border}`, boxShadow:T.shadow, borderTop:`3px solid #6366f1` }}>
             <div style={{ fontSize:10, fontWeight:700, color:T.textDim, textTransform:'uppercase', letterSpacing:1, marginBottom:10 }}>Distribución</div>
             {sin ? <Vacio small /> : <DonutChart distribucion={analisis.distribucion} />}
           </div>
         </div>
 
-        {/* PREGUNTAS en 3 columnas */}
-        <PanelCard title="Respuestas por pregunta">
+        {/* CARRUSEL DE PREGUNTAS */}
+        <PanelCard title={`Respuestas por pregunta — ${sin ? '0' : preguntaIdx + 1} / ${totalPreguntas}`}>
           {sin ? <Vacio /> : (
-            <div style={{ display:'grid', gridTemplateColumns:'repeat(3,1fr)', gap:'16px', overflowY:'auto', maxHeight:440, paddingRight:4 }}>
-              {analisis.analisisPorPregunta.map((p) => <PreguntaChart key={p.id} pregunta={p} />)}
-            </div>
+            <CarruselPregunta pregunta={preguntaActual} idx={preguntaIdx} total={totalPreguntas} />
           )}
         </PanelCard>
 
@@ -327,69 +342,98 @@ function Vacio({ small }) {
   return <div style={{ display:'flex', alignItems:'center', justifyContent:'center', minHeight:small?40:70, color:T.textDim, fontSize:13 }}>Esperando...</div>;
 }
 
-// ─── Pregunta con torta ───────────────────────────────────────────────────────
+// ─── Tipos de respuesta ───────────────────────────────────────────────────────
 const TIPOS = [
-  { key:'Conforme',        color:T.green,  label:'Conforme'        },
-  { key:'No conforme',     color:T.red,    label:'No conforme'     },
-  { key:'Necesita mejora', color:T.amber,  label:'Nec. mejora'     },
-  { key:'No aplica',       color:T.gray,   label:'No aplica'       },
-  { key:'Sin responder',   color:'#cbd5e1',label:'Sin responder'   },
+  { key:'Conforme',        color:T.green,  label:'Conforme'      },
+  { key:'No conforme',     color:T.red,    label:'No conforme'   },
+  { key:'Necesita mejora', color:T.amber,  label:'Nec. mejora'   },
+  { key:'No aplica',       color:T.gray,   label:'No aplica'     },
 ];
 
-function PreguntaChart({ pregunta }) {
+// ─── Carrusel de preguntas ─────────────────────────────────────────────────────
+function CarruselPregunta({ pregunta, idx, total }) {
+  if (!pregunta) return <Vacio />;
   const { texto, conteo, totalRespuestas, seccion } = pregunta;
+  const max = Math.max(...TIPOS.map(t => conteo[t.key] || 0), 1);
+  const tiposVisibles = TIPOS.filter(t => (conteo[t.key] || 0) > 0);
+  const displayTipos = tiposVisibles.length > 0 ? tiposVisibles : TIPOS;
 
-  const data = TIPOS.map(t => conteo[t.key] || 0);
-  const colors = TIPOS.map(t => t.color);
-  // Filtrar tipos con valor > 0 para la leyenda; si todo es 0 igual mostramos la torta vacía
-  const tiposConDatos = TIPOS.filter(t => (conteo[t.key] || 0) > 0);
-
-  const chartData = {
-    labels: TIPOS.map(t => t.label),
-    datasets: [{ data, backgroundColor: colors, borderColor:'#fff', borderWidth: 2, hoverOffset: 4 }],
-  };
-  const options = {
-    responsive: true, maintainAspectRatio: false,
-    plugins: {
-      legend: { display: false },
-      tooltip: { callbacks: { label: (ctx) => ` ${ctx.label}: ${ctx.raw} (${totalRespuestas > 0 ? ((ctx.raw/totalRespuestas)*100).toFixed(0) : 0}%)` } },
-    },
-  };
-
-  // Si todos los valores son 0, mostrar un pie gris de placeholder
-  const chartDataFinal = data.every(v => v === 0)
-    ? { labels: ['Sin datos'], datasets: [{ data: [1], backgroundColor: ['#e2e8f0'], borderColor: '#fff', borderWidth: 0 }] }
-    : chartData;
-
-  const displayTipos = tiposConDatos.length > 0 ? tiposConDatos : TIPOS.slice(0, 4);
+  // Dots: mostrar máximo 20 para no desbordar
+  const dotsMax = Math.min(total, 20);
+  const dotsOffset = total > 20 ? Math.max(0, idx - 9) : 0;
 
   return (
-    <div style={{ borderRadius:10, border:`1px solid ${T.border}`, padding:'12px 14px', background:'#fafcff', display:'flex', flexDirection:'column' }}>
-      <div style={{ fontSize:10, color:T.blue, fontWeight:700, textTransform:'uppercase', letterSpacing:.6, marginBottom:3 }}>{seccion}</div>
-      <div style={{ fontSize:13, fontWeight:700, color:T.text, marginBottom:10, lineHeight:1.4 }}>{texto}</div>
-
-      <div style={{ display:'flex', alignItems:'center', gap:12 }}>
-        {/* Torta */}
-        <div style={{ width:90, height:90, flexShrink:0 }}>
-          <Pie data={chartDataFinal} options={options} />
+    <div>
+      {/* Indicador: dots + texto */}
+      <div style={{ display:'flex', alignItems:'center', gap:12, marginBottom:10 }}>
+        <span style={{ fontSize:12, color:T.textDim, fontWeight:600, whiteSpace:'nowrap' }}>
+          Pregunta {idx + 1} de {total}
+        </span>
+        <div style={{ display:'flex', gap:4, alignItems:'center', flex:1 }}>
+          {Array.from({ length: dotsMax }).map((_, i) => {
+            const realIdx = i + dotsOffset;
+            return (
+              <div key={realIdx} style={{
+                width: 8, height: 8, borderRadius: '50%',
+                background: realIdx === idx ? T.blue : 'transparent',
+                border: `2px solid ${realIdx === idx ? T.blue : T.border}`,
+                flexShrink: 0,
+                transition: 'background .3s, border-color .3s',
+              }} />
+            );
+          })}
         </div>
-        {/* Leyenda — solo tipos con datos, o los 4 si no hay nada */}
-        <div style={{ display:'flex', flexDirection:'column', gap:4, flex:1 }}>
+      </div>
+
+      {/* Barra de progreso temporal (se reinicia con key) */}
+      <div style={{ height:3, background:'#eef2f7', borderRadius:2, marginBottom:18, overflow:'hidden' }}>
+        <div key={idx} style={{
+          height:'100%', borderRadius:2,
+          background: T.blue, opacity:.7,
+          animation:'progresoTiempo 8s linear forwards',
+        }} />
+      </div>
+
+      {/* Contenido animado (key dispara fadeSlideIn en cada cambio) */}
+      <div key={idx} style={{ animation:'fadeSlideIn .35s ease both' }}>
+        {/* Sección */}
+        <div style={{ fontSize:11, color:T.blue, fontWeight:700, textTransform:'uppercase', letterSpacing:.8, marginBottom:10 }}>
+          {seccion}
+        </div>
+
+        {/* Texto de la pregunta */}
+        <div style={{ fontSize:22, fontWeight:700, color:T.text, lineHeight:1.4, marginBottom:28 }}>
+          "{texto}"
+        </div>
+
+        {/* Barras horizontales */}
+        <div style={{ display:'flex', flexDirection:'column', gap:12 }}>
           {displayTipos.map(({ key, color, label }) => {
             const val = conteo[key] || 0;
-            const pct = totalRespuestas > 0 ? ((val/totalRespuestas)*100).toFixed(0) : 0;
+            const pct = totalRespuestas > 0 ? (val / totalRespuestas * 100) : 0;
+            const barW = max > 0 ? (val / max * 100) : 0;
             return (
-              <div key={key} style={{ display:'flex', alignItems:'center', gap:5 }}>
-                <div style={{ width:8, height:8, borderRadius:2, background:color, flexShrink:0 }} />
-                <span style={{ fontSize:11, color:T.textDim, flex:1 }}>{label}</span>
-                <span style={{ fontFamily:T.fontMono, fontSize:12, fontWeight:700, color }}>{val}</span>
-                <span style={{ fontSize:10, color:T.textDim, minWidth:28, textAlign:'right' }}>{pct}%</span>
+              <div key={key} style={{ display:'grid', gridTemplateColumns:'110px 1fr 48px 52px', alignItems:'center', gap:12 }}>
+                <span style={{ fontSize:13, color:T.textDim, fontWeight:600, textAlign:'right' }}>{label}</span>
+                <div style={{ height:28, background:'#eef2f7', borderRadius:6, overflow:'hidden' }}>
+                  <div style={{
+                    height:'100%', width:`${barW}%`, background:color, borderRadius:6,
+                    transition:'width .6s ease',
+                    display:'flex', alignItems:'center', justifyContent:'flex-end', paddingRight:8,
+                  }}>
+                    {barW > 20 && <span style={{ fontSize:12, fontWeight:700, color:'#fff' }}>{pct.toFixed(0)}%</span>}
+                  </div>
+                </div>
+                <span style={{ fontFamily:T.fontMono, fontSize:20, fontWeight:700, color, textAlign:'right' }}>{val}</span>
+                <span style={{ fontSize:13, color:T.textDim, textAlign:'right' }}>{pct.toFixed(1)}%</span>
               </div>
             );
           })}
-          <div style={{ fontSize:10, color:T.textDim, marginTop:2, borderTop:`1px dashed ${T.border}`, paddingTop:4 }}>
-            Total: <strong style={{ color:T.text }}>{totalRespuestas}</strong>
-          </div>
+        </div>
+
+        {/* Total */}
+        <div style={{ marginTop:16, fontSize:13, color:T.textDim, borderTop:`1px dashed ${T.border}`, paddingTop:10 }}>
+          Total de respuestas: <strong style={{ color:T.text, fontFamily:T.fontMono }}>{totalRespuestas}</strong>
         </div>
       </div>
     </div>
