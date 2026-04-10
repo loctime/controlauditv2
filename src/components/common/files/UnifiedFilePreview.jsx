@@ -1,5 +1,6 @@
 import React from 'react';
-import { Box, Button, Typography } from '@mui/material';
+import { Box, Button, Typography, IconButton } from '@mui/material';
+import DownloadIcon from '@mui/icons-material/Download';
 import { resolveFileAccess } from '../../../services/fileResolverService';
 
 export default function UnifiedFilePreview({ fileRef, height = 240 }) {
@@ -34,30 +35,135 @@ export default function UnifiedFilePreview({ fileRef, height = 240 }) {
     typeof finalDownloadUrl === 'string' && /\/image(\?.*)?$/i.test(finalDownloadUrl);
 
   if ((isLikelyImage || isLikelyControlFileImageUrl) && finalDownloadUrl) {
-    return <img src={finalDownloadUrl} alt={nameForExt || fileRef?.fileId || fileRef?.shareToken || 'imagen'} style={{ maxWidth: '100%', maxHeight: height, objectFit: 'contain' }} />;
+    return (
+      <Box sx={{ position: 'relative', display: 'inline-block' }}>
+        <img src={finalDownloadUrl} alt={nameForExt || fileRef?.fileId || fileRef?.shareToken || 'imagen'} style={{ maxWidth: '100%', maxHeight: height, objectFit: 'contain' }} />
+        <IconButton
+          href={finalDownloadUrl}
+          download={fileRef?.name || fileRef?.nombre || 'imagen'}
+          target="_blank"
+          rel="noreferrer"
+          sx={{
+            position: 'absolute',
+            bottom: 8,
+            right: 8,
+            backgroundColor: 'rgba(0, 0, 0, 0.6)',
+            color: 'white',
+            '&:hover': {
+              backgroundColor: 'rgba(0, 0, 0, 0.8)',
+            }
+          }}
+          title="Descargar imagen"
+        >
+          <DownloadIcon />
+        </IconButton>
+      </Box>
+    );
   }
 
   if (previewType === 'image' && viewUrl) {
-    return <img src={viewUrl} alt={fileRef.name} style={{ maxWidth: '100%', maxHeight: height, objectFit: 'contain' }} />;
+    return (
+      <Box sx={{ position: 'relative', display: 'inline-block' }}>
+        <img src={viewUrl} alt={fileRef.name} style={{ maxWidth: '100%', maxHeight: height, objectFit: 'contain' }} />
+        <IconButton
+          href={finalDownloadUrl || viewUrl}
+          download={fileRef?.name || fileRef?.nombre || 'imagen'}
+          target="_blank"
+          rel="noreferrer"
+          sx={{
+            position: 'absolute',
+            bottom: 8,
+            right: 8,
+            backgroundColor: 'rgba(0, 0, 0, 0.6)',
+            color: 'white',
+            '&:hover': {
+              backgroundColor: 'rgba(0, 0, 0, 0.8)',
+            }
+          }}
+          title="Descargar imagen"
+        >
+          <DownloadIcon />
+        </IconButton>
+      </Box>
+    );
   }
 
   if (previewType === 'pdf' && viewUrl) {
-    return <iframe title={fileRef.name} src={viewUrl} style={{ width: '100%', height, border: 0 }} />;
+    return (
+      <Box sx={{ position: 'relative' }}>
+        <iframe title={fileRef.name} src={viewUrl} style={{ width: '100%', height, border: 0 }} />
+        <Button
+          href={finalDownloadUrl || viewUrl}
+          download={fileRef?.name || fileRef?.nombre || 'documento.pdf'}
+          target="_blank"
+          rel="noreferrer"
+          variant="contained"
+          startIcon={<DownloadIcon />}
+          sx={{
+            position: 'absolute',
+            bottom: 8,
+            right: 8,
+            backgroundColor: 'rgba(0, 0, 0, 0.8)',
+            '&:hover': {
+              backgroundColor: 'rgba(0, 0, 0, 0.9)',
+            }
+          }}
+        >
+          Descargar PDF
+        </Button>
+      </Box>
+    );
   }
 
   if (previewType === 'video' && viewUrl) {
-    return <video controls style={{ width: '100%', maxHeight: height }} src={viewUrl} />;
+    return (
+      <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+        <video controls style={{ width: '100%', maxHeight: height }} src={viewUrl} />
+        <Button
+          href={finalDownloadUrl || viewUrl}
+          download={fileRef?.name || fileRef?.nombre || 'video'}
+          target="_blank"
+          rel="noreferrer"
+          variant="outlined"
+          startIcon={<DownloadIcon />}
+        >
+          Descargar video
+        </Button>
+      </Box>
+    );
   }
 
   if (previewType === 'audio' && viewUrl) {
-    return <audio controls style={{ width: '100%' }} src={viewUrl} />;
+    return (
+      <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+        <audio controls style={{ width: '100%' }} src={viewUrl} />
+        <Button
+          href={finalDownloadUrl || viewUrl}
+          download={fileRef?.name || fileRef?.nombre || 'audio'}
+          target="_blank"
+          rel="noreferrer"
+          variant="outlined"
+          startIcon={<DownloadIcon />}
+        >
+          Descargar audio
+        </Button>
+      </Box>
+    );
   }
 
   return (
     <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
       <Typography variant="body2">Preview no disponible para este tipo de archivo.</Typography>
       {finalDownloadUrl ? (
-        <Button variant="contained" component="a" href={finalDownloadUrl} target="_blank" rel="noreferrer">
+        <Button 
+          variant="contained" 
+          component="a" 
+          href={finalDownloadUrl} 
+          download={fileRef?.name || fileRef?.nombre || 'archivo'}
+          target="_blank" 
+          rel="noreferrer"
+          startIcon={<DownloadIcon />}
+        >
           Descargar archivo
         </Button>
       ) : null}
