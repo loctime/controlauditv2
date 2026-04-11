@@ -20,6 +20,11 @@ export const routesConfig = [
     path: "/formularios/public/:publicSharedId",
     public: true,
   },
+  {
+    id: "demo",
+    path: "/demo",
+    public: true,
+  },
 
   // Protected routes (single source of truth)
   {

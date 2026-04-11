@@ -43,6 +43,7 @@ const AuditoriaManualDetalle = lazy(() =>
   import("../components/pages/auditoriasManuales/components/AuditoriaManualDetalle")
 );
 
+const DemoLogin = lazy(() => import("../components/pages/demo/DemoLogin"));
 const Login = lazy(() => import("../components/pages/login/Login"));
 const Register = lazy(() => import("../components/pages/register/Register"));
 const ForgotPassword = lazy(() => import("../components/pages/forgotPassword/ForgotPassword"));
@@ -79,6 +80,7 @@ const componentMap = {
   "auditorias-manuales": AuditoriasManuales,
   "auditoria-manual-detalle": AuditoriaManualDetalle,
 
+  demo: DemoLogin,
   login: Login,
   register: Register,
   "forgot-password": ForgotPassword,

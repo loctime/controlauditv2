@@ -761,6 +761,30 @@ app.post('/api/superdev/impersonate', verificarSuperdev, async (req, res) => {
   }
 });
 
+// ==========================================
+// Endpoint público: demo token
+// ==========================================
+app.get('/api/demo-token', async (req, res) => {
+  try {
+    const DEMO_UID = 'F8znUHWDrgZn9dCp2zHKCBBRLCL2';
+
+    const customToken = await admin.auth().createCustomToken(DEMO_UID, {
+      appId: 'auditoria',
+      role: 'admin',
+      ownerId: DEMO_UID
+    });
+
+    res.json({ customToken });
+  } catch (error) {
+    console.error('[DEMO-TOKEN] Error al generar token:', error);
+    res.status(500).json({
+      error: 'Error interno del servidor',
+      code: 'INTERNAL_ERROR',
+      message: error.message
+    });
+  }
+});
+
 // Iniciar servidor con configuración flexible
 const PORT = process.env.PORT || config.server.port;
 const HOST = '0.0.0.0'; // Para Render, usar 0.0.0.0 en lugar de localhost

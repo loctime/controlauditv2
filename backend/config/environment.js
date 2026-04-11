@@ -100,7 +100,8 @@ const getEnvironmentConfig = () => {
           'https://cliente.controlaudit.app',
           'https://demo.controlaudit.app',
           'https://auditoria.controldoc.app',
-          'https://controlauditv2.onrender.com'
+          'https://controlauditv2.onrender.com',
+          'https://controlaudit.vercel.app'
         ]
       },
       logging: {
