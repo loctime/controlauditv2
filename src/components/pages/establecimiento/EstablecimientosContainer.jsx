@@ -2,31 +2,13 @@ import logger from '@/utils/logger';
 import React, { useState, useEffect } from "react";
 import {
   Button,
-  Grid,
   Typography,
   Box,
-  Tooltip,
-  IconButton,
   CircularProgress,
   useTheme,
   useMediaQuery,
   alpha,
-  Table,
-  TableBody,
-  TableCell,
-  TableContainer,
-  TableHead,
-  TableRow,
-  Paper,
-  Collapse
 } from "@mui/material";
-import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
-import ExpandLessIcon from '@mui/icons-material/ExpandLess';
-import BusinessIcon from '@mui/icons-material/Business';
-import StorefrontIcon from '@mui/icons-material/Storefront';
-import PeopleIcon from '@mui/icons-material/People';
-import SchoolIcon from '@mui/icons-material/School';
-import ReportProblemIcon from '@mui/icons-material/ReportProblem';
 import { useNavigate } from "react-router-dom";
 import Swal from 'sweetalert2';
 import { sucursalService } from '../../../services/sucursalService';
@@ -37,10 +19,6 @@ import EliminarEmpresa from "./EliminarEmpresa";
 import EditarEmpresaModal from "./EditarEmpresa";
 import EmpresaOperariosDialog from "./EmpresaOperariosDialog";
 import SucursalesTab from "./tabs/SucursalesTab";
-import EmpleadosTab from "./tabs/EmpleadosTab";
-import CapacitacionesTab from "./tabs/CapacitacionesTab";
-import AccidentesTab from "./tabs/AccidentesTab";
-import EmpresaStats from "./components/EmpresaStats";
 
 // Hooks personalizados
 import { useEmpresasStats, useEmpresasHandlers, useEmpresasEditHandlers } from './hooks';
@@ -48,8 +26,7 @@ import { usePermissions } from '@/components/pages/admin/hooks/usePermissions';
 
 // Componentes
 import EmpresasHeader from './components/EmpresasHeader';
-import EmpresaTableHeader from './components/EmpresaTableHeader';
-import EmpresaRow from './components/EmpresaRow';
+import EmpresaCard from './components/EmpresaCard';
 
 const EstablecimientosContainer = () => {
   const {
@@ -118,7 +95,6 @@ const EstablecimientosContainer = () => {
   const [openOperariosModal, setOpenOperariosModal] = useState(false);
   const [selectedEmpresaForOperarios, setSelectedEmpresaForOperarios] = useState(null);
   const [expandedRows, setExpandedRows] = useState(new Set());
-  const [activeTabPerEmpresa, setActiveTabPerEmpresa] = useState({});
 
   const formatearEmail = (email) => {
     if (!email) return '';
@@ -135,17 +111,6 @@ const EstablecimientosContainer = () => {
       newExpanded.add(empresaId);
     }
     setExpandedRows(newExpanded);
-  };
-
-  const setActiveTab = (empresaId, tab) => {
-    setActiveTabPerEmpresa(prev => ({
-      ...prev,
-      [empresaId]: tab
-    }));
-  };
-
-  const getActiveTab = (empresaId) => {
-    return activeTabPerEmpresa[empresaId] || 'sucursales';
   };
 
   const handleCloseModal = () => {
@@ -250,7 +215,6 @@ const EstablecimientosContainer = () => {
         isSmallMobile={isSmallMobile}
         onVerificar={handleVerificarEmpresas}
         verificando={verificando}
-        onNavigateToAccidentes={() => navigate('/accidentes')}
         onAddEmpresa={() => {
           logger.debug('🔵 [EstablecimientosContainer] Botón "Agregar Empresa" clickeado');
           logger.debug('[EstablecimientosContainer] Abriendo modal...');
@@ -259,10 +223,6 @@ const EstablecimientosContainer = () => {
         }}
         canCreateEmpresa={canCreateEmpresa}
       />
-
-      <Typography variant="body2" color="textSecondary" sx={{ mb: 3 }}>
-        Haz clic en la flecha para expandir y ver las opciones de gestión para cada empresa.
-      </Typography>
 
       {loadingEmpresas ? (
         <Box sx={{ textAlign: 'center', py: 4 }}>
@@ -281,77 +241,48 @@ const EstablecimientosContainer = () => {
           </Typography>
         </Box>
       ) : (
-        <TableContainer component={Paper}>
-          <Table>
-            <EmpresaTableHeader />
-            <TableBody>
-              {(userEmpresas || [])
-                .filter(empresa => empresa && empresa.id && empresa.nombre)
-                .filter(empresa => canViewEmpresa(empresa.id))
-                .map((empresa) => {
-                const isExpanded = expandedRows.has(empresa.id);
-                const stats = empresasStats[empresa.id] || {
-                  sucursales: 0,
-                  empleados: 0,
-                  capacitaciones: 0,
-                  capacitacionesCompletadas: 0,
-                  accidentes: 0,
-                  accidentesAbiertos: 0
-                };
+        <Box>
+          {((userEmpresas || [])
+            .filter(empresa => empresa && empresa.id && empresa.nombre)
+            .filter(empresa => canViewEmpresa(empresa.id)))
+            .map((empresa) => {
+              const isExpanded = expandedRows.has(empresa.id);
+              const stats = empresasStats[empresa.id] || {
+                sucursales: 0,
+                empleados: 0,
+                capacitaciones: 0,
+                capacitacionesCompletadas: 0,
+                accidentes: 0,
+                accidentesAbiertos: 0
+              };
 
-                return (
-                  <React.Fragment key={empresa.id}>
-                    <EmpresaRow
-                      empresa={empresa}
-                      stats={stats}
-                      isExpanded={isExpanded}
-                      onToggleRow={toggleRow}
-                      onTabChange={setActiveTab}
-                      formatearEmail={formatearEmail}
-                      ownerEmail={ownerEmail}
-                      effectiveOwnerId={ownerId}
-                      onEditClick={handleOpenEditModal}
-                      onOperariosClick={handleOpenOperariosModal}
-                      EliminarEmpresaComponent={EliminarEmpresa}
-                      canEditEmpresa={canEditEmpresa}
-                      canDeleteEmpresa={canDeleteEmpresa}
-                      canManageOperarios={canManageOperarios}
-                    />
-
-                    <TableRow>
-                      <TableCell colSpan={10} sx={{ py: 0 }}>
-                        <Collapse in={isExpanded} timeout="auto" unmountOnExit>
-                          <Box sx={{ p: 1, backgroundColor: '#f8f9fa', borderTop: '1px solid #e0e0e0' }}>
-                            <Box>
-                              {getActiveTab(empresa.id) === 'sucursales' && (
-                                <SucursalesTab
-                                  empresaId={empresa.id}
-                                  empresaNombre={empresa.nombre}
-                                  userEmpresas={userEmpresas}
-                                  loadEmpresasStats={loadEmpresasStats}
-                                />
-                              )}
-                              {getActiveTab(empresa.id) === 'empleados' && (
-                                <EmpleadosTab empresaId={empresa.id} empresaNombre={empresa.nombre} />
-                              )}
-                              {getActiveTab(empresa.id) === 'capacitaciones' && (
-                                <CapacitacionesTab empresaId={empresa.id} empresaNombre={empresa.nombre} />
-                              )}
-                              {getActiveTab(empresa.id) === 'accidentes' && (
-                                <AccidentesTab empresaId={empresa.id} empresaNombre={empresa.nombre} />
-                              )}
-                            </Box>
-                            <EmpresaStats empresaNombre={empresa.nombre} stats={stats} />
-                          </Box>
-                        </Collapse>
-                      </TableCell>
-                    </TableRow>
-                  </React.Fragment>
-                );
-              })}
-            </TableBody>
-          </Table>
-        </TableContainer>
+              return (
+                <EmpresaCard
+                  key={empresa.id}
+                  empresa={empresa}
+                  stats={stats}
+                  isExpanded={isExpanded}
+                  onToggleRow={toggleRow}
+                  formatearEmail={formatearEmail}
+                  ownerEmail={ownerEmail}
+                  effectiveOwnerId={ownerId}
+                  onEditClick={handleOpenEditModal}
+                  onOperariosClick={handleOpenOperariosModal}
+                  EliminarEmpresaComponent={EliminarEmpresa}
+                  canEditEmpresa={canEditEmpresa}
+                  canDeleteEmpresa={canDeleteEmpresa}
+                  canManageOperarios={canManageOperarios}
+                >
+                  <SucursalesTab
+                    empresaId={empresa.id}
+                    empresaNombre={empresa.nombre}
+                    userEmpresas={userEmpresas}
+                    loadEmpresasStats={loadEmpresasStats}
+                  />
+                </EmpresaCard>
+              );
+            })}
+        </Box>
       )}
 
       {openModal && (
