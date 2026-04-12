@@ -168,21 +168,25 @@ const CalendarioAuditorias = React.memo(({
           sx={{ gap: 2 }}
         >
           <Button
-            variant="text"
+            variant="outlined"
             onClick={resetToToday}
             sx={{ 
               display: 'flex', 
               alignItems: 'center', 
               gap: 0.5,
-              p: 0.5,
+              p: 0.75,
               minWidth: 'auto',
               textTransform: 'none',
-              fontSize: '0.875rem',
+              fontSize: '1.275rem',
               fontWeight: 500,
               color: 'text.primary',
+              borderColor: 'primary.main',
+              borderWidth: 1.5,
+              borderRadius: '8px',
               '&:hover': { 
-                backgroundColor: 'transparent',
-                color: 'primary.main'
+                backgroundColor: 'primary.main',
+                color: 'primary.contrastText',
+                borderColor: 'primary.dark'
               }
             }}
             title="Volver al mes actual"
@@ -192,8 +196,8 @@ const CalendarioAuditorias = React.memo(({
           </Button>
           
           <Box display="flex" alignItems="center" gap={0.5}>
-            <IconButton onClick={prevMonth} size="small" sx={{ p: 0.5 }} aria-label="Mes anterior">
-              <Typography component="span" sx={{ fontWeight: 'bold', fontSize: '1.2rem' }}>‹</Typography>
+            <IconButton onClick={prevMonth} size="medium" sx={{ p: 1, minWidth: 48, width: 48, bgcolor: "primary.main", color: "primary.contrastText", "&:hover": { bgcolor: "primary.dark", transform: "scale(1.05)" }, transition: "all 0.2s ease-in-out", boxShadow: 2 }} aria-label="Mes anterior">
+              <Typography component="span" sx={{ fontWeight: 'bold', fontSize: '1rem' }}>‹</Typography>
             </IconButton>
             <Box sx={{ minWidth: '100px', textAlign: 'center' }}>
               <Typography 
@@ -202,16 +206,30 @@ const CalendarioAuditorias = React.memo(({
                 onClick={handleMonthClick}
                 sx={{ 
                   cursor: 'pointer', 
-                  fontSize: '0.875rem',
+                  fontSize: '1.475rem',
                   fontWeight: 500,
                   '&:hover': { color: 'primary.main' }
                 }}
               >
-                {monthNames[currentMonth.getMonth()]} {currentMonth.getFullYear()}
+                {monthNames[currentMonth.getMonth()]}
+              </Typography>
+              <Typography 
+                variant="body1" 
+                component="span" 
+                onClick={handleYearClick}
+                sx={{ 
+                  cursor: 'pointer', 
+                  fontSize: '1.475rem',
+                  fontWeight: 500,
+                  marginLeft: 0.5,
+                  '&:hover': { color: 'primary.main' }
+                }}
+              >
+                {currentMonth.getFullYear()}
               </Typography>
             </Box>
-            <IconButton onClick={nextMonth} size="small" sx={{ p: 0.5 }} aria-label="Mes siguiente">
-              <Typography component="span" sx={{ fontWeight: 'bold', fontSize: '1.2rem' }}>›</Typography>
+            <IconButton onClick={nextMonth} size="medium" sx={{ p: 1, minWidth: 48, width: 48, bgcolor: "primary.main", color: "primary.contrastText", "&:hover": { bgcolor: "primary.dark", transform: "scale(1.05)" }, transition: "all 0.2s ease-in-out", boxShadow: 2 }} aria-label="Mes siguiente">
+              <Typography component="span" sx={{ fontWeight: 'bold', fontSize: '1rem' }}>›</Typography>
             </IconButton>
           </Box>
 
@@ -285,8 +303,8 @@ const CalendarioAuditorias = React.memo(({
           </Box>
           
           <Box display="flex" alignItems="center" justifyContent="center" gap={0.5}>
-            <IconButton onClick={prevMonth} size="small" sx={{ p: 0.5 }} aria-label="Mes anterior">
-              <Typography component="span" sx={{ fontWeight: 'bold', fontSize: '1.2rem' }}>‹</Typography>
+            <IconButton onClick={prevMonth} size="medium" sx={{ p: 1.5, minWidth: 48, width: 48, bgcolor: "primary.main", color: "primary.contrastText", "&:hover": { bgcolor: "primary.dark", transform: "scale(1.05)" }, transition: "all 0.2s ease-in-out", boxShadow: 2 }} aria-label="Mes anterior">
+              <Typography component="span" sx={{ fontWeight: 'bold', fontSize: '1rem' }}>‹</Typography>
             </IconButton>
             <Box sx={{ minWidth: '100px', textAlign: 'center' }}>
               <Typography 
@@ -300,11 +318,25 @@ const CalendarioAuditorias = React.memo(({
                   '&:hover': { color: 'primary.main' }
                 }}
               >
-                {monthNames[currentMonth.getMonth()]} {currentMonth.getFullYear()}
+                {monthNames[currentMonth.getMonth()]}
+              </Typography>
+              <Typography 
+                variant="body1" 
+                component="span" 
+                onClick={handleYearClick}
+                sx={{ 
+                  cursor: 'pointer', 
+                  fontSize: '0.875rem',
+                  fontWeight: 500,
+                  marginLeft: 0.5,
+                  '&:hover': { color: 'primary.main' }
+                }}
+              >
+                {currentMonth.getFullYear()}
               </Typography>
             </Box>
-            <IconButton onClick={nextMonth} size="small" sx={{ p: 0.5 }} aria-label="Mes siguiente">
-              <Typography component="span" sx={{ fontWeight: 'bold', fontSize: '1.2rem' }}>›</Typography>
+            <IconButton onClick={nextMonth} size="medium" sx={{ p: 1, bgcolor: "primary.main", color: "primary.contrastText", "&:hover": { bgcolor: "primary.dark", transform: "scale(1.05)" }, transition: "all 0.2s ease-in-out", boxShadow: 2 }} aria-label="Mes siguiente">
+              <Typography component="span" sx={{ fontWeight: 'bold', fontSize: '1rem' }}>›</Typography>
             </IconButton>
           </Box>
         </Box>
