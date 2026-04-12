@@ -61,6 +61,10 @@ export const ColorModeProvider = ({ children }) => {
               }),
         },
         shape: { borderRadius: 8 },
+        typography: {
+          htmlFontSize: 16,
+          fontSize: 13,
+        },
       }),
     [mode]
   );
