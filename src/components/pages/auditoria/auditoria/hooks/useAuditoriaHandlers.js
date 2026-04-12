@@ -375,9 +375,14 @@ export const useAuditoriaHandlers = ({
   const handleAnterior = useCallback(() => {
     setNavegacionError("");
     
-    // Permitir siempre ir al paso 1 (selección de datos básicos)
+    // Permitir siempre ir al paso 0 o 1 (selección de datos básicos)
     if (activeStep === 2) {
       setActiveStep(1);
+      return;
+    }
+    
+    if (activeStep === 1) {
+      setActiveStep(0);
       return;
     }
     
@@ -405,17 +410,18 @@ export const useAuditoriaHandlers = ({
   const handleStepClick = useCallback((index, pasoCompletoAuditoria) => {
     setNavegacionError("");
     
+    // Permitir siempre ir al paso 0 (empresa) o paso 1 (formulario)
+    if (index === 0 || index === 1) {
+      setActiveStep(index);
+      return;
+    }
+    
+    // Para otros pasos, validar que los pasos anteriores estén completos
     for (let i = 0; i < index; i++) {
       if (!pasoCompletoAuditoria(i)) {
         setNavegacionError("Completa los pasos anteriores antes de avanzar.");
         return;
       }
-    }
-
-    // Permitir siempre ir al paso 1 (selección de datos básicos)
-    if (index === 1 && activeStep > 1) {
-      setActiveStep(1);
-      return;
     }
 
     if (firmasValidas && index < activeStep) {

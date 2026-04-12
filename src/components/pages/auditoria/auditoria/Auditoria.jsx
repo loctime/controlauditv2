@@ -869,7 +869,7 @@ const AuditoriaRefactorizada = () => {
     }
   }, [location.state, formularios, formularioSeleccionadoId]);
 
-  // Salto automático al paso 2 (Preguntas) si viene de agenda con todo pre-cargado
+  // Salto automático al paso 3 (Preguntas) si viene de agenda con todo pre-cargado
   useEffect(() => {
     if (
       location.state?.formularioId &&
