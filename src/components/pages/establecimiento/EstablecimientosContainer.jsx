@@ -1,15 +1,12 @@
 import logger from '@/utils/logger';
 import React, { useState, useEffect } from "react";
 import {
-  Button,
   Typography,
   Box,
   CircularProgress,
   useTheme,
   useMediaQuery,
-  alpha,
 } from "@mui/material";
-import { useNavigate } from "react-router-dom";
 import Swal from 'sweetalert2';
 import { sucursalService } from '../../../services/sucursalService';
 import { useAuth } from '@/components/context/AuthContext';
@@ -38,7 +35,6 @@ const EstablecimientosContainer = () => {
     updateEmpresa,
     getEffectiveOwnerId
   } = useAuth();
-  const navigate = useNavigate();
   const theme = useTheme();
   const isSmallMobile = useMediaQuery(theme.breakpoints.down('sm'));
 
