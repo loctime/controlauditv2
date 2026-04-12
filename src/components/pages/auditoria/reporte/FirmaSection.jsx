@@ -200,6 +200,9 @@ const FirmaSection = ({
   secciones,
   imagenes = [],
   encargado,
+  comentarios = [],
+  clasificaciones = [],
+  acciones = [],
   // Props para datos adicionales del reporte
   datosReporte = {},
   onDatosReporteChange
@@ -684,6 +687,9 @@ const FirmaSection = ({
         secciones={secciones}
         imagenes={imagenes}
         encargado={encargado}
+        comentarios={comentarios}
+        clasificaciones={clasificaciones}
+        acciones={acciones}
         onSaveFirmaResponsable={handleSaveFirmaResponsable}
         firmaResponsable={firmaResponsableURL}
         datosReporte={datosReporte}

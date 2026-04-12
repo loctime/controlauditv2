@@ -239,6 +239,9 @@ export const createAuditoriaSteps = ({
               secciones={secciones}
               imagenes={imagenes}
               encargado={null}
+              comentarios={comentarios}
+              clasificaciones={clasificaciones}
+              acciones={accionesRequeridas}
               datosReporte={datosReporte}
               onDatosReporteChange={setDatosReporte}
             />
