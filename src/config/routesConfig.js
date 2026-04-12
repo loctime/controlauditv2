@@ -295,7 +295,7 @@ export const routesConfig = [
     path: "/editar",
     roles: ["admin", "superdev"],
     showInMenu: false,
-    redirectTo: "/formulario",
+    redirectTo: "/editar",
   },
   {
     id: "legacy-operario-dashboard",

@@ -486,19 +486,28 @@ const ResumenAuditoriaModal = ({
                                 <Box sx={{ px: 1.5, pb: 1.5, display: 'flex', flexDirection: 'column', gap: 1 }}>
                                   {requiereAccion && (
                                     <Box sx={{
-                                      display: 'flex',
-                                      alignItems: 'center',
-                                      gap: 0.75,
                                       px: 1.25,
-                                      py: 0.6,
-                                      bgcolor: alpha(theme.palette.warning.main, 0.1),
+                                      py: 0.75,
+                                      bgcolor: alpha(theme.palette.warning.main, 0.08),
                                       borderRadius: 1,
-                                      border: `1px solid ${alpha(theme.palette.warning.main, 0.25)}`
+                                      border: `1px solid ${alpha(theme.palette.warning.main, 0.3)}`
                                     }}>
-                                      <PriorityHighIcon sx={{ fontSize: 14, color: 'warning.main' }} />
-                                      <Typography sx={{ fontSize: 12, color: 'warning.dark', fontWeight: 600 }}>
-                                        Acción requerida
-                                      </Typography>
+                                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75, mb: accion?.accionTexto ? 0.5 : 0 }}>
+                                        <PriorityHighIcon sx={{ fontSize: 14, color: 'warning.main' }} />
+                                        <Typography sx={{ fontSize: 12, color: 'warning.dark', fontWeight: 700 }}>
+                                          Acción requerida
+                                        </Typography>
+                                        {accion?.fechaVencimiento && (
+                                          <Typography sx={{ fontSize: 11, color: 'warning.dark', ml: 'auto' }}>
+                                            Vence: {new Date(accion.fechaVencimiento).toLocaleDateString('es-ES')}
+                                          </Typography>
+                                        )}
+                                      </Box>
+                                      {accion?.accionTexto && (
+                                        <Typography sx={{ fontSize: 12.5, color: 'text.primary', pl: 2.5 }}>
+                                          {accion.accionTexto}
+                                        </Typography>
+                                      )}
                                     </Box>
                                   )}
 
@@ -509,7 +518,8 @@ const ResumenAuditoriaModal = ({
                                       gap: 0.75,
                                       px: 1.25,
                                       py: 0.75,
-                                      bgcolor: alpha(theme.palette.action.selected, 0.5),
+                                      bgcolor: alpha(theme.palette.primary.main, 0.04),
+                                      border: `1px solid ${alpha(theme.palette.divider, 0.5)}`,
                                       borderRadius: 1
                                     }}>
                                       <CommentIcon sx={{ fontSize: 14, color: 'text.secondary', mt: 0.15, flexShrink: 0 }} />
