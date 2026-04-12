@@ -25,6 +25,16 @@ export const routesConfig = [
     path: "/demo",
     public: true,
   },
+  {
+    id: "terminos",
+    path: "/terminos",
+    public: true,
+  },
+  {
+    id: "privacidad",
+    path: "/privacidad",
+    public: true,
+  },
 
   // Protected routes (single source of truth)
   {

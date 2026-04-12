@@ -1,6 +1,7 @@
 import React from 'react';
 import { Box, Typography, Link } from '@mui/material';
 import { useTheme } from '@mui/material/styles';
+import { Link as RouterLink } from 'react-router-dom';
 
 const AppFooter = () => {
   const theme = useTheme();
@@ -13,6 +14,7 @@ const AppFooter = () => {
         backgroundColor: theme.palette.background.paper,
         px: 3,
         py: 1.5,
+        minHeight: 48,
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'space-between',
@@ -27,11 +29,24 @@ const AppFooter = () => {
       </Typography>
 
       <Box sx={{ display: 'flex', alignItems: 'center', gap: 2.5 }}>
-        {['Guía de uso', 'Soporte', 'Contacto'].map((label) => (
-          <Link key={label} href="#" underline="hover" variant="caption" color="text.secondary">
-            {label}
-          </Link>
-        ))}
+        <Link
+          component={RouterLink}
+          to="/terminos"
+          underline="hover"
+          variant="caption"
+          color="text.secondary"
+        >
+          Términos y Condiciones
+        </Link>
+        <Link
+          component={RouterLink}
+          to="/privacidad"
+          underline="hover"
+          variant="caption"
+          color="text.secondary"
+        >
+          Política de Privacidad
+        </Link>
         <Typography
           variant="caption"
           sx={{

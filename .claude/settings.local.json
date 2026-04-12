@@ -20,7 +20,17 @@
       "Bash(grep -r @controlfile/sdk /c/Users/User/Desktop/controlauditv2/src --include=*.jsx --include=*.js)",
       "Bash(grep -c 'id: \"\"dashboard-seguridad\"\"' /c/Users/User/Desktop/controlauditv2/src/config/routesConfig.js)",
       "Bash(grep -n 'id: \"\"dashboard-seguridad\"\"' /c/Users/User/Desktop/controlauditv2/src/config/routesConfig.js)",
-      "Bash(grep -rn \"from ''@controlfile/sdk\\\\|from \"\"@controlfile\" /c/Users/User/Desktop/controlauditv2/src)"
+      "Bash(grep -rn \"from ''@controlfile/sdk\\\\|from \"\"@controlfile\" /c/Users/User/Desktop/controlauditv2/src)",
+      "Read(//c/Users/User/AppData/Roaming/Claude/local-agent-mode-sessions/skills-plugin/0392c58e-5d6b-490d-957c-8483853cccc0/85de6d86-8315-421b-b987-e1be7d2b1763/skills/docx/**)",
+      "Bash(pandoc --track-changes=all \"/c/Users/User/Downloads/terminos-y-condiciones.docx\" -o /tmp/terminos.md)",
+      "Bash(pandoc --track-changes=all \"/c/Users/User/Downloads/politica-de-privacidad.docx\" -o /tmp/privacidad.md)",
+      "Bash(python scripts/office/unpack.py \"C:/Users/User/Downloads/terminos-y-condiciones.docx\" /tmp/terminos_unpacked/)",
+      "Bash(pip install:*)",
+      "Bash(python scripts/office/unpack.py \"C:/Users/User/Downloads/politica-de-privacidad.docx\" /tmp/privacidad_unpacked/)",
+      "Read(//c/tmp/terminos_unpacked/**)",
+      "Read(//tmp/**)",
+      "Bash(python -c \"import tempfile; print\\(tempfile.gettempdir\\(\\)\\)\")",
+      "Bash(python -c \"import os; print\\(os.listdir\\('C:\\\\\\\\\\\\\\\\tmp\\\\\\\\\\\\\\\\terminos_unpacked'\\)\\)\")"
     ]
   }
 }
