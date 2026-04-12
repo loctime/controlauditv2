@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import {
   Dialog,
   DialogTitle,
@@ -7,97 +7,72 @@ import {
   Button,
   Typography,
   Box,
-  Grid,
-  Card,
-  CardContent,
   Chip,
-  Avatar,
-  List,
-  ListItem,
-  ListItemText,
   IconButton,
   useTheme,
   alpha,
-  Alert
+  Alert,
+  LinearProgress,
+  Collapse
 } from '@mui/material';
 import {
   Close as CloseIcon,
   Business as BusinessIcon,
   LocationOn as LocationIcon,
   Assignment as AssignmentIcon,
-  Person as PersonIcon,
   CalendarToday as CalendarIcon,
-  CheckCircle as CheckCircleIcon,
-  Error as ErrorIcon,
-  Warning as WarningIcon,
-  Help as HelpIcon,
-  Visibility as VisibilityIcon,
-  Edit as EditIcon,
   Work as WorkIcon,
   Build as BuildIcon,
   SupervisorAccount as SupervisorAccountIcon,
-  People as PeopleIcon
+  People as PeopleIcon,
+  ExpandMore as ExpandMoreIcon,
+  ChevronRight as ChevronRightIcon
 } from '@mui/icons-material';
 import Firma from './Firma';
 import { normalizarArchivosPorPregunta } from './utils/normalizadores';
 import UnifiedFilePreview from '@/components/common/files/UnifiedFilePreview';
 
-const ResumenAuditoriaModal = ({ 
-  open, 
-  onClose, 
-  empresa, 
-  sucursal, 
-  formulario, 
-  respuestas, 
-  secciones, 
+const ResumenAuditoriaModal = ({
+  open,
+  onClose,
+  empresa,
+  sucursal,
+  formulario,
+  respuestas,
+  secciones,
   imagenes = [],
   encargado,
   fecha = new Date().toLocaleDateString('es-ES'),
-  // Props para la firma
   onSaveFirmaResponsable,
   firmaResponsable,
-  // Props para datos adicionales del reporte
   datosReporte = {}
 }) => {
   const theme = useTheme();
 
-    const archivosPorPregunta = React.useMemo(() => {
+  const archivosPorPregunta = React.useMemo(() => {
     return normalizarArchivosPorPregunta({ filesByQuestion: imagenes, imagenes }, secciones || []);
   }, [imagenes, secciones]);
 
-  // Función para obtener el icono según la calificación
-  const getCalificacionIcon = (calificacion) => {
-    switch (calificacion) {
-      case 'Conforme':
-        return <CheckCircleIcon color="success" fontSize="small" />;
-      case 'No conforme':
-        return <ErrorIcon color="error" fontSize="small" />;
-      case 'Necesita mejora':
-        return <WarningIcon color="warning" fontSize="small" />;
-      case 'No aplica':
-        return <HelpIcon color="disabled" fontSize="small" />;
-      default:
-        return null;
-    }
+  const [seccionesExpandidas, setSeccionesExpandidas] = useState(() => {
+    const initial = {};
+    (secciones || []).forEach((_, i) => { initial[i] = true; });
+    return initial;
+  });
+
+  const toggleSeccion = (index) => {
+    setSeccionesExpandidas(prev => ({ ...prev, [index]: !prev[index] }));
   };
 
-  // Función para obtener el color del chip según la calificación
   const getCalificacionColor = (calificacion) => {
     switch (calificacion) {
-      case 'Conforme':
-        return 'success';
-      case 'No conforme':
-        return 'error';
-      case 'Necesita mejora':
-        return 'warning';
-      case 'No aplica':
-        return 'default';
-      default:
-        return 'default';
+      case 'Conforme': return 'success';
+      case 'No conforme': return 'error';
+      case 'Necesita mejora': return 'warning';
+      case 'No aplica': return 'default';
+      default: return 'default';
     }
   };
 
-  // Calcular estadísticas
   const estadisticas = {
     Conforme: respuestas?.flat().filter(res => res === "Conforme").length || 0,
     "No conforme": respuestas?.flat().filter(res => res === "No conforme").length || 0,
@@ -107,384 +82,281 @@ const ResumenAuditoriaModal = ({
 
   const totalPreguntas = respuestas?.flat().length || 0;
   const preguntasContestadas = respuestas?.flat().filter(res => res !== '').length || 0;
+  const porcentaje = totalPreguntas > 0 ? Math.round((preguntasContestadas / totalPreguntas) * 100) : 0;
+
+  const statItems = [
+    { label: 'Conforme', value: estadisticas.Conforme, bg: alpha(theme.palette.success.main, 0.12), color: theme.palette.success.main },
+    { label: 'No conforme', value: estadisticas["No conforme"], bg: alpha(theme.palette.error.main, 0.12), color: theme.palette.error.main },
+    { label: 'Necesita mejora', value: estadisticas["Necesita mejora"], bg: alpha(theme.palette.warning.main, 0.12), color: theme.palette.warning.main },
+    { label: 'No aplica', value: estadisticas["No aplica"], bg: alpha(theme.palette.text.secondary, 0.08), color: theme.palette.text.secondary },
+  ];
+
+  const pillItems = [
+    { icon: <BusinessIcon sx={{ fontSize: 13 }} />, label: empresa?.nombre || 'Sin empresa' },
+    { icon: <LocationIcon sx={{ fontSize: 13 }} />, label: sucursal || 'Casa Central' },
+    { icon: <AssignmentIcon sx={{ fontSize: 13 }} />, label: formulario?.nombre || 'Sin formulario' },
+    { icon: <CalendarIcon sx={{ fontSize: 13 }} />, label: fecha },
+  ];
+
+  const extraPills = [
+    datosReporte?.tareaObservada && { icon: <WorkIcon sx={{ fontSize: 13 }} />, label: datosReporte.tareaObservada },
+    datosReporte?.lugarSector && { icon: <LocationIcon sx={{ fontSize: 13 }} />, label: datosReporte.lugarSector },
+    datosReporte?.equiposInvolucrados && { icon: <BuildIcon sx={{ fontSize: 13 }} />, label: datosReporte.equiposInvolucrados },
+    datosReporte?.supervisor && { icon: <SupervisorAccountIcon sx={{ fontSize: 13 }} />, label: datosReporte.supervisor },
+    datosReporte?.numeroTrabajadores && { icon: <PeopleIcon sx={{ fontSize: 13 }} />, label: `${datosReporte.numeroTrabajadores} trabajadores` },
+  ].filter(Boolean);
+
+  const allPills = [...pillItems, ...extraPills];
 
   return (
-    <Dialog 
-      open={open} 
-      onClose={onClose} 
-      maxWidth="lg" 
+    <Dialog
+      open={open}
+      onClose={onClose}
+      maxWidth="md"
       fullWidth
       PaperProps={{
-        sx: {
-          maxHeight: '95vh',
-          borderRadius: 2
-        }
+        sx: { maxHeight: '95vh', borderRadius: 2 }
       }}
     >
-      <DialogTitle sx={{ 
-        pb: 1,
+      {/* Header */}
+      <DialogTitle sx={{
+        pb: 1.5,
         display: 'flex',
-        alignItems: 'center',
+        alignItems: 'flex-start',
         justifyContent: 'space-between',
-        background: `linear-gradient(135deg, ${alpha(theme.palette.primary.main, 0.1)}, ${alpha(theme.palette.primary.main, 0.05)})`
+        borderBottom: `1px solid ${theme.palette.divider}`
       }}>
-        <Box display="flex" alignItems="center" gap={1} component="span">
-          <VisibilityIcon color="primary" />
-          <Typography variant="h6" color="primary" sx={{ fontWeight: 600 }} component="span">
-            Resumen Completo de la Auditoría
+        <Box>
+          <Typography variant="h6" sx={{ fontWeight: 700, lineHeight: 1.2 }}>
+            Resumen para firma
+          </Typography>
+          <Typography variant="caption" color="text.secondary">
+            Auditoría completada
           </Typography>
         </Box>
-        <IconButton onClick={onClose} size="small">
-          <CloseIcon />
+        <IconButton onClick={onClose} size="small" sx={{ mt: -0.5 }}>
+          <CloseIcon fontSize="small" />
         </IconButton>
       </DialogTitle>
 
       <DialogContent sx={{ p: 3 }}>
-        <Grid container spacing={3}>
-          {/* Columna izquierda - Resumen */}
-          <Grid item xs={12} lg={8}>
-            {/* Información General */}
-            <Card sx={{ mb: 3, border: `2px solid ${alpha(theme.palette.primary.main, 0.2)}` }}>
-              <CardContent>
-                <Typography variant="h6" gutterBottom sx={{ color: 'primary.main', fontWeight: 600 }}>
-                  Información General
-                </Typography>
-                
-                <Grid container spacing={2}>
-                  <Grid item xs={12} sm={6}>
-                    <Box display="flex" alignItems="center" gap={1} mb={1}>
-                      <BusinessIcon color="primary" fontSize="small" />
-                      <Typography variant="body2" color="text.secondary">
-                        <strong>Empresa:</strong> {empresa?.nombre || 'No especificada'}
-                      </Typography>
-                    </Box>
-                  </Grid>
-                  
-                  <Grid item xs={12} sm={6}>
-                    <Box display="flex" alignItems="center" gap={1} mb={1}>
-                      <LocationIcon color="primary" fontSize="small" />
-                      <Typography variant="body2" color="text.secondary">
-                        <strong>Ubicación:</strong> {sucursal || 'Casa Central'}
-                      </Typography>
-                    </Box>
-                  </Grid>
-                  
-                  <Grid item xs={12} sm={6}>
-                    <Box display="flex" alignItems="center" gap={1} mb={1}>
-                      <AssignmentIcon color="primary" fontSize="small" />
-                      <Typography variant="body2" color="text.secondary">
-                        <strong>Formulario:</strong> {formulario?.nombre || 'No especificado'}
-                      </Typography>
-                    </Box>
-                  </Grid>
-                  
-                  <Grid item xs={12} sm={6}>
-                    <Box display="flex" alignItems="center" gap={1} mb={1}>
-                      <CalendarIcon color="primary" fontSize="small" />
-                      <Typography variant="body2" color="text.secondary">
-                        <strong>Fecha:</strong> {fecha}
-                      </Typography>
-                    </Box>
-                  </Grid>
-                </Grid>
+        {/* Pills de información */}
+        <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.75, mb: 3 }}>
+          {allPills.map((pill, i) => (
+            <Box
+              key={i}
+              sx={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: 0.5,
+                px: 1.25,
+                py: 0.4,
+                bgcolor: 'background.default',
+                border: `1px solid ${alpha(theme.palette.divider, 0.8)}`,
+                borderRadius: '20px',
+                fontSize: 12,
+                color: 'text.secondary',
+                lineHeight: 1
+              }}
+            >
+              {pill.icon}
+              <Typography sx={{ fontSize: 12, color: 'text.secondary', lineHeight: 1 }}>
+                {pill.label}
+              </Typography>
+            </Box>
+          ))}
+        </Box>
 
-                {/* Información Adicional del Reporte */}
-                {(datosReporte?.tareaObservada || datosReporte?.lugarSector || datosReporte?.equiposInvolucrados || datosReporte?.supervisor || datosReporte?.numeroTrabajadores) && (
-                  <Box mt={3} pt={2} borderTop={`1px solid ${alpha(theme.palette.divider, 0.5)}`}>
-                    <Typography variant="subtitle1" gutterBottom sx={{ color: 'primary.main', fontWeight: 600, mb: 2 }}>
-                      Información Adicional del Reporte
+        {/* Estadísticas */}
+        <Box sx={{ bgcolor: 'background.default', borderRadius: 2, p: 2, mb: 3 }}>
+          <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 1.5, mb: 2 }}>
+            {statItems.map((item) => (
+              <Box
+                key={item.label}
+                sx={{
+                  bgcolor: item.bg,
+                  borderRadius: 1.5,
+                  p: 1.5,
+                  textAlign: 'center'
+                }}
+              >
+                <Typography sx={{ fontSize: 28, fontWeight: 700, color: item.color, lineHeight: 1 }}>
+                  {item.value}
+                </Typography>
+                <Typography sx={{ fontSize: 11, color: item.color, mt: 0.25, lineHeight: 1.2 }}>
+                  {item.label}
+                </Typography>
+              </Box>
+            ))}
+          </Box>
+          <LinearProgress
+            variant="determinate"
+            value={porcentaje}
+            sx={{
+              height: 4,
+              borderRadius: 2,
+              bgcolor: alpha(theme.palette.primary.main, 0.12),
+              '& .MuiLinearProgress-bar': { borderRadius: 2 }
+            }}
+          />
+          <Typography sx={{ fontSize: 11, color: 'text.secondary', mt: 0.5 }}>
+            {preguntasContestadas} de {totalPreguntas} respondidas ({porcentaje}%)
+          </Typography>
+        </Box>
+
+        {/* Detalle de preguntas — secciones colapsables */}
+        {secciones && secciones.length > 0 ? (
+          <Box sx={{ mb: 3 }}>
+            {secciones.map((seccion, seccionIndex) => {
+              const isExpanded = seccionesExpandidas[seccionIndex] !== false;
+              const nombreSeccion = typeof seccion.nombre === 'string'
+                ? seccion.nombre
+                : (seccion?.texto || seccion?.text || `Sección ${seccionIndex + 1}`);
+
+              return (
+                <Box
+                  key={seccionIndex}
+                  sx={{
+                    mb: 1.5,
+                    border: `1px solid ${alpha(theme.palette.divider, 0.6)}`,
+                    borderRadius: 1.5,
+                    overflow: 'hidden'
+                  }}
+                >
+                  {/* Header colapsable */}
+                  <Box
+                    onClick={() => toggleSeccion(seccionIndex)}
+                    sx={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'space-between',
+                      px: 2,
+                      py: 1.25,
+                      cursor: 'pointer',
+                      bgcolor: alpha(theme.palette.primary.main, 0.04),
+                      '&:hover': { bgcolor: alpha(theme.palette.primary.main, 0.08) },
+                      userSelect: 'none'
+                    }}
+                  >
+                    <Typography sx={{ fontWeight: 600, fontSize: 14, color: 'primary.main' }}>
+                      {nombreSeccion}
                     </Typography>
-                    <Grid container spacing={2}>
-                      {datosReporte?.tareaObservada && (
-                        <Grid item xs={12} sm={6}>
-                          <Box display="flex" alignItems="center" gap={1}>
-                            <WorkIcon color="primary" fontSize="small" />
-                            <Typography variant="body2" color="text.secondary">
-                              <strong>Tarea Observada:</strong> {datosReporte.tareaObservada}
-                            </Typography>
-                          </Box>
-                        </Grid>
-                      )}
-                      {datosReporte?.lugarSector && (
-                        <Grid item xs={12} sm={6}>
-                          <Box display="flex" alignItems="center" gap={1}>
-                            <LocationIcon color="primary" fontSize="small" />
-                            <Typography variant="body2" color="text.secondary">
-                              <strong>Lugar / Sector:</strong> {datosReporte.lugarSector}
-                            </Typography>
-                          </Box>
-                        </Grid>
-                      )}
-                      {datosReporte?.equiposInvolucrados && (
-                        <Grid item xs={12} sm={6}>
-                          <Box display="flex" alignItems="center" gap={1}>
-                            <BuildIcon color="primary" fontSize="small" />
-                            <Typography variant="body2" color="text.secondary">
-                              <strong>Equipo/s Involucrado:</strong> {datosReporte.equiposInvolucrados}
-                            </Typography>
-                          </Box>
-                        </Grid>
-                      )}
-                      {datosReporte?.supervisor && (
-                        <Grid item xs={12} sm={6}>
-                          <Box display="flex" alignItems="center" gap={1}>
-                            <SupervisorAccountIcon color="primary" fontSize="small" />
-                            <Typography variant="body2" color="text.secondary">
-                              <strong>Supervisor:</strong> {datosReporte.supervisor}
-                            </Typography>
-                          </Box>
-                        </Grid>
-                      )}
-                      {datosReporte?.numeroTrabajadores && (
-                        <Grid item xs={12} sm={6}>
-                          <Box display="flex" alignItems="center" gap={1}>
-                            <PeopleIcon color="primary" fontSize="small" />
-                            <Typography variant="body2" color="text.secondary">
-                              <strong>N° de Trabajadores:</strong> {datosReporte.numeroTrabajadores}
-                            </Typography>
-                          </Box>
-                        </Grid>
-                      )}
-                    </Grid>
+                    {isExpanded
+                      ? <ExpandMoreIcon fontSize="small" sx={{ color: 'primary.main' }} />
+                      : <ChevronRightIcon fontSize="small" sx={{ color: 'primary.main' }} />
+                    }
                   </Box>
-                )}
 
-                {/* Encargado */}
-                {encargado && (
-                  <Box mt={2} p={2} bgcolor={alpha(theme.palette.info.main, 0.1)} borderRadius={1}>
-                    <Box display="flex" alignItems="center" gap={2}>
-                      <PersonIcon color="info" />
-                      <Box>
-                        <Typography variant="body2" color="text.secondary">
-                          <strong>Encargado asignado:</strong>
-                        </Typography>
-                        <Box display="flex" alignItems="center" gap={1}>
-                          <Avatar sx={{ width: 24, height: 24, fontSize: '0.75rem' }}>
-                            {encargado.displayName ? encargado.displayName.charAt(0).toUpperCase() : encargado.email.charAt(0).toUpperCase()}
-                          </Avatar>
-                          <Typography variant="body2">
-                            {encargado.displayName || 'Sin nombre'} ({encargado.email})
-                          </Typography>
-                        </Box>
-                      </Box>
-                    </Box>
-                  </Box>
-                )}
-              </CardContent>
-            </Card>
+                  {/* Preguntas */}
+                  <Collapse in={isExpanded}>
+                    <Box sx={{ px: 2, pb: 1 }}>
+                      {seccion.preguntas.map((pregunta, preguntaIndex) => {
+                        const respuesta = respuestas?.[seccionIndex]?.[preguntaIndex] || '';
+                        const fileList = archivosPorPregunta?.[seccionIndex]?.[preguntaIndex] || [];
+                        const isNoConforme = respuesta === 'No conforme';
 
-            {/* Estadísticas */}
-            <Card sx={{ mb: 3, border: `2px solid ${alpha(theme.palette.success.main, 0.2)}` }}>
-              <CardContent>
-                <Typography variant="h6" gutterBottom sx={{ color: 'success.main', fontWeight: 600 }}>
-                  Estadísticas de la Auditoría
-                </Typography>
-                
-                <Grid container spacing={2}>
-                  <Grid item xs={6} sm={3}>
-                    <Box textAlign="center">
-                      <Typography variant="h4" color="success.main" sx={{ fontWeight: 'bold' }}>
-                        {estadisticas.Conforme}
-                      </Typography>
-                      <Typography variant="body2" color="text.secondary">
-                        Conforme
-                      </Typography>
-                    </Box>
-                  </Grid>
-                  
-                  <Grid item xs={6} sm={3}>
-                    <Box textAlign="center">
-                      <Typography variant="h4" color="error.main" sx={{ fontWeight: 'bold' }}>
-                        {estadisticas["No conforme"]}
-                      </Typography>
-                      <Typography variant="body2" color="text.secondary">
-                        No Conforme
-                      </Typography>
-                    </Box>
-                  </Grid>
-                  
-                  <Grid item xs={6} sm={3}>
-                    <Box textAlign="center">
-                      <Typography variant="h4" color="warning.main" sx={{ fontWeight: 'bold' }}>
-                        {estadisticas["Necesita mejora"]}
-                      </Typography>
-                      <Typography variant="body2" color="text.secondary">
-                        Necesita Mejora
-                      </Typography>
-                    </Box>
-                  </Grid>
-                  
-                  <Grid item xs={6} sm={3}>
-                    <Box textAlign="center">
-                      <Typography variant="h4" color="text.secondary" sx={{ fontWeight: 'bold' }}>
-                        {estadisticas["No aplica"]}
-                      </Typography>
-                      <Typography variant="body2" color="text.secondary">
-                        No Aplica
-                      </Typography>
-                    </Box>
-                  </Grid>
-                </Grid>
-                
-                <Box mt={2} p={2} bgcolor={alpha(theme.palette.info.main, 0.1)} borderRadius={1}>
-                  <Typography variant="body2" color="text.secondary">
-                    <strong>Progreso:</strong> {preguntasContestadas} de {totalPreguntas} preguntas respondidas
-                    ({Math.round((preguntasContestadas / totalPreguntas) * 100)}%)
-                  </Typography>
-                </Box>
-              </CardContent>
-            </Card>
-
-            {/* Detalle de Preguntas */}
-            <Card sx={{ border: `2px solid ${alpha(theme.palette.info.main, 0.2)}` }}>
-              <CardContent>
-                <Typography variant="h6" gutterBottom sx={{ color: 'info.main', fontWeight: 600 }}>
-                  Detalle de Preguntas y Respuestas
-                </Typography>
-                
-                {secciones && secciones.length > 0 ? (
-                  <List>
-                    {secciones.map((seccion, seccionIndex) => (
-                      <Box key={seccionIndex} mb={3}>
-                        <Typography variant="h6" sx={{ 
-                          color: 'primary.main', 
-                          fontWeight: 600, 
-                          mb: 2,
-                          pb: 1,
-                          borderBottom: `2px solid ${alpha(theme.palette.primary.main, 0.2)}`
-                        }}>
-                          {typeof seccion.nombre === 'string' ? seccion.nombre : (seccion?.texto || seccion?.text || `Sección ${seccionIndex + 1}`)}
-                        </Typography>
-                        
-                        {seccion.preguntas.map((pregunta, preguntaIndex) => {
-                          const respuesta = respuestas?.[seccionIndex]?.[preguntaIndex] || '';
-                          const fileList = archivosPorPregunta?.[seccionIndex]?.[preguntaIndex] || [];
-                          return (
-                            <ListItem key={preguntaIndex} sx={{ 
-                              flexDirection: 'column', 
-                              alignItems: 'flex-start',
-                              p: 2,
-                              mb: 1,
-                              bgcolor: alpha(theme.palette.grey[50], 0.5),
+                        return (
+                          <Box
+                            key={preguntaIndex}
+                            sx={{
+                              mt: 1,
+                              p: 1.25,
                               borderRadius: 1,
-                              border: `1px solid ${alpha(theme.palette.grey[300], 0.5)}`
-                            }}>
-                              <ListItemText
-                                primary={
-                                  <Typography variant="body1" sx={{ fontWeight: 500, mb: 1 }}>
-                                    {typeof pregunta === 'string' ? pregunta : pregunta?.texto || pregunta?.text || ''}
-                                  </Typography>
-                                }
-                                secondary={
-                                  <Box>
-                                    <Box display="flex" alignItems="center" gap={1} mb={fileList.length > 0 ? 1 : 0}>
-                                      {respuesta ? (
-                                        <>
-                                          {getCalificacionIcon(respuesta)}
-                                          <Chip
-                                            label={respuesta}
-                                            color={getCalificacionColor(respuesta)}
-                                            size="small"
-                                            variant="outlined"
-                                          />
-                                        </>
-                                      ) : (
-                                        <Chip
-                                          label="Sin responder"
-                                          color="default"
-                                          size="small"
-                                          variant="outlined"
-                                        />
-                                      )}
-                                    </Box>
-                                    {fileList.length > 0 && (
-                                      <Box mt={1} sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
-                                        {fileList.map((fileRef, fileIndex) => (
-                                          <UnifiedFilePreview key={`${fileRef.fileId || 'file'}-${fileIndex}`} fileRef={fileRef} height={220} />
-                                        ))}
-                                      </Box>
-                                    )}
-                                  </Box>
-                                }
-                                disableTypography
+                              bgcolor: isNoConforme
+                                ? alpha(theme.palette.error.main, 0.05)
+                                : 'transparent',
+                              border: `1px solid ${isNoConforme
+                                ? alpha(theme.palette.error.main, 0.15)
+                                : alpha(theme.palette.divider, 0.4)}`
+                            }}
+                          >
+                            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 1 }}>
+                              <Typography sx={{ fontSize: 13.5, flex: 1 }}>
+                                {typeof pregunta === 'string' ? pregunta : pregunta?.texto || pregunta?.text || ''}
+                              </Typography>
+                              <Chip
+                                label={respuesta || 'Sin responder'}
+                                color={respuesta ? getCalificacionColor(respuesta) : 'default'}
+                                size="small"
+                                variant="outlined"
+                                sx={{ flexShrink: 0, fontSize: 11 }}
                               />
-                            </ListItem>
-                          );
-                        })}
-                      </Box>
-                    ))}
-                  </List>
-                ) : (
-                  <Box textAlign="center" py={3}>
-                    <Typography variant="body2" color="text.secondary">
-                      No hay preguntas disponibles para mostrar
-                    </Typography>
-                  </Box>
-                )}
-              </CardContent>
-            </Card>
-          </Grid>
+                            </Box>
+                            {fileList.length > 0 && (
+                              <Box mt={1} sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+                                {fileList.map((fileRef, fileIndex) => (
+                                  <UnifiedFilePreview
+                                    key={`${fileRef.fileId || 'file'}-${fileIndex}`}
+                                    fileRef={fileRef}
+                                    height={220}
+                                  />
+                                ))}
+                              </Box>
+                            )}
+                          </Box>
+                        );
+                      })}
+                    </Box>
+                  </Collapse>
+                </Box>
+              );
+            })}
+          </Box>
+        ) : (
+          <Box textAlign="center" py={3} mb={3}>
+            <Typography variant="body2" color="text.secondary">
+              No hay preguntas disponibles para mostrar
+            </Typography>
+          </Box>
+        )}
 
-          {/* Columna derecha - Firma */}
-          <Grid item xs={12} lg={4}>
-            <Card sx={{ 
-              border: `2px solid ${alpha(theme.palette.warning.main, 0.2)}`,
-              position: 'sticky',
-              top: 16
-            }}>
-              <CardContent>
-                <Typography variant="h6" gutterBottom sx={{ color: 'warning.main', fontWeight: 600 }}>
-                  <EditIcon sx={{ mr: 1, verticalAlign: 'middle' }} />
-                  Firma del Responsable (Opcional)
-                </Typography>
-                
-                <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
-                  Después de revisar el resumen completo, puede firmar aquí para confirmar la auditoría. Esta firma es opcional.
-                </Typography>
+        {/* Zona de firma */}
+        <Box
+          sx={{
+            border: `2px dashed ${alpha(theme.palette.primary.main, 0.4)}`,
+            borderRadius: 2,
+            p: 3
+          }}
+        >
+          <Typography sx={{ fontSize: 11, fontWeight: 700, letterSpacing: 1, color: 'text.secondary', textTransform: 'uppercase', mb: 0.5 }}>
+            Firma del responsable
+          </Typography>
+          <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+            Al firmar, el responsable del sector confirma haber revisado los resultados.
+          </Typography>
 
-                {firmaResponsable && (
-                  <Alert severity="success" sx={{ mb: 2 }}>
-                    ✅ Firma del responsable completada
-                  </Alert>
-                )}
+          {firmaResponsable && (
+            <Alert severity="success" sx={{ mb: 2 }}>
+              Firma del responsable completada
+            </Alert>
+          )}
 
-                <Firma 
-                  title="Firma del Responsable de la Empresa (Opcional)" 
-                  setFirmaURL={onSaveFirmaResponsable}
-                  firmaExistente={firmaResponsable}
-                />
-
-                {firmaResponsable && (
-                  <Box mt={2} p={2} bgcolor={alpha(theme.palette.success.main, 0.1)} borderRadius={1}>
-                    <Typography variant="body2" color="success.main" sx={{ fontWeight: 500 }}>
-                      ✅ Firma del responsable guardada. Puede cerrar este resumen y continuar.
-                    </Typography>
-                  </Box>
-                )}
-
-                {!firmaResponsable && (
-                  <Box mt={2} p={2} bgcolor={alpha(theme.palette.info.main, 0.1)} borderRadius={1}>
-                    <Typography variant="body2" color="info.main" sx={{ fontWeight: 500 }}>
-                      ℹ️ La firma del responsable es opcional. Puede continuar sin firmar.
-                    </Typography>
-                  </Box>
-                )}
-              </CardContent>
-            </Card>
-          </Grid>
-        </Grid>
+          <Firma
+            title="Firma del Responsable de la Empresa (Opcional)"
+            setFirmaURL={onSaveFirmaResponsable}
+            firmaExistente={firmaResponsable}
+          />
+        </Box>
       </DialogContent>
 
-      <DialogActions sx={{ p: 3, pt: 1 }}>
-        <Button onClick={onClose} variant="contained" color="primary">
-          {firmaResponsable ? 'Cerrar Resumen' : 'Cerrar sin Firmar (Opcional)'}
-        </Button>
+      <DialogActions sx={{ px: 3, py: 2, borderTop: `1px solid ${theme.palette.divider}`, gap: 1 }}>
+        {firmaResponsable ? (
+          <>
+            <Button onClick={onClose} variant="outlined" color="inherit">
+              Cerrar sin firmar
+            </Button>
+            <Button onClick={onClose} variant="contained" color="primary">
+              Confirmar y cerrar
+            </Button>
+          </>
+        ) : (
+          <Button onClick={onClose} variant="outlined" color="inherit">
+            Cerrar sin firmar
+          </Button>
+        )}
       </DialogActions>
     </Dialog>
   );
 };
 
-export default ResumenAuditoriaModal; 
-
-
-
+export default ResumenAuditoriaModal;

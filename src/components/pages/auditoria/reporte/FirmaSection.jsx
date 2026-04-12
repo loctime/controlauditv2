@@ -21,7 +21,6 @@ import {
 } from "@mui/material";
 import { CheckCircle, Edit, Person, Visibility, Save, Clear, Upload, Download } from "@mui/icons-material";
 import { useAuth } from '@/components/context/AuthContext';
-import SignaturePad from 'react-signature-canvas';
 import Swal from 'sweetalert2';
 import './ReportesPage.css'; // Asegúrate de que la clase CSS esté disponible
 import FirmaDigital from '../../../common/FirmaDigital';
@@ -29,6 +28,163 @@ import FirmaDigital from '../../../common/FirmaDigital';
 const capitalizeWords = (str) => {
   return str.replace(/\b\w+/g, (word) => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase());
 };
+
+const NativeSignaturePad = React.forwardRef(({ minWidth = 1, backgroundColor = '#ffffff' }, ref) => {
+  const canvasRef = useRef(null);
+  const isDrawing = useRef(false);
+  const lastPoint = useRef(null);
+  const strokesRef = useRef([]);
+  const currentStroke = useRef([]);
+
+  const redraw = (ctx, strokes) => {
+    const canvas = ctx.canvas;
+    const ratio = window.devicePixelRatio || 1;
+    ctx.fillStyle = backgroundColor;
+    ctx.fillRect(0, 0, canvas.width / ratio, canvas.height / ratio);
+    strokes.forEach(stroke => {
+      if (!stroke || stroke.length === 0) return;
+      ctx.strokeStyle = '#000';
+      ctx.lineWidth = minWidth;
+      ctx.lineCap = 'round';
+      ctx.lineJoin = 'round';
+      if (stroke.length === 1) {
+        ctx.beginPath();
+        ctx.arc(stroke[0].x, stroke[0].y, minWidth / 2, 0, Math.PI * 2);
+        ctx.fillStyle = '#000';
+        ctx.fill();
+      } else {
+        ctx.beginPath();
+        ctx.moveTo(stroke[0].x, stroke[0].y);
+        for (let i = 1; i < stroke.length; i++) ctx.lineTo(stroke[i].x, stroke[i].y);
+        ctx.stroke();
+      }
+    });
+  };
+
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    let observer;
+
+    const setupObserver = () => {
+      observer = new ResizeObserver(() => {
+        const ratio = window.devicePixelRatio || 1;
+        const ctx = canvas.getContext('2d', { willReadFrequently: true });
+        const data = [...strokesRef.current];
+        canvas.width = canvas.offsetWidth * ratio;
+        canvas.height = canvas.offsetHeight * ratio;
+        ctx.setTransform(1, 0, 0, 1, 0, 0);
+        ctx.scale(ratio, ratio);
+        redraw(ctx, data);
+      });
+      observer.observe(canvas);
+    };
+
+    const initCanvas = () => {
+      if (canvas.offsetWidth === 0) return false;
+      const ratio = window.devicePixelRatio || 1;
+      const ctx = canvas.getContext('2d', { willReadFrequently: true });
+      canvas.width = canvas.offsetWidth * ratio;
+      canvas.height = canvas.offsetHeight * ratio;
+      ctx.setTransform(1, 0, 0, 1, 0, 0);
+      ctx.scale(ratio, ratio);
+      canvas.style.touchAction = 'none';
+      ctx.fillStyle = backgroundColor;
+      ctx.fillRect(0, 0, canvas.offsetWidth, canvas.offsetHeight);
+      setupObserver();
+      return true;
+    };
+
+    if (!initCanvas()) {
+      const retry = setTimeout(() => { initCanvas(); }, 150);
+      return () => { clearTimeout(retry); observer?.disconnect(); };
+    }
+
+    return () => observer?.disconnect();
+  }, [backgroundColor]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  React.useImperativeHandle(ref, () => ({
+    clear: () => {
+      const canvas = canvasRef.current;
+      if (!canvas) return;
+      const ratio = window.devicePixelRatio || 1;
+      const ctx = canvas.getContext('2d', { willReadFrequently: true });
+      ctx.fillStyle = backgroundColor;
+      ctx.fillRect(0, 0, canvas.width / ratio, canvas.height / ratio);
+      strokesRef.current = [];
+    },
+    isEmpty: () => strokesRef.current.length === 0,
+    toData: () => strokesRef.current,
+    fromData: (data) => {
+      strokesRef.current = data || [];
+      const canvas = canvasRef.current;
+      if (!canvas) return;
+      redraw(canvas.getContext('2d', { willReadFrequently: true }), strokesRef.current);
+    },
+    getTrimmedCanvas: () => canvasRef.current,
+  }));
+
+  const getPos = (e) => {
+    const rect = canvasRef.current.getBoundingClientRect();
+    return { x: e.clientX - rect.left, y: e.clientY - rect.top };
+  };
+
+  const getTouchPos = (e) => {
+    const rect = canvasRef.current.getBoundingClientRect();
+    const touch = e.touches[0];
+    return { x: touch.clientX - rect.left, y: touch.clientY - rect.top };
+  };
+
+  const startDraw = (x, y) => {
+    isDrawing.current = true;
+    lastPoint.current = { x, y };
+    currentStroke.current = [{ x, y }];
+  };
+
+  const draw = (x, y) => {
+    if (!isDrawing.current || !lastPoint.current) return;
+    const ctx = canvasRef.current.getContext('2d', { willReadFrequently: true });
+    const prev = lastPoint.current;
+    const midX = (prev.x + x) / 2;
+    const midY = (prev.y + y) / 2;
+
+    ctx.beginPath();
+    ctx.moveTo(prev.x, prev.y);
+    ctx.quadraticCurveTo(prev.x, prev.y, midX, midY);
+    ctx.strokeStyle = '#000';
+    ctx.lineWidth = minWidth + 1.5;
+    ctx.lineCap = 'round';
+    ctx.lineJoin = 'round';
+    ctx.stroke();
+
+    lastPoint.current = { x, y };
+    currentStroke.current.push({ x, y });
+  };
+
+  const endDraw = () => {
+    if (!isDrawing.current) return;
+    isDrawing.current = false;
+    if (currentStroke.current.length > 0) {
+      strokesRef.current = [...strokesRef.current, [...currentStroke.current]];
+      currentStroke.current = [];
+    }
+    lastPoint.current = null;
+  };
+
+  return (
+    <canvas
+      ref={canvasRef}
+      style={{ width: '100%', height: '200px', display: 'block', cursor: 'crosshair' }}
+      onMouseDown={(e) => { const p = getPos(e); startDraw(p.x, p.y); }}
+      onMouseMove={(e) => { const p = getPos(e); draw(p.x, p.y); }}
+      onMouseUp={endDraw}
+      onMouseLeave={endDraw}
+      onTouchStart={(e) => { e.preventDefault(); const p = getTouchPos(e); startDraw(p.x, p.y); }}
+      onTouchMove={(e) => { e.preventDefault(); const p = getTouchPos(e); draw(p.x, p.y); }}
+      onTouchEnd={(e) => { e.preventDefault(); endDraw(); }}
+    />
+  );
+});
 
 const FirmaSection = ({ 
   isPdf = false, 
@@ -104,26 +260,6 @@ const FirmaSection = ({
       setSignatureData('');
     }
   }, [modalCrearFirmaAbierto, userProfile]);
-
-  // Optimizar canvas después del montaje
-  useEffect(() => {
-    const optimizeCanvas = () => {
-      if (sigPadRef.current && sigPadRef.current._canvas) {
-        const canvas = sigPadRef.current._canvas;
-        // Configurar willReadFrequently directamente en el canvas
-        canvas.willReadFrequently = true;
-        logger.debug('[FirmaSection] Canvas optimizado para lecturas frecuentes');
-      }
-    };
-
-    // Intentar optimizar inmediatamente
-    optimizeCanvas();
-    
-    // Si no está disponible inmediatamente, intentar después de un breve delay
-    const timeoutId = setTimeout(optimizeCanvas, 100);
-    
-    return () => clearTimeout(timeoutId);
-  }, []);
 
   const handleSaveFirmaAuditor = (url) => {
     setFirmaAuditorURL(url);
@@ -447,12 +583,12 @@ const FirmaSection = ({
                 sx={{ mb: 2 }}
                 color={firmaResponsableURL ? "success" : "primary"}
               >
-                {firmaResponsableURL ? 'Ver Resumen y Firma' : 'Revisar y Firmar (Opcional)'}
+                {firmaResponsableURL ? 'Ver Resumen y Firma' : 'Revisar y hacer Firmar (Opcional)'}
               </Button>
               <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
                 {firmaResponsableURL 
                   ? 'Firma del responsable completada. Puede revisar el resumen nuevamente.'
-                  : 'Revisa todos los detalles y opcionalmente firma la auditoría'
+                  : 'Revisa el resultado de la auditoria y registra la firma del responsable del sector'
                 }
               </Typography>
               
@@ -609,21 +745,17 @@ const FirmaSection = ({
                   <Typography variant="subtitle1" gutterBottom>
                     Dibuja tu Firma
                   </Typography>
-                  <Paper 
-                    elevation={2} 
-                    sx={{ 
+                  <Paper
+                    elevation={2}
+                    sx={{
                       border: `2px solid ${theme.palette.divider}`,
                       backgroundColor: theme.palette.mode === 'dark' ? theme.palette.background.paper : '#fff',
                       mb: 2
                     }}
                   >
-                    <SignaturePad
+                    <NativeSignaturePad
                       ref={sigPadRef}
-                      canvasProps={{
-                        width: 400,
-                        height: 200,
-                        className: 'signature-canvas'
-                      }}
+                      minWidth={1}
                       backgroundColor={theme.palette.mode === 'dark' ? theme.palette.background.paper : "#ffffff"}
                     />
                   </Paper>
