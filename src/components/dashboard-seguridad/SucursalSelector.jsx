@@ -65,6 +65,9 @@ export default function SucursalSelector({
               if (!sucursales || sucursales.length === 0 || val === 'no-sucursales') {
                 return 'No hay sucursales';
               }
+              if (val === 'todas' || !val) {
+                return 'Todas las sucursales';
+              }
               const found = sucursales.find(s => s.id === val);
               return found?.nombre || 'Sucursal';
             }}

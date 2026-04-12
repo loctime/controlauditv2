@@ -30,13 +30,15 @@ import {
   CloudUpload as CloudUploadIcon
 } from '@mui/icons-material';
 import { useAuth } from '@/components/context/AuthContext';
+import { useGlobalSelection } from '@/hooks/useGlobalSelection';
 import EmpleadoFormModal from './EmpleadoForm';
 import ImportEmpleadosDialog from './import/ImportEmpleadosDialog';
 import { empleadoService } from '../../../services/empleadoService';
 import SinSucursalAlert from '@/components/common/SinSucursalAlert';
 
 export default function Empleados() {
-  const { userProfile, loadingSucursales, role, selectedEmpresa, selectedSucursal } = useAuth();
+  const { userProfile, loadingSucursales, role } = useAuth();
+  const { empresaId: selectedEmpresa, sucursalId: selectedSucursal } = useGlobalSelection();
   
   // Determinar si el usuario puede crear empleados
   // Admin/superdev siempre puede crear, operario solo si no está bloqueado y está activo
@@ -57,7 +59,14 @@ export default function Empleados() {
   const [openImportDialog, setOpenImportDialog] = useState(false);
 
   const loadEmpleados = useCallback(async () => {
-    if (!userProfile?.ownerId || !selectedSucursal) {
+    if (!userProfile?.ownerId) {
+      setEmpleados([]);
+      setLoading(false);
+      return;
+    }
+
+    // Sin empresa seleccionada no hay contexto para cargar
+    if (!selectedEmpresa || selectedEmpresa === 'todas') {
       setEmpleados([]);
       setLoading(false);
       return;
@@ -66,8 +75,10 @@ export default function Empleados() {
     setLoading(true);
     try {
       const ownerId = userProfile.ownerId;
-      const empleadosData = await empleadoService.getEmpleadosBySucursal(ownerId, selectedSucursal);
-      
+      const empleadosData = selectedSucursal === 'todas'
+        ? await empleadoService.getEmpleadosByEmpresa(ownerId, selectedEmpresa)
+        : await empleadoService.getEmpleadosBySucursal(ownerId, selectedSucursal);
+
       setEmpleados(empleadosData);
     } catch (error) {
       logger.error('Error al cargar empleados:', error);
@@ -75,18 +86,12 @@ export default function Empleados() {
     } finally {
       setLoading(false);
     }
-  }, [selectedSucursal, userProfile?.ownerId]);
+  }, [selectedEmpresa, selectedSucursal, userProfile?.ownerId]);
 
   // Cargar empleados
   useEffect(() => {
-    if (selectedSucursal) {
-      loadEmpleados();
-    } else {
-      // Si no hay sucursal seleccionada, limpiar empleados
-      setEmpleados([]);
-      setLoading(false);
-    }
-  }, [selectedSucursal, loadEmpleados]);
+    loadEmpleados();
+  }, [loadEmpleados]);
 
   const handleOpenForm = (empleado = null) => {
     setSelectedEmpleado(empleado);
@@ -189,8 +194,8 @@ export default function Empleados() {
       </Box>
 
       {/* Alertas de estado */}
-      {!selectedSucursal ? (
-        <SinSucursalAlert empresaId={selectedEmpresa !== 'todas' ? selectedEmpresa : undefined} />
+      {(!selectedEmpresa || selectedEmpresa === 'todas') ? (
+        <SinSucursalAlert empresaId={undefined} />
       ) : null}
 
       
@@ -266,16 +271,10 @@ export default function Empleados() {
           <Box sx={{ display: 'flex', justifyContent: 'center', p: 4 }}>
             <CircularProgress />
           </Box>
-        ) : !selectedSucursal ? (
-          <Box sx={{ p: 4, textAlign: 'center' }}>
-            <Typography color="text.secondary">
-              Selecciona una sucursal para ver los empleados
-            </Typography>
-          </Box>
         ) : filteredEmpleados.length === 0 ? (
           <Box sx={{ p: 4, textAlign: 'center' }}>
             <Typography color="text.secondary" sx={{ mb: 2 }}>
-              No hay empleados registrados en esta sucursal
+              No hay empleados registrados
             </Typography>
             {canCreateEmpleado && (
               <Button

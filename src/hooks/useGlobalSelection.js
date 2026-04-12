@@ -63,18 +63,20 @@ export const useGlobalSelection = () => {
     return userSucursales?.filter(s => s.empresaId === empresaId) || [];
   }, [empresaId, isTodasEmpresas, userSucursales]);
 
-  // Auto-seleccionar primera sucursal cuando la empresa cambia y la sucursal actual no es válida
+  // Resetear sucursal a 'todas' cuando la empresa cambia y la sucursal actual no pertenece a ella
   useEffect(() => {
     if (isTodasEmpresas) return;
-    if (sucursalId === 'todas') return;
+
+    // Si el estado real tiene un ID que no pertenece a la empresa actual, sincronizar a 'todas'
+    if (sucursalId === 'todas') {
+      if (globalSelectedSucursal && globalSelectedSucursal !== 'todas') {
+        setGlobalSelectedSucursal('todas');
+      }
+      return;
+    }
 
     const sucursalValida = sucursalesDisponibles.find(s => s.id === sucursalId);
-    if (sucursalValida) return; // La sucursal es válida, no hacer nada
-
-    // La sucursal no es válida, auto-seleccionar la primera disponible o 'todas'
-    if (sucursalesDisponibles.length > 0) {
-      setGlobalSelectedSucursal(sucursalesDisponibles[0].id);
-    } else if (sucursalId !== 'todas') {
+    if (!sucursalValida) {
       setGlobalSelectedSucursal('todas');
     }
   }, [empresaId, sucursalId, isTodasEmpresas, sucursalesDisponibles, globalSelectedSucursal, setGlobalSelectedSucursal]);
