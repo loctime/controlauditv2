@@ -375,17 +375,7 @@ export const useAuditoriaHandlers = ({
   const handleAnterior = useCallback(() => {
     setNavegacionError("");
     
-    // Permitir siempre ir al paso 0 o 1 (selección de datos básicos)
-    if (activeStep === 2) {
-      setActiveStep(1);
-      return;
-    }
-    
-    if (activeStep === 1) {
-      setActiveStep(0);
-      return;
-    }
-    
+    // Si hay firmas válidas y no es el primer paso, mostrar confirmación
     if (firmasValidas && activeStep > 0) {
       Swal.fire({
         title: '¿Información',
@@ -404,6 +394,7 @@ export const useAuditoriaHandlers = ({
       return;
     }
     
+    // Para todos los demás casos, permitir navegación hacia atrás
     setActiveStep((prev) => Math.max(prev - 1, 0));
   }, [activeStep, firmasValidas, setNavegacionError, setActiveStep]);
 

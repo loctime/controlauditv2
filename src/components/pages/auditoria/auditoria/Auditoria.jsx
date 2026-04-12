@@ -535,8 +535,10 @@ const AuditoriaRefactorizada = () => {
               }, 100);
             }, 50);
             
-            // SIMPLIFICADO: Siempre ir al paso de preguntas si hay respuestas guardadas
-            setActiveStep(2); // Paso de preguntas
+            // SIMPLIFICADO: Ir al paso de preguntas si hay respuestas guardadas Y no viene de agenda
+            if (!location.state?.auditoriaId) {
+              setActiveStep(2); // Paso de preguntas
+            }
             setHasUnsavedChanges(false);
             setLastSaved(savedData.timestamp);
             
@@ -686,24 +688,27 @@ const AuditoriaRefactorizada = () => {
   // Ref para evitar logs repetidos del mismo estado
   const ultimoPaso2CompletoRef = useRef(null);
   
+  // Optimización: Memoizar estado de pasos para evitar ejecuciones constantes
+  const estadoPasos = useMemo(() => ({
+    paso0: pasoCompleto(0, { empresaSeleccionada, sucursalSeleccionada, formularioSeleccionadoId, respuestas, sucursales }),
+    paso1: pasoCompleto(1, { empresaSeleccionada, sucursalSeleccionada, formularioSeleccionadoId, respuestas, sucursales }),
+    paso2: pasoCompleto(2, { empresaSeleccionada, sucursalSeleccionada, formularioSeleccionadoId, respuestas, sucursales }),
+    paso3: pasoCompleto(3, { empresaSeleccionada, sucursalSeleccionada, formularioSeleccionadoId, respuestas, sucursales }),
+    paso4: pasoCompleto(4, { empresaSeleccionada, sucursalSeleccionada, formularioSeleccionadoId, respuestas, sucursales }),
+  }), [empresaSeleccionada, sucursalSeleccionada, formularioSeleccionadoId, respuestas, sucursales]);
+
+  // Función optimizada para pasoCompleto usando resultados memoizados
   const pasoCompletoAuditoria = useCallback((step) => {
-    const resultado = pasoCompleto(step, {
-      empresaSeleccionada,
-      sucursalSeleccionada,
-      formularioSeleccionadoId,
-      respuestas,
-      sucursales
-    });
+    const resultado = estadoPasos[`paso${step}`] ?? false;
     
-    // Log solo cuando el resultado del paso 2 realmente cambia (no en cada render)
+    // Log solo cuando el resultado del paso 2 realmente cambia
     if (step === 2 && ultimoPaso2CompletoRef.current !== resultado) {
       ultimoPaso2CompletoRef.current = resultado;
-      // Log solo cuando cambia el estado, no en cada render
       logger.debug(`[DEBUG] Paso 2 completo: ${resultado}`);
     }
     
     return resultado;
-  }, [empresaSeleccionada, sucursalSeleccionada, formularioSeleccionadoId, respuestas, sucursales]);
+  }, [estadoPasos]);
 
   // Estado para forzar re-render
   const [forceUpdate, setForceUpdate] = useState(0);
@@ -882,15 +887,6 @@ const AuditoriaRefactorizada = () => {
       logger.debug('[DEBUG Auditoria] Salto automático al paso Preguntas por agenda');
     }
   }, [location.state, empresaSeleccionada, sucursalSeleccionada, formularioSeleccionadoId, activeStep]);
-
-  // Debug: Verificar clasificaciones antes de crear pasos
-  useEffect(() => {
-    logger.debug('🔍 [Auditoria] clasificaciones en estado:', clasificaciones);
-    logger.debug('🔍 [Auditoria] Tipo:', typeof clasificaciones, Array.isArray(clasificaciones));
-    if (Array.isArray(clasificaciones) && clasificaciones.length > 0) {
-      logger.debug('🔍 [Auditoria] Contenido:', JSON.stringify(clasificaciones, null, 2));
-    }
-  }, [clasificaciones]);
 
   // Generar auditId temporal para la sesión (se usará para subir imágenes)
   const auditId = useMemo(() => {

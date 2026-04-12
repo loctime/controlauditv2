@@ -31,9 +31,6 @@ export const todasLasPreguntasContestadas = (respuestas) => {
     return todasRespondidas;
   });
   
-  // Solo loggear en debug si es necesario (evitar logs repetidos)
-  logger.debug('Validación de preguntas completadas', { resultado });
-  
   return resultado;
 };
 
