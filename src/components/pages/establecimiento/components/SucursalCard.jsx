@@ -6,6 +6,8 @@ import {
   IconButton,
   Typography,
   Tooltip,
+  Button,
+  Divider,
   useTheme
 } from '@mui/material';
 import PeopleIcon from '@mui/icons-material/People';
@@ -13,6 +15,8 @@ import SchoolIcon from '@mui/icons-material/School';
 import ReportProblemIcon from '@mui/icons-material/ReportProblem';
 import EditIcon from '@mui/icons-material/Edit';
 import DeleteIcon from '@mui/icons-material/Delete';
+import AccessTimeIcon from '@mui/icons-material/AccessTime';
+import TrackChangesIcon from '@mui/icons-material/TrackChanges';
 
 const SucursalCard = React.memo(({
   sucursal,
@@ -36,6 +40,8 @@ const SucursalCard = React.memo(({
     navigateToPage('/accidentes', { empresaId, sucursalId: sucursal.id });
   };
 
+  const acciHayAccidentesAbiertos = stats.accidentesAbiertos > 0;
+
   return (
     <Card
       variant="outlined"
@@ -50,76 +56,125 @@ const SucursalCard = React.memo(({
         sx={{
           display: 'flex',
           alignItems: 'center',
-          gap: 2,
-          py: 1.5,
-          '&:last-child': { pb: 1.5 }
+          gap: 3,
+          py: 2,
+          '&:last-child': { pb: 2 }
         }}
       >
-        {/* Nombre + dirección */}
+        {/* Nombre + info */}
         <Box sx={{ flex: 1, minWidth: 0 }}>
-          <Typography variant="subtitle2" sx={{ fontWeight: 700, lineHeight: 1.2 }} noWrap>
+          <Typography variant="subtitle1" sx={{ fontWeight: 700, lineHeight: 1.3 }} noWrap>
             {sucursal.nombre}
           </Typography>
-          {sucursal.direccion && (
-            <Typography variant="caption" color="text.secondary" noWrap>
-              {sucursal.direccion}
-            </Typography>
-          )}
+          <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1.5, mt: 0.5, alignItems: 'center' }}>
+            {sucursal.direccion && (
+              <Typography variant="caption" color="text.secondary" noWrap>
+                {sucursal.direccion}
+              </Typography>
+            )}
+            {sucursal.direccion && (sucursal.horasSemanales || sucursal.targetAnualAuditorias || sucursal.targetMensualCapacitaciones) && (
+              <Divider orientation="vertical" flexItem sx={{ height: 12, alignSelf: 'center' }} />
+            )}
+            {sucursal.horasSemanales && (
+              <Tooltip title="Horas semanales">
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.3 }}>
+                  <AccessTimeIcon sx={{ fontSize: 12, color: 'text.disabled' }} />
+                  <Typography variant="caption" color="text.secondary">
+                    {sucursal.horasSemanales}h/sem
+                  </Typography>
+                </Box>
+              </Tooltip>
+            )}
+            {sucursal.targetAnualAuditorias > 0 && (
+              <Tooltip title="Target anual de auditorías">
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.3 }}>
+                  <TrackChangesIcon sx={{ fontSize: 12, color: 'text.disabled' }} />
+                  <Typography variant="caption" color="text.secondary">
+                    {sucursal.targetAnualAuditorias} aud/año
+                  </Typography>
+                </Box>
+              </Tooltip>
+            )}
+            {sucursal.targetMensualCapacitaciones > 0 && (
+              <Tooltip title="Target mensual de capacitaciones">
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.3 }}>
+                  <SchoolIcon sx={{ fontSize: 12, color: 'text.disabled' }} />
+                  <Typography variant="caption" color="text.secondary">
+                    {sucursal.targetMensualCapacitaciones} cap/mes
+                  </Typography>
+                </Box>
+              </Tooltip>
+            )}
+          </Box>
         </Box>
 
-        {/* Stats navegables */}
-        <Box sx={{ display: 'flex', gap: 2, alignItems: 'center', flexShrink: 0 }}>
-          <Tooltip title={`${stats.empleados} empleado(s) — ir a módulo`}>
-            <Box
+        {/* Botones de navegación a módulos */}
+        <Box sx={{ display: 'flex', gap: 1, alignItems: 'center', flexShrink: 0 }}>
+          <Tooltip title="Ver empleados">
+            <Button
+              variant="outlined"
+              size="small"
+              startIcon={<PeopleIcon />}
               onClick={handleNavEmpleados}
               sx={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: 0.5,
-                cursor: 'pointer',
-                '&:hover': { color: theme.palette.primary.main }
+                textTransform: 'none',
+                borderColor: theme.palette.divider,
+                color: 'text.secondary',
+                '&:hover': {
+                  borderColor: theme.palette.primary.main,
+                  color: theme.palette.primary.main,
+                  backgroundColor: `${theme.palette.primary.main}08`
+                }
               }}
             >
-              <PeopleIcon sx={{ fontSize: 15, color: 'inherit' }} />
-              <Typography variant="body2">{stats.empleados}</Typography>
-            </Box>
+              {stats.empleados}
+            </Button>
           </Tooltip>
 
-          <Tooltip title={`${stats.capacitaciones} capacitación(es) — ir a módulo`}>
-            <Box
+          <Tooltip title="Ver capacitaciones">
+            <Button
+              variant="outlined"
+              size="small"
+              startIcon={<SchoolIcon />}
               onClick={handleNavCapacitaciones}
               sx={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: 0.5,
-                cursor: 'pointer',
-                '&:hover': { color: theme.palette.secondary.main }
+                textTransform: 'none',
+                borderColor: theme.palette.divider,
+                color: 'text.secondary',
+                '&:hover': {
+                  borderColor: theme.palette.secondary.main,
+                  color: theme.palette.secondary.main,
+                  backgroundColor: `${theme.palette.secondary.main}08`
+                }
               }}
             >
-              <SchoolIcon sx={{ fontSize: 15, color: 'inherit' }} />
-              <Typography variant="body2">{stats.capacitaciones}</Typography>
-            </Box>
+              {stats.capacitaciones}
+            </Button>
           </Tooltip>
 
-          <Tooltip title={`${stats.accidentes} accidente(s) — ir a módulo`}>
-            <Box
+          <Tooltip title={acciHayAccidentesAbiertos ? `${stats.accidentesAbiertos} accidente(s) abierto(s)` : 'Ver accidentes'}>
+            <Button
+              variant="outlined"
+              size="small"
+              startIcon={<ReportProblemIcon />}
               onClick={handleNavAccidentes}
               sx={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: 0.5,
-                cursor: 'pointer',
-                color: stats.accidentesAbiertos > 0 ? 'error.main' : 'inherit',
-                '&:hover': { color: theme.palette.error.main }
+                textTransform: 'none',
+                borderColor: acciHayAccidentesAbiertos ? theme.palette.error.main : theme.palette.divider,
+                color: acciHayAccidentesAbiertos ? theme.palette.error.main : 'text.secondary',
+                '&:hover': {
+                  borderColor: theme.palette.error.main,
+                  color: theme.palette.error.main,
+                  backgroundColor: `${theme.palette.error.main}08`
+                }
               }}
             >
-              <ReportProblemIcon sx={{ fontSize: 15, color: 'inherit' }} />
-              <Typography variant="body2" color="inherit">{stats.accidentes}</Typography>
-            </Box>
+              {stats.accidentes}
+            </Button>
           </Tooltip>
         </Box>
 
-        {/* Acciones */}
+        {/* Acciones editar / eliminar */}
         <Box sx={{ display: 'flex', gap: 0.5, flexShrink: 0 }}>
           <Tooltip title="Editar sucursal">
             <IconButton
