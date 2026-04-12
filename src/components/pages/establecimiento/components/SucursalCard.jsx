@@ -25,12 +25,10 @@ const SucursalCard = React.memo(({
   const theme = useTheme();
 
   const handleNavEmpleados = () => {
-    localStorage.setItem('selectedSucursal', sucursal.id);
     navigateToPage('/empleados', sucursal.id);
   };
 
   const handleNavCapacitaciones = () => {
-    localStorage.setItem('selectedSucursal', sucursal.id);
     navigateToPage('/capacitaciones', sucursal.id);
   };
 
