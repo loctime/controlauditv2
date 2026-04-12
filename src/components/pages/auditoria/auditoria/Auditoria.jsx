@@ -579,8 +579,25 @@ const AuditoriaRefactorizada = () => {
               todasCompletadas: todasLasPreguntasContestadas(respuestasRestauradas)
             });
           } else {
-            // Limpiar datos guardados si no se quiere restaurar
-            await autoSaveService.clearLocalStorage(userProfile.uid);
+            // Pedir segunda confirmación antes de borrar el progreso
+            const confirmDelete = await Swal.fire({
+              title: '¿Estás seguro?',
+              text: 'Se perderá todo el progreso guardado de la auditoría anterior. Esta acción no se puede deshacer.',
+              icon: 'warning',
+              showCancelButton: true,
+              confirmButtonText: 'Sí, empezar de cero',
+              cancelButtonText: 'Volver',
+              confirmButtonColor: '#d33',
+              reverseButtons: true
+            });
+
+            if (confirmDelete.isConfirmed) {
+              await autoSaveService.clearLocalStorage(userProfile.uid);
+            } else {
+              // Volver a mostrar el primer diálogo
+              restoreAttemptedRef.current = false;
+              restoreAuditoria();
+            }
           }
         } else {
           // No hay datos para restaurar, marcar como intentado
@@ -1191,6 +1208,8 @@ const AuditoriaRefactorizada = () => {
             onClick={() => {
               setBloquearDatosAgenda(false);
               setOpenAlertaEdicion(false);
+              setAuditoriaIdAgenda(null);
+              navigate('/auditoria', { replace: true, state: null });
               log("El usuario desbloqueó los datos de agenda para edición manual.");
               setSnackbarMsg("Ahora puedes editar los datos de empresa, sucursal y formulario.");
               setSnackbarType("info");
