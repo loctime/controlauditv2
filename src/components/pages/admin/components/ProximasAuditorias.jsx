@@ -12,7 +12,7 @@ import {
 } from "@mui/material";
 import { Schedule, Person, PersonOff } from "@mui/icons-material";
 
-const ProximasAuditorias = ({ auditoriasPendientes }) => {
+const ProximasAuditorias = ({ auditoriasPendientes, onSelectDate }) => {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
 
@@ -46,6 +46,13 @@ const ProximasAuditorias = ({ auditoriasPendientes }) => {
     if (!encargado) return '';
     const nombre = getNombreUsuario(encargado);
     return nombre ? nombre.charAt(0).toUpperCase() : '';
+  };
+
+  const handleCardClick = (auditoria) => {
+    if (onSelectDate && auditoria.fecha) {
+      const fecha = new Date(auditoria.fecha);
+      onSelectDate(fecha);
+    }
   };
 
   return (
@@ -115,14 +122,19 @@ const ProximasAuditorias = ({ auditoriasPendientes }) => {
               return (
                 <Box 
                   key={`${auditoria.id}-${idx}`} 
+                  onClick={() => handleCardClick(auditoria)}
                   sx={{
                     p: isMobile ? 2 : 2.5,
                     borderRadius: 2,
                     bgcolor: 'background.paper',
                     border: `1px solid ${alpha(theme.palette.divider, 0.5)}`,
+                    cursor: 'pointer',
+                    transition: 'all 0.2s ease-in-out',
                     '&:hover': {
                       bgcolor: alpha(theme.palette.primary.main, 0.05),
-                      borderColor: theme.palette.primary.main
+                      borderColor: theme.palette.primary.main,
+                      transform: 'translateY(-2px)',
+                      boxShadow: '0 4px 12px rgba(0,0,0,0.1)'
                     }
                   }}
                 >

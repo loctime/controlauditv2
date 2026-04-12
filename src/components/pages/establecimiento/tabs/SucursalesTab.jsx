@@ -4,26 +4,16 @@ import {
   Box,
   Button,
   CircularProgress,
-  Paper,
   Typography,
-  Table,
-  TableBody,
-  TableContainer,
   useTheme
 } from '@mui/material';
-import StorefrontIcon from '@mui/icons-material/Storefront';
 import { useAuth } from '@/components/context/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import Swal from 'sweetalert2';
-import EmpleadosContent from './EmpleadosContent';
-import CapacitacionesContent from './CapacitacionesContent';
-import AccidentesContent from './AccidentesContent';
-import AccionesRequeridas from '../components/AccionesRequeridas';
 import { registrarAccionSistema } from '../../../../utils/firestoreUtils';
 import { calcularProgresoTargets } from '../../../../utils/sucursalTargetUtils';
 import { useSucursalesStats } from '../hooks/useSucursalesStats';
-import SucursalTableHeader from '../components/SucursalTableHeader';
-import SucursalRow from '../components/SucursalRow';
+import SucursalCard from '../components/SucursalCard';
 import SucursalFormModal from '../components/SucursalFormModal';
 import { sucursalService } from '../../../../services/sucursalService';
 
@@ -32,13 +22,11 @@ const SucursalesTab = ({ empresaId, empresaNombre, userEmpresas, loadEmpresasSta
   const navigate = useNavigate();
   const theme = useTheme();
   const { sucursalesStats, loadSucursalesStats } = useSucursalesStats();
-  
+
   const [sucursales, setSucursales] = useState([]);
   const [loading, setLoading] = useState(false);
-  const [expandedRows, setExpandedRows] = useState(new Set());
   const [targetsProgreso, setTargetsProgreso] = useState({});
-  const [activeTabPerSucursal, setActiveTabPerSucursal] = useState({});
-  
+
   // Estado del modal unificado
   const [openModal, setOpenModal] = useState(false);
   const [modalMode, setModalMode] = useState('create'); // 'create' o 'edit'
@@ -76,10 +64,10 @@ const SucursalesTab = ({ empresaId, empresaNombre, userEmpresas, loadEmpresasSta
       }
       const sucursalesData = await sucursalService.listByEmpresa(ownerId, empresaId);
       setSucursales(sucursalesData);
-      
+
       // Cargar estadísticas de cada sucursal
       await loadSucursalesStats(sucursalesData, ownerId);
-      
+
       // Cargar progreso de targets mensuales
       const progresos = await calcularProgresoTargets(sucursalesData);
       setTargetsProgreso(progresos);
@@ -88,28 +76,6 @@ const SucursalesTab = ({ empresaId, empresaNombre, userEmpresas, loadEmpresasSta
     } finally {
       setLoading(false);
     }
-  };
-
-  const toggleRow = (sucursalId, tab) => {
-    const newExpanded = new Set(expandedRows);
-    
-    // Si ya está expandido y es el mismo tab, colapsar
-    if (newExpanded.has(sucursalId) && activeTabPerSucursal[sucursalId] === tab) {
-      newExpanded.delete(sucursalId);
-    } else {
-      // Si no está expandido o es un tab diferente, expandir y cambiar tab
-      newExpanded.add(sucursalId);
-      setActiveTabPerSucursal(prev => ({
-        ...prev,
-        [sucursalId]: tab
-      }));
-    }
-    
-    setExpandedRows(newExpanded);
-  };
-
-  const getActiveTab = (sucursalId) => {
-    return activeTabPerSucursal[sucursalId] || 'empleados';
   };
 
   const navigateToPage = (page, data) => {
@@ -241,7 +207,7 @@ const SucursalesTab = ({ empresaId, empresaNombre, userEmpresas, loadEmpresasSta
       setOpenModal(false);
       resetForm();
       await loadSucursales();
-      
+
       if (typeof loadEmpresasStats === 'function' && ownerId) {
         loadEmpresasStats(userEmpresas, ownerId);
       }
@@ -278,7 +244,7 @@ const SucursalesTab = ({ empresaId, empresaNombre, userEmpresas, loadEmpresasSta
           });
           return;
         }
-        
+
         // Verificar si hay empleados asociados
         const empleadosCount = await sucursalService.countEmpleadosBySucursal(ownerId, sucursal.id);
 
@@ -307,7 +273,7 @@ const SucursalesTab = ({ empresaId, empresaNombre, userEmpresas, loadEmpresasSta
         );
 
         await loadSucursales();
-        
+
         if (typeof loadEmpresasStats === 'function') {
           loadEmpresasStats(userEmpresas, ownerId);
         }
@@ -328,120 +294,64 @@ const SucursalesTab = ({ empresaId, empresaNombre, userEmpresas, loadEmpresasSta
     }
   };
 
-  const renderExpandedContent = (sucursal) => {
-    const activeTab = getActiveTab(sucursal.id);
-    
-    return (
-      <Box sx={{ p: 3, backgroundColor: theme.palette.background.default, borderTop: `1px solid ${theme.palette.divider}` }}>
-        {activeTab === 'empleados' && (
-          <EmpleadosContent 
-            sucursalId={sucursal.id} 
-            sucursalNombre={sucursal.nombre}
-            selectedEmpresa={empresaId}
-            navigateToPage={navigateToPage}
-            reloadSucursalesStats={reloadSucursalesStats}
-            loadEmpresasStats={loadEmpresasStats}
-            userEmpresas={userEmpresas}
-          />
-        )}
-        {activeTab === 'capacitaciones' && (
-          <CapacitacionesContent 
-            sucursalId={sucursal.id} 
-            sucursalNombre={sucursal.nombre} 
-            navigateToPage={navigateToPage} 
-          />
-        )}
-        {activeTab === 'accidentes' && (
-          <AccidentesContent 
-            sucursalId={sucursal.id} 
-            sucursalNombre={sucursal.nombre} 
-            empresaId={empresaId} 
-            navigateToPage={navigateToPage} 
-          />
-        )}
-        {activeTab === 'acciones_requeridas' && (
-          <AccionesRequeridas 
-            sucursalId={sucursal.id} 
-            sucursalNombre={sucursal.nombre} 
-          />
-        )}
-      </Box>
-    );
-  };
-
   return (
     <Box>
+      {/* Header de sección */}
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
-        <Typography variant="h6">Sucursales de {empresaNombre}</Typography>
+        <Typography variant="caption" sx={{ fontWeight: 700, letterSpacing: 1, color: 'text.secondary', textTransform: 'uppercase' }}>
+          Sucursales
+        </Typography>
         <Button
-          variant="contained"
-          startIcon={<StorefrontIcon />}
+          variant="outlined"
+          size="small"
           onClick={handleOpenCreateModal}
         >
-          Agregar Sucursal
+          + Agregar sucursal
         </Button>
       </Box>
 
+      {/* Estados: loading / vacío / lista */}
       {loading ? (
         <Box sx={{ display: 'flex', justifyContent: 'center', py: 3 }}>
-          <CircularProgress />
+          <CircularProgress size={28} />
         </Box>
       ) : sucursales.length === 0 ? (
         <Box sx={{ textAlign: 'center', py: 3 }}>
-          <Typography variant="body1" color="textSecondary">
+          <Typography variant="body2" color="text.secondary">
             No hay sucursales registradas para esta empresa
           </Typography>
         </Box>
       ) : (
-        <TableContainer component={Paper}>
-          <Table>
-            <SucursalTableHeader />
-            <TableBody>
-              {sucursales.map((sucursal) => {
-                const isExpanded = expandedRows.has(sucursal.id);
-                const stats = sucursalesStats[sucursal.id] || { 
-                  empleados: 0, 
-                  capacitaciones: 0, 
-                  capacitacionesCompletadas: 0, 
-                  accidentes: 0, 
-                  accidentesAbiertos: 0, 
-                  accionesRequeridas: 0 
-                };
-                const progreso = targetsProgreso[sucursal.id] || { 
-                  completadas: 0, 
-                  target: 0, 
-                  porcentaje: 0, 
-                  estado: 'sin_target' 
-                };
+        <Box>
+          {sucursales.map((sucursal) => {
+            const stats = sucursalesStats[sucursal.id] || {
+              empleados: 0,
+              capacitaciones: 0,
+              capacitacionesCompletadas: 0,
+              accidentes: 0,
+              accidentesAbiertos: 0,
+              accionesRequeridas: 0
+            };
 
-                return (
-                  <SucursalRow
-                    key={sucursal.id}
-                    sucursal={sucursal}
-                    stats={stats}
-                    progreso={progreso}
-                    isExpanded={isExpanded}
-                    activeTab={getActiveTab(sucursal.id)}
-                    onToggleRow={toggleRow}
-                    onEdit={handleOpenEditModal}
-                    onDelete={handleDeleteSucursal}
-                  >
-                    {renderExpandedContent(sucursal)}
-                  </SucursalRow>
-                );
-              })}
-            </TableBody>
-          </Table>
-        </TableContainer>
+            return (
+              <SucursalCard
+                key={sucursal.id}
+                sucursal={sucursal}
+                stats={stats}
+                onEdit={handleOpenEditModal}
+                onDelete={handleDeleteSucursal}
+                navigateToPage={navigateToPage}
+                empresaId={empresaId}
+              />
+            );
+          })}
+        </Box>
       )}
 
-      {/* Modal unificado para crear/editar */}
+      {/* Modal unificado crear/editar */}
       <SucursalFormModal
         open={openModal}
-        onClose={() => {
-          setOpenModal(false);
-          resetForm();
-        }}
+        onClose={() => { setOpenModal(false); resetForm(); }}
         formData={sucursalForm}
         onChange={handleFormChange}
         onSubmit={handleSubmit}

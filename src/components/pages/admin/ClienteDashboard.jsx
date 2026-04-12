@@ -132,7 +132,10 @@ const ClienteDashboard = React.memo(() => {
           </Grid>
           <Grid container spacing={3}>
             <Grid item xs={12}>
-              <ProximasAuditorias auditoriasPendientes={proximasAuditorias} />
+              <ProximasAuditorias 
+                auditoriasPendientes={proximasAuditorias} 
+                onSelectDate={setSelectedDate}
+              />
             </Grid>
           </Grid>
         </Box>
