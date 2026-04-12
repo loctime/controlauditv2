@@ -195,6 +195,18 @@ const AgendarAuditoriaDialog = ({ open, onClose, onSave, empresas, sucursales, f
                   ))}
                 </Select>
               </FormControl>
+              {empresas.length === 0 && (
+                <Box sx={{ mt: 1 }}>
+                  <Button 
+                    variant="outlined" 
+                    size="small" 
+                    fullWidth
+                    onClick={() => window.open('/admin/empresas', '_blank')}
+                  >
+                    Crear Empresa
+                  </Button>
+                </Box>
+              )}
             </Grid>
             
             <Grid item xs={12} md={6}>
@@ -215,6 +227,18 @@ const AgendarAuditoriaDialog = ({ open, onClose, onSave, empresas, sucursales, f
                     ))}
                 </Select>
               </FormControl>
+              {form.empresaId && sucursales.filter(s => s.empresaId === form.empresaId).length === 0 && (
+                <Box sx={{ mt: 1 }}>
+                  <Button 
+                    variant="outlined" 
+                    size="small" 
+                    fullWidth
+                    onClick={() => window.open('/admin/sucursales', '_blank')}
+                  >
+                    Crear Sucursal
+                  </Button>
+                </Box>
+              )}
             </Grid>
             
             <Grid item xs={12} md={6}>
@@ -233,6 +257,18 @@ const AgendarAuditoriaDialog = ({ open, onClose, onSave, empresas, sucursales, f
                   ))}
                 </Select>
               </FormControl>
+              {formularios.length === 0 && (
+                <Box sx={{ mt: 1 }}>
+                  <Button 
+                    variant="outlined" 
+                    size="small" 
+                    fullWidth
+                    onClick={() => window.open('/admin/formularios', '_blank')}
+                  >
+                    Crear Formulario
+                  </Button>
+                </Box>
+              )}
             </Grid>
             
             <Grid item xs={12} md={6}>
