@@ -100,50 +100,149 @@ const AuditoriaStepper = ({
     }
   }, [activeStep, isMobile]);
 
+  // Función para obtener información contextual según el paso
+  const getContextualInfo = (stepIndex) => {
+    switch(stepIndex) {
+      case 0: // Empresa y Sucursal
+        if (empresaSeleccionada) {
+          const info = empresaSeleccionada.nombre || empresaSeleccionada;
+          if (sucursalSeleccionada) {
+            return `${info} · ${sucursalSeleccionada}`;
+          }
+          return info;
+        }
+        return 'Seleccionar empresa y sucursal';
+        
+      case 1: // Formulario
+        if (formularioSeleccionadoId && formularios) {
+          const formulario = formularios.find(f => f.id === formularioSeleccionadoId);
+          return formulario ? formulario.nombre : 'Formulario seleccionado';
+        }
+        return 'Seleccionar formulario';
+        
+      case 2: // Preguntas
+        const totalPreguntas = secciones.reduce((acc, seccion) => acc + (seccion.preguntas?.length || 0), 0);
+        const respuestasContestadas = respuestas.reduce((acc, seccionResp) => acc + seccionResp.filter(r => r !== '').length, 0);
+        if (totalPreguntas > 0) {
+          return `${respuestasContestadas}/${totalPreguntas} preguntas respondidas`;
+        }
+        return 'Responder preguntas';
+        
+      case 3: // Firmas
+        if (firmaAuditor && firmaResponsable) {
+          return 'Firmas completadas';
+        } else if (firmaAuditor || firmaResponsable) {
+          return 'Firma pendiente';
+        }
+        return 'Firmar documento';
+        
+      case 4: // Generar Reporte
+        if (pasoCompleto(3)) {
+          return 'Listo para generar';
+        }
+        return 'Pendiente';
+        
+      default:
+        return steps[stepIndex]?.label || '';
+    }
+  };
+
   // Componente para el header móvil compacto
-  const MobileHeader = () => (
-    <Box sx={{ 
-      mb: 0.5, 
-      p: 1, 
-      background: `linear-gradient(135deg, ${alpha(theme.palette.primary.main, 0.08)}, ${alpha(theme.palette.primary.main, 0.03)})`,
-      borderRadius: 1,
-      border: `1px solid ${alpha(theme.palette.primary.main, 0.15)}`
-    }}>
-      <Box display="flex" alignItems="center" justifyContent="space-between" mb={0.25}>
-        <Typography variant="caption" sx={{ fontWeight: 600, color: 'primary.main', fontSize: '0.75rem' }}>
-          Paso {activeStep + 1} de {steps.length}
+  const MobileHeader = () => {
+    // Obtener información contextual según el paso actual
+    const getContextualInfo = () => {
+      switch(activeStep) {
+        case 0: // Empresa y Sucursal
+          if (empresaSeleccionada) {
+            const info = empresaSeleccionada.nombre || empresaSeleccionada;
+            if (sucursalSeleccionada) {
+              return `${info} · ${sucursalSeleccionada}`;
+            }
+            return info;
+          }
+          return 'Seleccionar empresa y sucursal';
+          
+        case 1: // Formulario
+          if (formularioSeleccionadoId && formularios) {
+            const formulario = formularios.find(f => f.id === formularioSeleccionadoId);
+            return formulario ? formulario.nombre : 'Formulario seleccionado';
+          }
+          return 'Seleccionar formulario';
+          
+        case 2: // Preguntas
+          const totalPreguntas = secciones.reduce((acc, seccion) => acc + (seccion.preguntas?.length || 0), 0);
+          const respuestasContestadas = respuestas.reduce((acc, seccionResp) => acc + seccionResp.filter(r => r !== '').length, 0);
+          if (totalPreguntas > 0) {
+            return `${respuestasContestadas}/${totalPreguntas} preguntas respondidas`;
+          }
+          return 'Responder preguntas';
+          
+        case 3: // Firmas
+          if (firmaAuditor && firmaResponsable) {
+            return 'Firmas completadas';
+          } else if (firmaAuditor || firmaResponsable) {
+            return 'Firma pendiente';
+          }
+          return 'Firmar documento';
+          
+        default:
+          return steps[activeStep]?.label || '';
+      }
+    };
+
+    return (
+      <Box sx={{ 
+        mb: 0.5, 
+        p: 1, 
+        background: `linear-gradient(135deg, ${alpha(theme.palette.primary.main, 0.08)}, ${alpha(theme.palette.primary.main, 0.03)})`,
+        borderRadius: 1,
+        border: `1px solid ${alpha(theme.palette.primary.main, 0.15)}`
+      }}>
+        <Box display="flex" alignItems="center" justifyContent="space-between" mb={0.25}>
+          <Typography variant="caption" sx={{ fontWeight: 600, color: 'primary.main', fontSize: '0.75rem' }}>
+            Paso {activeStep + 1} de {steps.length}
+          </Typography>
+          <Chip 
+            label={`${Math.round(((activeStep + 1) / steps.length) * 100)}%`}
+            color="primary"
+            size="small"
+            variant="filled"
+            sx={{ height: '16px', fontSize: '0.6rem' }}
+          />
+        </Box>
+        
+        <Typography variant="caption" sx={{ fontWeight: 500, color: 'text.secondary', fontSize: '0.7rem' }}>
+          {steps[activeStep]?.label}
         </Typography>
-        <Chip 
-          label={`${Math.round(((activeStep + 1) / steps.length) * 100)}%`}
-          color="primary"
-          size="small"
-          variant="filled"
-          sx={{ height: '16px', fontSize: '0.6rem' }}
+        
+        <Typography variant="caption" sx={{ 
+          fontWeight: 600, 
+          color: pasoCompleto(activeStep) ? 'success.main' : 'primary.main', 
+          fontSize: '0.75rem',
+          display: 'block',
+          mt: 0.25
+        }}>
+          {getContextualInfo()}
+        </Typography>
+        <LinearProgress 
+          variant="determinate" 
+          value={((activeStep + 1) / steps.length) * 100}
+          aria-label={`Progreso de la auditoría: ${Math.round(((activeStep + 1) / steps.length) * 100)}% completado`}
+          sx={{ 
+            mt: 0.25,
+            height: 2, 
+            borderRadius: 1,
+            backgroundColor: alpha(theme.palette.primary.main, 0.08),
+            '& .MuiLinearProgress-bar': {
+              borderRadius: 1,
+              background: `linear-gradient(90deg, ${theme.palette.primary.main}, ${theme.palette.secondary.main})`
+            }
+          }} 
         />
       </Box>
-      
-      <Typography variant="caption" sx={{ fontWeight: 500, color: 'text.secondary', fontSize: '0.7rem' }}>
-        {steps[activeStep]?.label}
-      </Typography>
-      
-      <LinearProgress 
-        variant="determinate" 
-        value={((activeStep + 1) / steps.length) * 100}
-        aria-label={`Progreso de la auditoría: ${Math.round(((activeStep + 1) / steps.length) * 100)}% completado`}
-        sx={{ 
-          mt: 0.25,
-          height: 2, 
-          borderRadius: 1,
-          backgroundColor: alpha(theme.palette.primary.main, 0.08),
-          '& .MuiLinearProgress-bar': {
-            borderRadius: 1,
-            background: `linear-gradient(90deg, ${theme.palette.primary.main}, ${theme.palette.secondary.main})`
-          }
-        }} 
-      />
-    </Box>
-  );
-
+    );
+  };
+  
   return (
     <Box>
       {isMobile ? (
@@ -242,18 +341,25 @@ const AuditoriaStepper = ({
                       <Typography variant="caption" color="textSecondary" sx={{ fontSize: '0.7rem' }}>
                         {step.description}
                       </Typography>
+                      <Typography variant="caption" sx={{ 
+                        fontWeight: 600, 
+                        color: pasoCompleto(index) ? 'success.main' : 'primary.main', 
+                        fontSize: '0.7rem',
+                        display: 'block',
+                        mt: 0.25
+                      }}>
+                        {getContextualInfo(index)}
+                      </Typography>
                     </StepLabel>
                   </Step>
                 ))}
               </Stepper>
             </Paper>
           </Grid>
-          
           <Grid item xs={12} md={9}>
-            <Paper ref={desktopContentRef} elevation={2} sx={{ p: 2.5, borderRadius: 2, minHeight: '400px' }}>
+            <Paper elevation={2} sx={{ p: 2, borderRadius: 2 }}>
               {steps[activeStep]?.content}
-              
-              <Box display="flex" gap={1} mt={2}>
+              <Box display="flex" gap={0.5} mt={1}>
                 <Button
                   variant="outlined"
                   color="primary"
