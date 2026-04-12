@@ -291,11 +291,10 @@ export const routesConfig = [
     redirectTo: "/panel",
   },
   {
-    id: "legacy-editar",
+    id: "editar-formulario",
     path: "/editar",
     roles: ["admin", "superdev"],
     showInMenu: false,
-    redirectTo: "/editar",
   },
   {
     id: "legacy-operario-dashboard",

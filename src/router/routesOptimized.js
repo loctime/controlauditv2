@@ -42,6 +42,7 @@ const AuditoriasManuales = lazy(() =>
 const AuditoriaManualDetalle = lazy(() =>
   import("../components/pages/auditoriasManuales/components/AuditoriaManualDetalle")
 );
+const EditarFormulario = lazy(() => import("../components/pages/editar/EditarFormulario"));
 
 const DemoLogin = lazy(() => import("../components/pages/demo/DemoLogin"));
 const TerminosYCondiciones = lazy(() => import("../components/pages/legal/TerminosYCondiciones"));
@@ -81,6 +82,7 @@ const componentMap = {
   "legacy-ausencias": Ausencias,
   "auditorias-manuales": AuditoriasManuales,
   "auditoria-manual-detalle": AuditoriaManualDetalle,
+  "editar-formulario": EditarFormulario,
 
   demo: DemoLogin,
   terminos: TerminosYCondiciones,

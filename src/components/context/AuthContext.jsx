@@ -45,8 +45,26 @@ const AuthContextComponent = ({ children }) => {
   const [auditoriasCompartidas, setAuditoriasCompartidas] = useState([]);
   
   // Estados globales de selección
-  const [selectedEmpresa, setSelectedEmpresa] = useState('todas');
-  const [selectedSucursal, setSelectedSucursal] = useState('todas');
+  const [selectedEmpresa, _setSelectedEmpresa] = useState('todas');
+  const [selectedSucursal, _setSelectedSucursal] = useState('todas');
+
+  const setSelectedEmpresa = (val) => {
+    _setSelectedEmpresa(val);
+    if (val && val !== 'todas') {
+      localStorage.setItem('globalSelectedEmpresa', val);
+    } else {
+      localStorage.removeItem('globalSelectedEmpresa');
+    }
+  };
+
+  const setSelectedSucursal = (val) => {
+    _setSelectedSucursal(val);
+    if (val && val !== 'todas') {
+      localStorage.setItem('globalSelectedSucursal', val);
+    } else {
+      localStorage.removeItem('globalSelectedSucursal');
+    }
+  };
 
   // Estado para selectedOwnerId (solo para tu UID específico)
   const [selectedOwnerId, setSelectedOwnerId] = useState(null);
@@ -126,32 +144,6 @@ const AuthContextComponent = ({ children }) => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isLogged, userContext, userEmpresas, userSucursales, loadingEmpresas, loadingSucursales]);
   
-  // Persistir selección en localStorage cuando cambie
-  // IMPORTANTE: Persistir "todas" como valor válido
-  useEffect(() => {
-    if (!isLogged || !userContext) return;
-    
-    try {
-      // Persistir siempre, incluyendo "todas"
-      const valueToSave = selectedEmpresa || 'todas';
-      localStorage.setItem('globalSelectedEmpresa', valueToSave);
-    } catch (error) {
-      logger.warn('[AuthContext] Error persistiendo empresa en localStorage:', error);
-    }
-  }, [selectedEmpresa, isLogged, userContext]);
-  
-  useEffect(() => {
-    if (!isLogged || !userContext) return;
-    
-    try {
-      // Persistir siempre, incluyendo "todas"
-      const valueToSave = selectedSucursal || 'todas';
-      localStorage.setItem('globalSelectedSucursal', valueToSave);
-    } catch (error) {
-      logger.warn('[AuthContext] Error persistiendo sucursal en localStorage:', error);
-    }
-  }, [selectedSucursal, isLogged, userContext]);
-
   // Persistir selectedOwnerId en localStorage (solo para tu UID)
   useEffect(() => {
     if (!isLogged || !userContext) return;
