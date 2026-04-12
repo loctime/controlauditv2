@@ -646,6 +646,11 @@ import logger from '@/utils/logger';
       if (!user) {
         throw new Error('Usuario no autenticado');
       }
+      
+      if (!user.ownerId) {
+        logger.error('saveEmpleados: user.ownerId no disponible', { user });
+        throw new Error('user.ownerId es requerido para importar empleados');
+      }
 
       // Filtrar solo empleados válidos (sin errores bloqueantes)
       const validEmpleados = empleadosParsed.filter((emp, index) => {

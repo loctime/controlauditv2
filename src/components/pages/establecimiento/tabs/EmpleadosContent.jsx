@@ -130,7 +130,7 @@ const EmpleadosContent = ({ sucursalId, sucursalNombre, selectedEmpresa, reloadS
     }
 
     try {
-      await empleadoService.crearEmpleado({
+      await empleadoService.crearEmpleado(userProfile.ownerId, {
         ...empleadoForm,
         sucursalId,
         sucursalNombre,

@@ -385,7 +385,7 @@ export default function Empleados() {
               sucursalId: selectedSucursal
             }, actor);
           } else {
-            await empleadoService.crearEmpleado({
+            await empleadoService.crearEmpleado(ownerId, {
               ...data,
               empresaId: selectedEmpresa,
               sucursalId: selectedSucursal
