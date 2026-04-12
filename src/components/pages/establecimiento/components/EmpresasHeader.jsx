@@ -1,78 +1,56 @@
 import React from 'react';
 import { Box, Typography, Button, CircularProgress } from '@mui/material';
-import BusinessIcon from '@mui/icons-material/Business';
-import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
-import ReportProblemIcon from '@mui/icons-material/ReportProblem';
 
 /**
- * Header de gestión de empresas
+ * Header de gestión de empresas — versión simplificada
  */
 const EmpresasHeader = React.memo(({
   totalEmpresas,
   isSmallMobile,
   onVerificar,
   verificando,
-  onNavigateToAccidentes,
   onAddEmpresa,
   canCreateEmpresa = false
 }) => (
   <Box sx={{
     display: 'flex',
     flexDirection: isSmallMobile ? 'column' : 'row',
-    alignItems: 'center',
+    alignItems: isSmallMobile ? 'flex-start' : 'center',
     justifyContent: 'space-between',
-    mb: 4,
+    mb: 3,
     gap: 2
   }}>
-    <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-      <BusinessIcon sx={{ fontSize: isSmallMobile ? 32 : 40, color: 'primary.main' }} />
-      <Typography
-        variant={isSmallMobile ? "h5" : "h4"}
-        component="h1"
-        sx={{
-          fontWeight: 700,
-          color: '#1565c0',
-          display: 'flex',
-          alignItems: 'center',
-          gap: 1
-        }}
-      >
-        Gestión de Empresas ({totalEmpresas || 0})
-      </Typography>
-    </Box>
+    <Typography
+      variant={isSmallMobile ? 'h5' : 'h4'}
+      component="h1"
+      sx={{ fontWeight: 700, color: 'text.primary' }}
+    >
+      Empresas ({totalEmpresas || 0})
+    </Typography>
 
     <Box sx={{
       display: 'flex',
       gap: 1,
       flexWrap: 'wrap',
-      justifyContent: isSmallMobile ? 'center' : 'flex-end'
+      justifyContent: isSmallMobile ? 'flex-start' : 'flex-end'
     }}>
       <Button
         variant="outlined"
         onClick={onVerificar}
         disabled={verificando}
-        startIcon={verificando ? <CircularProgress size={16} /> : <ExpandMoreIcon />}
-        size={isSmallMobile ? "small" : "medium"}
+        startIcon={verificando ? <CircularProgress size={16} /> : null}
+        size={isSmallMobile ? 'small' : 'medium'}
       >
-        {verificando ? "Verificando..." : "Verificar"}
+        {verificando ? 'Verificando...' : 'Verificar'}
       </Button>
-      <Button
-        variant="outlined"
-        color="error"
-        onClick={onNavigateToAccidentes}
-        startIcon={<ReportProblemIcon />}
-        size={isSmallMobile ? "small" : "medium"}
-      >
-        Accidentes
-      </Button>
+
       {canCreateEmpresa && (
         <Button
           variant="contained"
           onClick={onAddEmpresa}
-          startIcon={<BusinessIcon />}
-          size={isSmallMobile ? "small" : "medium"}
+          size={isSmallMobile ? 'small' : 'medium'}
         >
-          Agregar Empresa
+          + Agregar empresa
         </Button>
       )}
     </Box>
