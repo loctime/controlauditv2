@@ -32,7 +32,13 @@ const AuditoriaHeader = ({
   
   // Tema
   theme,
-  isMobile
+  isMobile,
+  
+  // Datos de auditoría agendada
+  empresaSeleccionada,
+  sucursalSeleccionada,
+  formularioSeleccionadoId,
+  formularios
 }) => {
   return (
     <Box sx={{ mb: isMobile ? 1 : 3 }}>
@@ -61,16 +67,45 @@ const AuditoriaHeader = ({
           >
             Volver
           </Button>
-          <Typography variant={isMobile ? "h6" : "h4"} sx={{ 
-            fontWeight: 700,
-            background: `linear-gradient(135deg, ${theme.palette.primary.main}, ${theme.palette.secondary.main})`,
-            backgroundClip: 'text',
-            WebkitBackgroundClip: 'text',
-            WebkitTextFillColor: 'transparent',
-            fontSize: isMobile ? '1.1rem' : undefined
-          }}>
-            Nueva Auditoría
-          </Typography>
+          <Box display="flex" alignItems="center" gap={isMobile ? 1 : 2}>
+            {location.state?.auditoriaId && empresaSeleccionada ? (
+              <>
+                <Typography variant={isMobile ? "h6" : "h4"} sx={{ 
+                  fontWeight: 700,
+                  background: `linear-gradient(135deg, ${theme.palette.success.main}, ${theme.palette.primary.main})`,
+                  backgroundClip: 'text',
+                  WebkitBackgroundClip: 'text',
+                  WebkitTextFillColor: 'transparent',
+                  fontSize: isMobile ? '1.1rem' : undefined
+                }}>
+                  Auditoría Agendada
+                </Typography>
+                <Typography variant={isMobile ? "body1" : "h6"} sx={{ 
+                  color: theme.palette.success.main,
+                  fontWeight: 700,
+                  fontSize: isMobile ? '0.9rem' : '1.1rem',
+                  textShadow: '0 1px 2px rgba(0,0,0,0.1)'
+                }}>
+                  {empresaSeleccionada.nombre || empresaSeleccionada}{' '}
+                  {sucursalSeleccionada ? `· ${sucursalSeleccionada}` : ''}{' '}
+                  {formularioSeleccionadoId && formularios.find(f => f.id === formularioSeleccionadoId)
+                    ? `· ${formularios.find(f => f.id === formularioSeleccionadoId).nombre}`
+                    : ''}
+                </Typography>
+              </>
+            ) : (
+              <Typography variant={isMobile ? "h6" : "h4"} sx={{ 
+                fontWeight: 700,
+                background: `linear-gradient(135deg, ${theme.palette.primary.main}, ${theme.palette.secondary.main})`,
+                backgroundClip: 'text',
+                WebkitBackgroundClip: 'text',
+                WebkitTextFillColor: 'transparent',
+                fontSize: isMobile ? '1.1rem' : undefined
+              }}>
+                Nueva Auditoría
+              </Typography>
+            )}
+          </Box>
         </Box>
         
         <Chip 

@@ -1033,20 +1033,7 @@ const AuditoriaRefactorizada = () => {
       {/* Sugerencia de agendas pendientes (Etapa 2) */}
       <SugerenciaAgenda agendas={agendasPendientes} />
 
-      {/* Banner de confirmación cuando viene de agenda */}
-      {location.state?.auditoriaId && empresaSeleccionada && (
-        <Alert severity="info" sx={{ mb: 2 }}>
-          <Typography variant="body2">
-            <strong>Auditoría agendada:</strong>{' '}
-            {empresaSeleccionada.nombre || empresaSeleccionada}{' '}
-            {sucursalSeleccionada ? `· ${sucursalSeleccionada}` : ''}{' '}
-            {formularioSeleccionadoId && formularios.find(f => f.id === formularioSeleccionadoId)
-              ? `· ${formularios.find(f => f.id === formularioSeleccionadoId).nombre}`
-              : ''}
-          </Typography>
-        </Alert>
-      )}
-
+      
       {/* Header con navegación y progreso */}
       <AuditoriaHeader
         navigate={navigate}
@@ -1056,6 +1043,10 @@ const AuditoriaRefactorizada = () => {
         setMostrarAlertaReinicio={setMostrarAlertaReinicio}
         theme={theme}
         isMobile={isMobile}
+        empresaSeleccionada={empresaSeleccionada}
+        sucursalSeleccionada={sucursalSeleccionada}
+        formularioSeleccionadoId={formularioSeleccionadoId}
+        formularios={formularios}
       />
 
       {/* Alertas de estado para datos faltantes */}
