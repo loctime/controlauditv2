@@ -172,23 +172,13 @@ export const routesConfig = [
     icon: "Dashboard",
   },
   {
-    id: "formulario",
-    path: "/formulario",
+    id: "editar-formulario",
+    path: "/editar",
     label: "Formularios",
     roles: ["admin", "superdev"],
     showInMenu: true,
     section: "auditorias",
     order: 40,
-    icon: "FormatListBulletedOutlined",
-  },
-  {
-    id: "formularios-publicos",
-    path: "/formularios-publicos",
-    label: "Formularios Publicos",
-    roles: ["admin", "superdev"],
-    showInMenu: false,
-    section: "formularios",
-    order: 41,
     icon: "FormatListBulletedOutlined",
   },
   {
@@ -289,12 +279,6 @@ export const routesConfig = [
     roles: ["admin", "superdev"],
     showInMenu: false,
     redirectTo: "/panel",
-  },
-  {
-    id: "editar-formulario",
-    path: "/editar",
-    roles: ["admin", "superdev"],
-    showInMenu: false,
   },
   {
     id: "legacy-operario-dashboard",

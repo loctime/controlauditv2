@@ -247,7 +247,7 @@ const PerfilUsuario = () => {
 
   const handleCompartir = () => {
     // Navegar a la sección de formularios públicos
-    navigate('/formularios-publicos');
+    navigate('/editar?tab=2');
   };
 
   const handleMisFormularios = () => {
