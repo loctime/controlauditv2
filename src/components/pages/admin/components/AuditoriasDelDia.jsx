@@ -42,6 +42,12 @@ const AuditoriasDelDia = ({
 }) => {
   const navigate = useNavigate();
   const [confirmarEliminar, setConfirmarEliminar] = useState({ abierto: false, auditoriaId: null, empresa: '' });
+  const [mostrarTodas, setMostrarTodas] = useState(false);
+  
+  // Limitar a 3 auditorías inicialmente
+  const auditoriasMostradas = mostrarTodas ? auditoriasDelDia : auditoriasDelDia.slice(0, 3);
+  const tieneMas = auditoriasDelDia.length > 3;
+
   // Función para obtener el nombre del usuario
   const getNombreUsuario = (encargado) => {
     if (!encargado) return null;
@@ -143,115 +149,133 @@ const AuditoriasDelDia = ({
           </Box>
         </Box>
       ) : (
-        <List>
-          {auditoriasDelDia.map((auditoria) => (
-            <ListItem key={auditoria.id} divider>
-              <ListItemText
-                sx={{ paddingRight: { xs: 11, sm: 20 } }}
-                primary={
-                  <Box display="flex" alignItems="center" gap={1}>
-                    <Typography variant="h6" sx={{ fontWeight: 'bold', fontSize: '0.95rem' }}>
-                      {auditoria.empresa}
-                    </Typography>
-                    {/* Chip de estado */}
-                    <Chip 
-                      label={auditoria.estado === 'agendada' ? 'Agendada' : 'Completada'} 
-                      size="small" 
-                      color={auditoria.estado === 'agendada' ? 'warning' : 'success'} 
-                      variant="outlined"
-                      sx={{ fontSize: '0.7rem' }}
-                    />
-                  </Box>
-                }
-                secondary={
-                  <Grid container spacing={1}>
-                    <Grid item xs={7}>
-                      <Typography variant="body2" sx={{ mt: 0.3 }} component="div">
-                        <LocationOn sx={{ fontSize: '0.85rem', mr: 0.5, verticalAlign: 'middle' }} />
-                        {auditoria.sucursal || 'Casa Central'}
+        <>
+          <List>
+            {auditoriasMostradas.map((auditoria) => (
+              <ListItem key={auditoria.id} divider>
+                <ListItemText
+                  sx={{ paddingRight: { xs: 11, sm: 20 } }}
+                  primary={
+                    <Box display="flex" alignItems="center" gap={1}>
+                      <Typography variant="h6" sx={{ fontWeight: 'bold', fontSize: '0.95rem' }}>
+                        {auditoria.empresa}
                       </Typography>
-                      <Typography variant="body2" sx={{ mt: 0.3 }} component="div">
-                        <Schedule sx={{ fontSize: '0.85rem', mr: 0.5, verticalAlign: 'middle' }} />
-                        {auditoria.hora}
-                      </Typography>
-                      <Typography variant="body2" sx={{ mt: 0.3 }} component="div">
-                        <Description sx={{ fontSize: '0.85rem', mr: 0.5, verticalAlign: 'middle' }} />
-                        {auditoria.formulario}
-                      </Typography>
-                    </Grid>
-                    <Grid item xs={5}>
-                      {/* Información del encargado */}
-                      <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 1, mt: 0.3 }}>
-                        {auditoria.encargado ? (
-                          <>
-                            <Avatar sx={{ width: 20, height: 20, fontSize: '0.7rem' }}>
-                              {getInicialUsuario(auditoria.encargado)}
-                            </Avatar>
-                            <Box>
-                              <Typography variant="body2" color="text.secondary" component="div">
-                                <Person sx={{ fontSize: '0.85rem', mr: 0.5, verticalAlign: 'middle' }} />
-                                {getNombreUsuario(auditoria.encargado)}
-                              </Typography>
-                              {getEmailUsuario(auditoria.encargado) && (
-                                <Typography variant="body2" color="text.secondary" sx={{ fontSize: '0.8rem', opacity: 0.7 }} component="div">
-                                  ({getEmailUsuario(auditoria.encargado)})
+                      {/* Chip de estado */}
+                      <Chip 
+                        label={auditoria.estado === 'agendada' ? 'Agendada' : 'Completada'} 
+                        size="small" 
+                        color={auditoria.estado === 'agendada' ? 'warning' : 'success'} 
+                        variant="outlined"
+                        sx={{ fontSize: '0.7rem' }}
+                      />
+                    </Box>
+                  }
+                  secondary={
+                    <Grid container spacing={1}>
+                      <Grid item xs={7}>
+                        <Typography variant="body2" sx={{ mt: 0.3 }} component="div">
+                          <LocationOn sx={{ fontSize: '0.85rem', mr: 0.5, verticalAlign: 'middle' }} />
+                          {auditoria.sucursal || 'Casa Central'}
+                        </Typography>
+                        <Typography variant="body2" sx={{ mt: 0.3 }} component="div">
+                          <Schedule sx={{ fontSize: '0.85rem', mr: 0.5, verticalAlign: 'middle' }} />
+                          {auditoria.hora}
+                        </Typography>
+                        <Typography variant="body2" sx={{ mt: 0.3 }} component="div">
+                          <Description sx={{ fontSize: '0.85rem', mr: 0.5, verticalAlign: 'middle' }} />
+                          {auditoria.formulario}
+                        </Typography>
+                      </Grid>
+                      <Grid item xs={5}>
+                        {/* Información del encargado */}
+                        <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 1, mt: 0.3 }}>
+                          {auditoria.encargado ? (
+                            <>
+                              <Avatar sx={{ width: 20, height: 20, fontSize: '0.7rem' }}>
+                                {getInicialUsuario(auditoria.encargado)}
+                              </Avatar>
+                              <Box>
+                                <Typography variant="body2" color="text.secondary" component="div">
+                                  <Person sx={{ fontSize: '0.85rem', mr: 0.5, verticalAlign: 'middle' }} />
+                                  {getNombreUsuario(auditoria.encargado)}
                                 </Typography>
-                              )}
-                            </Box>
-                          </>
-                        ) : (
-                          <Typography variant="body2" color="text.secondary" sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }} component="div">
-                            <PersonOff sx={{ fontSize: '0.85rem' }} />
-                            Sin encargado
+                                {getEmailUsuario(auditoria.encargado) && (
+                                  <Typography variant="body2" color="text.secondary" sx={{ fontSize: '0.8rem', opacity: 0.7 }} component="div">
+                                    ({getEmailUsuario(auditoria.encargado)})
+                                  </Typography>
+                                )}
+                              </Box>
+                            </>
+                          ) : (
+                            <Typography variant="body2" color="text.secondary" sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }} component="div">
+                              <PersonOff sx={{ fontSize: '0.85rem' }} />
+                              Sin encargado
+                            </Typography>
+                          )}
+                        </Box>
+                        {auditoria.descripcion && (
+                          <Typography variant="body2" color="text.secondary" sx={{ mt: 0.3, fontStyle: 'italic' }} component="div">
+                            "{auditoria.descripcion}"
                           </Typography>
                         )}
-                      </Box>
-                      {auditoria.descripcion && (
-                        <Typography variant="body2" color="text.secondary" sx={{ mt: 0.3, fontStyle: 'italic' }} component="div">
-                          "{auditoria.descripcion}"
-                        </Typography>
-                      )}
+                      </Grid>
                     </Grid>
-                  </Grid>
-                }
-              />
-              <ListItemSecondaryAction>
-                <Stack direction="row" spacing={1}>
-                  {auditoria.estado === 'agendada' && (
-                    <Button
-                      variant="contained"
-                      color="success"
+                  }
+                />
+                <ListItemSecondaryAction>
+                  <Stack direction="row" spacing={1}>
+                    {auditoria.estado === 'agendada' && (
+                      <Button
+                        variant="contained"
+                        color="success"
+                        size="small"
+                        startIcon={<PlayArrow />}
+                        onClick={() => {
+                          navigate('/auditoria', {
+                            state: {
+                              empresa: auditoria.empresa,
+                              empresaId: auditoria.empresaId,
+                              sucursal: auditoria.sucursal,
+                              formularioId: auditoria.formularioId,
+                              auditoriaId: auditoria.id,
+                              fecha: auditoria.fecha
+                            }
+                          });
+                        }}
+                      >
+                        Ir a completar
+                      </Button>
+                    )}
+                    <IconButton
+                      color="error"
                       size="small"
-                      startIcon={<PlayArrow />}
-                      onClick={() => {
-                        navigate('/auditoria', {
-                          state: {
-                            empresa: auditoria.empresa,
-                            empresaId: auditoria.empresaId,
-                            sucursal: auditoria.sucursal,
-                            formularioId: auditoria.formularioId,
-                            auditoriaId: auditoria.id,
-                            fecha: auditoria.fecha
-                          }
-                        });
-                      }}
+                      onClick={() => setConfirmarEliminar({ abierto: true, auditoriaId: auditoria.id, empresa: auditoria.empresa })}
+                      title="Eliminar"
                     >
-                      Ir a completar
-                    </Button>
-                  )}
-                  <IconButton
-                    color="error"
-                    size="small"
-                    onClick={() => setConfirmarEliminar({ abierto: true, auditoriaId: auditoria.id, empresa: auditoria.empresa })}
-                    title="Eliminar"
-                  >
-                    <Delete />
-                  </IconButton>
-                </Stack>
-              </ListItemSecondaryAction>
-            </ListItem>
-          ))}
-        </List>
+                      <Delete />
+                    </IconButton>
+                  </Stack>
+                </ListItemSecondaryAction>
+              </ListItem>
+            ))}
+          </List>
+
+          {tieneMas && (
+            <Box sx={{ display: 'flex', justifyContent: 'center', mt: 1 }}>
+              <Button
+                variant="text"
+                size="small"
+                onClick={() => setMostrarTodas(!mostrarTodas)}
+                sx={{ fontSize: '0.85rem', textTransform: 'none', color: 'primary.main' }}
+              >
+                {mostrarTodas 
+                  ? `Ver menos (${auditoriasDelDia.length - 3} ocultas)` 
+                  : `Ver más (${auditoriasDelDia.length - 3} más)` 
+                }
+              </Button>
+            </Box>
+          )}
+        </>
       )}
       
       {/* Modal de confirmación para eliminar */}

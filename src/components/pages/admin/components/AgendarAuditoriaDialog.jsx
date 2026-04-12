@@ -16,7 +16,8 @@ import {
   Button,
   Chip,
   Avatar,
-  Typography
+  Typography,
+  CircularProgress
 } from "@mui/material";
 import { Add, Person, PersonOff } from "@mui/icons-material";
 import { toast } from 'react-toastify';
@@ -40,6 +41,7 @@ const AgendarAuditoriaDialog = ({ open, onClose, onSave, empresas, sucursales, f
   });
   const [usuariosOperarios, setUsuariosOperarios] = useState([]);
   const [cargandoUsuarios, setCargandoUsuarios] = useState(false);
+  const [guardando, setGuardando] = useState(false);
 
   // Función para obtener el nombre del días
   const getNombreDia = (fechaStr) => {
@@ -111,14 +113,25 @@ const AgendarAuditoriaDialog = ({ open, onClose, onSave, empresas, sucursales, f
     }
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     if (!form.empresa || !form.formulario || !form.fecha || !form.hora) {
       toast.error('Por favor completa todos los campos obligatorios');
       return;
     }
-    onSave(form);
-    setForm({ empresa: '', empresaId: '', sucursal: '', formulario: '', formularioId: '', fecha: '', hora: '', descripcion: '', encargado: '' });
+    
+    setGuardando(true);
+    try {
+      await onSave(form);
+      // Limpiar formulario y cerrar modal después de guardar exitosamente
+      setForm({ empresa: '', empresaId: '', sucursal: '', formulario: '', formularioId: '', fecha: '', hora: '', descripcion: '', encargado: '' });
+      onClose();
+    } catch (error) {
+      console.error('Error al guardar auditoría:', error);
+      toast.error('Error al guardar la auditoría');
+    } finally {
+      setGuardando(false);
+    }
   };
 
   // Función para obtener el nombre del usuario
@@ -134,7 +147,7 @@ const AgendarAuditoriaDialog = ({ open, onClose, onSave, empresas, sucursales, f
   };
 
   return (
-    <Dialog open={open} onClose={onClose} maxWidth="md" fullWidth>
+    <Dialog open={open} onClose={guardando ? null : onClose} maxWidth="md" fullWidth>
       <DialogTitle>
         <Box display="flex" alignItems="center" gap={1}>
           <Add color="primary" />
@@ -315,9 +328,16 @@ const AgendarAuditoriaDialog = ({ open, onClose, onSave, empresas, sucursales, f
           </Grid>
         </DialogContent>
         <DialogActions>
-          <Button onClick={onClose}>Cancelar</Button>
-          <Button type="submit" variant="contained">
-            Agendar Auditoría
+          <Button onClick={onClose} disabled={guardando}>
+            Cancelar
+          </Button>
+          <Button 
+            type="submit" 
+            variant="contained" 
+            disabled={guardando}
+            startIcon={guardando ? <CircularProgress size={20} /> : <Add />}
+          >
+            {guardando ? 'Guardando...' : 'Agendar Auditoría'}
           </Button>
         </DialogActions>
       </form>
@@ -325,4 +345,4 @@ const AgendarAuditoriaDialog = ({ open, onClose, onSave, empresas, sucursales, f
   );
 };
 
-export default AgendarAuditoriaDialog; 
+export default AgendarAuditoriaDialog;
