@@ -35,7 +35,7 @@ const AgendarAuditoriaDialog = ({ open, onClose, onSave, empresas, sucursales, f
     formulario: '',
     formularioId: '',
     fecha: '',
-    hora: '',
+    hora: '09:00',
     descripcion: '',
     encargado: ''
   });
@@ -99,6 +99,28 @@ const AgendarAuditoriaDialog = ({ open, onClose, onSave, empresas, sucursales, f
       cargarUsuariosOperarios();
     }
   }, [open, userProfile]);
+
+  // Efecto para manejar selección automática de empresa y formulario
+  useEffect(() => {
+    if (empresas.length === 1) {
+      setForm(prev => ({ ...prev, empresa: empresas[0].nombre, empresaId: empresas[0].id }));
+    }
+    if (formularios.length === 1) {
+      setForm(prev => ({ ...prev, formulario: formularios[0].nombre, formularioId: formularios[0].id }));
+    }
+  }, [empresas, formularios]);
+
+  // Efecto para manejar selección automática de sucursal
+  useEffect(() => {
+    if (form.empresaId) {
+      const sucursalesFiltradas = sucursales.filter(s => s.empresaId === form.empresaId);
+      if (sucursalesFiltradas.length === 1) {
+        setForm(prev => ({ ...prev, sucursal: sucursalesFiltradas[0].nombre }));
+      } else if (sucursalesFiltradas.length > 1) {
+        setForm(prev => ({ ...prev, sucursal: '' }));
+      }
+    }
+  }, [form.empresaId, sucursales]);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -177,14 +199,13 @@ const AgendarAuditoriaDialog = ({ open, onClose, onSave, empresas, sucursales, f
             
             <Grid item xs={12} md={6}>
               <FormControl fullWidth>
-                <InputLabel>Sucursal (Opcional)</InputLabel>
+                <InputLabel>Sucursal</InputLabel>
                 <Select
                   name="sucursal"
                   value={form.sucursal}
                   onChange={handleChange}
-                  label="Sucursal (Opcional)"
+                  label="Sucursal"
                 >
-                  <MenuItem value="">Casa Central</MenuItem>
                   {sucursales
                     .filter(sucursal => !form.empresaId || sucursal.empresaId === form.empresaId)
                     .map((sucursal) => (

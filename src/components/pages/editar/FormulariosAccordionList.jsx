@@ -24,9 +24,8 @@ import ExpandMoreIcon from "@mui/icons-material/ExpandMore";
 import EditIcon from "@mui/icons-material/Edit";
 import PublicIcon from '@mui/icons-material/Public';
 import SearchIcon from '@mui/icons-material/Search';
-import { doc, updateDoc } from "firebase/firestore";
-import { db } from "../../../firebaseControlFile";
 import EditarFormularioModal from "./EditarFormularioModal";
+import { formularioService } from '../../../services/formularioService';
 import { useAuth } from '@/components/context/AuthContext';
 
 /**
@@ -40,7 +39,7 @@ const FormulariosAccordionList = ({ formularios, onEditar, formularioSeleccionad
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
   const isSmallMobile = useMediaQuery(theme.breakpoints.down('sm'));
-  const { getUserFormularios } = useAuth();
+  const { getUserFormularios, user, userProfile } = useAuth();
   
   const lastClickedRef = useRef(null);
   const [busqueda, setBusqueda] = useState("");
@@ -91,13 +90,17 @@ const FormulariosAccordionList = ({ formularios, onEditar, formularioSeleccionad
 
     setEditLoading(true);
     try {
-      await updateDoc(doc(db, "formularios", formularioEdit.id), {
-        nombre: formularioEdit.nombre,
-        estado: formularioEdit.estado,
-        version: formularioEdit.version,
-        esPublico: formularioEdit.esPublico,
-        ultimaModificacion: new Date()
-      });
+      await formularioService.updateFormulario(
+        formularioEdit.id,
+        {
+          nombre: formularioEdit.nombre,
+          estado: formularioEdit.estado,
+          version: formularioEdit.version,
+          esPublico: formularioEdit.esPublico
+        },
+        user,
+        userProfile
+      );
 
       // Invalidar cache offline después de editar formulario
       try {

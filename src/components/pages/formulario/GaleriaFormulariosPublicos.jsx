@@ -1,10 +1,11 @@
 import logger from '@/utils/logger';
 import React, { useEffect, useState, useMemo } from 'react';
-import { collection, query, where, getDocs } from 'firebase/firestore';
+import { collection, getDocs } from 'firebase/firestore';
 import { dbAudit } from '../../../firebaseControlFile';
+import { firestoreRoutesCore } from '../../../core/firestore/firestoreRoutes.core';
 import { formularioService } from '../../../services/formularioService';
 import {
-  Box, Typography, Accordion, AccordionSummary, AccordionDetails, Chip, Button, Grid, Alert, TextField, InputAdornment, Select, MenuItem, Rating, Stack, Tooltip, Avatar, CircularProgress
+  Box, Typography, Accordion, AccordionSummary, AccordionDetails, Chip, Button, Grid, Alert, TextField, InputAdornment, Select, MenuItem, Rating, Stack, Tooltip, CircularProgress
 } from '@mui/material';
 import ContentCopyIcon from '@mui/icons-material/ContentCopy';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
@@ -29,57 +30,46 @@ const GaleriaFormulariosPublicos = ({ onCopiar }) => {
   const [copiandoId, setCopiandoId] = useState(null);
   const [ratingLoading, setRatingLoading] = useState(null);
   const [copiadoExitoso, setCopiadoExitoso] = useState(null);
-  const [misFormulariosCopiados, setMisFormulariosCopiados] = useState([]);
+  // Set de IDs de formularios_publicos que el usuario ya copió
+  const [copiadosDesdeIds, setCopiadosDesdeIds] = useState(new Set());
   const navigate = useNavigate();
   const { userProfile } = useAuth();
 
+  // Cargar galería desde formularios_publicos
   useEffect(() => {
     const fetchPublicForms = async () => {
       setLoading(true);
-      const q = query(collection(dbAudit, 'formularios'), where('esPublico', '==', true));
-      const snapshot = await getDocs(q);
-      setFormularios(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
-      setLoading(false);
-      logger.debug('[GaleriaFormulariosPublicos] Formularios públicos cargados:', snapshot.docs.length);
+      try {
+        const snapshot = await getDocs(collection(dbAudit, 'formularios_publicos'));
+        setFormularios(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+        logger.debug('[GaleriaFormulariosPublicos] Formularios públicos cargados:', snapshot.docs.length);
+      } catch (error) {
+        logger.error('[GaleriaFormulariosPublicos] Error al cargar galería:', error);
+      } finally {
+        setLoading(false);
+      }
     };
     fetchPublicForms();
   }, []);
 
-  // Cargar formularios del usuario para verificar cuáles ya tiene copiados
+  // Cargar IDs de formularios que el usuario ya copió (desde su colección owner-centric)
   useEffect(() => {
-    const fetchMisFormularios = async () => {
-      if (!userProfile) return;
-      
+    const fetchMisCopiados = async () => {
+      if (!userProfile?.ownerId) return;
       try {
-        const q = query(
-          collection(dbAudit, 'formularios'), 
-          where('creadorId', '==', userProfile.uid),
-          where('esPublico', '==', false)
+        const snapshot = await getDocs(
+          collection(dbAudit, ...firestoreRoutesCore.formularios(userProfile.ownerId))
         );
-        const snapshot = await getDocs(q);
-        const misFormularios = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-        
-        // Crear un mapa de formularios copiados basado en el formularioOriginalId o nombre
-        const formulariosCopiados = misFormularios.filter(form => {
-          // Buscar si hay un formulario público que ya fue copiado por este usuario
-          return formularios.some(formPublico => 
-            (form.formularioOriginalId === formPublico.id) || // Copia directa por ID
-            (form.nombre === formPublico.nombre && 
-             formPublico.creadorId !== userProfile.uid && // No es propio
-             form.creadorId === userProfile.uid) // Es una copia del usuario actual
-          );
-        });
-        
-        logger.debug('[GaleriaFormulariosPublicos] Formularios copiados detectados:', formulariosCopiados.map(f => f.nombre));
-        
-        setMisFormulariosCopiados(formulariosCopiados);
-        logger.debug('[GaleriaFormulariosPublicos] Formularios del usuario cargados:', misFormularios.length);
+        const copiados = snapshot.docs
+          .map(doc => ({ id: doc.id, ...doc.data() }))
+          .filter(f => !!f.copiadoDesde);
+        setCopiadosDesdeIds(new Set(copiados.map(f => f.copiadoDesde)));
+        logger.debug('[GaleriaFormulariosPublicos] IDs copiados del usuario:', copiados.length);
       } catch (error) {
-        logger.error('Error al cargar formularios del usuario:', error);
+        logger.error('[GaleriaFormulariosPublicos] Error al cargar copiados:', error);
       }
     };
-    
-    fetchMisFormularios();
+    fetchMisCopiados();
   }, [userProfile, formularios]);
 
   // Filtro y búsqueda en frontend
@@ -90,7 +80,7 @@ const GaleriaFormulariosPublicos = ({ onCopiar }) => {
       lista = lista.filter(f =>
         (f.nombre?.toLowerCase().includes(b) ||
          f.creadorEmail?.toLowerCase().includes(b) ||
-         f.creadorDisplayName?.toLowerCase?.().includes(b))
+         f.creadorNombre?.toLowerCase?.().includes(b))
       );
     }
     switch (filtro) {
@@ -118,54 +108,36 @@ const GaleriaFormulariosPublicos = ({ onCopiar }) => {
     return lista;
   }, [formularios, busqueda, filtro]);
 
-  // Copiar formulario: incrementa contador en Firestore y copia realmente el formulario
+  // Copiar formulario desde la galería
   const handleCopiar = async (form) => {
     setCopiandoId(form.id);
     try {
-      // Verificar si este usuario ya copió este formulario antes
-      const yaCopiadoAntes = misFormulariosCopiados.some(
-        (copiado) => (copiado.formularioOriginalId === form.id) || 
-                     (copiado.nombre === form.nombre && copiado.creadorId === userProfile?.uid)
-      );
-      
-      // También verificar si el usuario ya está en la lista de usuarios que copiaron
-      const usuarioYaCopio = form.usuariosQueCopiaron?.includes(userProfile?.uid) || false;
-      
-      // Solo incrementar contador si es la primera vez que este usuario copia este formulario
-      if (!yaCopiadoAntes && !usuarioYaCopio) {
-        const usuariosQueCopiaron = form.usuariosQueCopiaron || [];
-        await formularioService.incrementarContadorCopias(form.id, userProfile.uid, form, usuariosQueCopiaron);
-        logger.debug('[GaleriaFormulariosPublicos] Contador incrementado - primera copia del usuario');
-      } else {
-        logger.debug('[GaleriaFormulariosPublicos] No se incrementa contador - usuario ya copió este formulario antes');
-      }
-      
-      // Copiar realmente el formulario a la cuenta del usuario
-      if (userProfile) {
-        await formularioService.copiarFormularioPublico(form, userProfile);
-        logger.debug('[GaleriaFormulariosPublicos] Formulario copiado a sistema:', userProfile.uid);
-      }
-      
-      // Llamar función onCopiar si existe (para compatibilidad)
-      onCopiar && onCopiar(form);
-      
-      // Actualizar estado local solo si es la primera copia
-      if (!yaCopiadoAntes && !usuarioYaCopio) {
-        setFormularios(prev => prev.map(f => f.id === form.id ? { 
-          ...f, 
+      const yaCopiado = copiadosDesdeIds.has(form.id) || (form.usuariosQueCopiaron?.includes(userProfile?.uid) ?? false);
+
+      if (!yaCopiado) {
+        await formularioService.incrementarContadorCopias(
+          form.id,
+          userProfile.uid,
+          form.usuariosQueCopiaron || []
+        );
+        setFormularios(prev => prev.map(f => f.id === form.id ? {
+          ...f,
           copiadoCount: (f.copiadoCount || 0) + 1,
           usuariosQueCopiaron: [...(f.usuariosQueCopiaron || []), userProfile.uid]
         } : f));
       }
-      
-      logger.debug('[GaleriaFormulariosPublicos] Formulario copiado:', form.id);
-      
-      // Actualizar lista de formularios copiados
-      setMisFormulariosCopiados(prev => [...prev, { ...form, creadorId: userProfile.uid }]);
-      
-      // Mostrar mensaje de éxito
+
+      if (userProfile) {
+        await formularioService.copiarFormularioPublico(form, userProfile);
+        logger.debug('[GaleriaFormulariosPublicos] Formulario copiado a sistema:', userProfile.uid);
+      }
+
+      onCopiar && onCopiar(form);
+
+      setCopiadosDesdeIds(prev => new Set([...prev, form.id]));
       setCopiadoExitoso(form.id);
       setTimeout(() => setCopiadoExitoso(null), 2000);
+      logger.debug('[GaleriaFormulariosPublicos] Formulario copiado:', form.id);
     } catch (e) {
       logger.error('Error al copiar formulario:', e);
     } finally {
@@ -173,13 +145,13 @@ const GaleriaFormulariosPublicos = ({ onCopiar }) => {
     }
   };
 
-  // Puntuar formulario: rating anónimo, promedio simple
+  // Puntuar formulario
   const handlePuntuar = async (form, value) => {
     setRatingLoading(form.id);
     try {
       const ratingsCount = (form.ratingsCount || 0) + 1;
       const newRating = ((form.rating || 0) * (form.ratingsCount || 0) + value) / ratingsCount;
-      await formularioService.actualizarRating(form.id, newRating, ratingsCount, form);
+      await formularioService.actualizarRating(form.id, newRating, ratingsCount);
       setFormularios(prev => prev.map(f => f.id === form.id ? { ...f, rating: newRating, ratingsCount } : f));
       logger.debug('[GaleriaFormulariosPublicos] Formulario puntuado:', form.id, value);
     } catch (e) {
@@ -188,16 +160,6 @@ const GaleriaFormulariosPublicos = ({ onCopiar }) => {
       setRatingLoading(null);
     }
   };
-
-  // Obtener UID del usuario actual (desde localStorage)
-  const userInfo = useMemo(() => {
-    try {
-      return JSON.parse(localStorage.getItem('userInfo'));
-    } catch {
-      return null;
-    }
-  }, []);
-  const myUid = userInfo?.uid;
 
   if (loading) return <Alert severity="info">Cargando formularios públicos...</Alert>;
   if (formularios.length === 0) return <Alert severity="info">No hay formularios públicos aún.</Alert>;
@@ -219,7 +181,7 @@ const GaleriaFormulariosPublicos = ({ onCopiar }) => {
       </Button>
       {/* Título */}
       <Typography variant="h5" gutterBottom>Galería de Formularios Públicos</Typography>
-      
+
       {/* Alerta para usuarios no autenticados */}
       {!userProfile && (
         <Alert severity="info" sx={{ mb: 2 }}>
@@ -252,31 +214,25 @@ const GaleriaFormulariosPublicos = ({ onCopiar }) => {
       </Stack>
       <Grid container spacing={2}>
         {formulariosFiltrados.map(form => {
-          const esPropio = form.creadorId && myUid && form.creadorId === myUid;
-          const yaCopiado = misFormulariosCopiados.some(
-            (copiado) => (copiado.formularioOriginalId === form.id) || 
-                         (copiado.nombre === form.nombre && copiado.creadorId === userProfile?.uid)
-          );
-          
-          // Debug: mostrar información sobre formularios copiados
-          if (form.nombre === 'RGRL') {
-            logger.debug('[DEBUG] Formulario RGRL:', {
-              formId: form.id,
-              misFormulariosCopiados: misFormulariosCopiados.map(f => ({ 
-                nombre: f.nombre, 
-                formularioOriginalId: f.formularioOriginalId,
-                creadorId: f.creadorId 
-              })),
-              yaCopiado
-            });
-          }
+          const esPropio = !!userProfile?.uid && form.creadorId === userProfile.uid;
+          const yaCopiado = copiadosDesdeIds.has(form.id) || (form.usuariosQueCopiaron?.includes(userProfile?.uid) ?? false);
+
           return (
             <Grid item xs={12} key={form.id}>
               <Accordion>
                 <AccordionSummary expandIcon={<ExpandMoreIcon />}>
                   <Box sx={{ flex: 1 }}>
                     <Typography variant="h6" sx={{ display: 'inline', mr: 1 }}>{form.nombre}</Typography>
-                    <Chip label={`Creador: ${form.creadorEmail || form.creadorDisplayName || 'N/A'}`} size="small" sx={{ ml: 1 }} />
+                    {/* Chips de estado */}
+                    <Chip label="Público" size="small" color="primary" variant="outlined" sx={{ ml: 1 }} />
+                    {esPropio && (
+                      <Chip label="Propio" size="small" color="info" sx={{ ml: 1 }} />
+                    )}
+                    {yaCopiado && (
+                      <Chip label="Ya copiado" size="small" color="success" sx={{ ml: 1 }} />
+                    )}
+                    {/* Chips de metadata */}
+                    <Chip label={`Creador: ${form.creadorEmail || form.creadorNombre || 'N/A'}`} size="small" sx={{ ml: 1 }} />
                     <Chip label={`Secciones: ${Array.isArray(form.secciones) ? form.secciones.length : 0}`} size="small" sx={{ ml: 1 }} />
                     <Chip label={`Preguntas: ${Array.isArray(form.secciones) ? form.secciones.reduce((acc, s) => acc + (Array.isArray(s.preguntas) ? s.preguntas.length : 0), 0) : 0}`} size="small" sx={{ ml: 1 }} />
                     <Chip label={`Copias: ${form.copiadoCount || 0}`} size="small" color="info" sx={{ ml: 1 }} />
@@ -292,9 +248,9 @@ const GaleriaFormulariosPublicos = ({ onCopiar }) => {
                       </span>
                     </Tooltip>
                   </Box>
-                  <Tooltip title={!userProfile ? 'Debes iniciar sesión para copiar formularios' : 
+                  <Tooltip title={!userProfile ? 'Debes iniciar sesión para copiar formularios' :
                                  esPropio ? 'No puedes copiar tu propio formulario' :
-                                 yaCopiado ? 'Ya tienes este formulario copiado' : 'Copiar a mi sistema'}>
+                                 yaCopiado ? 'Ya tenés este formulario copiado' : 'Copiar a mi sistema'}>
                     <span>
                       <Button
                         variant="contained"
@@ -302,11 +258,11 @@ const GaleriaFormulariosPublicos = ({ onCopiar }) => {
                         onClick={e => { e.stopPropagation(); handleCopiar(form); }}
                         disabled={copiandoId === form.id || esPropio || !userProfile || yaCopiado}
                         sx={{ ml: 2 }}
-                                              >
-                          {copiandoId === form.id ? <CircularProgress size={18} /> : 
-                           copiadoExitoso === form.id ? '¡Copiado!' : 
-                           yaCopiado ? 'Ya copiado' : 'Copiar'}
-                        </Button>
+                      >
+                        {copiandoId === form.id ? <CircularProgress size={18} /> :
+                         copiadoExitoso === form.id ? '¡Copiado!' :
+                         yaCopiado ? 'Ya copiado' : 'Copiar'}
+                      </Button>
                     </span>
                   </Tooltip>
                 </AccordionSummary>
@@ -360,4 +316,4 @@ const GaleriaFormulariosPublicos = ({ onCopiar }) => {
   );
 };
 
-export default GaleriaFormulariosPublicos; 
+export default GaleriaFormulariosPublicos;

@@ -30,14 +30,13 @@ import {
   CloudUpload as CloudUploadIcon
 } from '@mui/icons-material';
 import { useAuth } from '@/components/context/AuthContext';
-import { useGlobalSelection } from '../../../hooks/useGlobalSelection';
 import EmpleadoFormModal from './EmpleadoForm';
 import ImportEmpleadosDialog from './import/ImportEmpleadosDialog';
 import { empleadoService } from '../../../services/empleadoService';
 import SinSucursalAlert from '@/components/common/SinSucursalAlert';
 
 export default function Empleados() {
-  const { userProfile, loadingSucursales, role } = useAuth();
+  const { userProfile, loadingSucursales, role, selectedEmpresa, selectedSucursal } = useAuth();
   
   // Determinar si el usuario puede crear empleados
   // Admin/superdev siempre puede crear, operario solo si no está bloqueado y está activo
@@ -47,17 +46,6 @@ export default function Empleados() {
     isActive &&
     (isAdminLike || role === 'operario');
   
-  // Usar selección global
-  const {
-    selectedEmpresa,
-    selectedSucursal,
-    setSelectedEmpresa,
-    setSelectedSucursal,
-    sucursalesFiltradas: filteredSucursales,
-    userEmpresas,
-    userSucursales: _userSucursales
-  } = useGlobalSelection();
-  
   const [empleados, setEmpleados] = useState([]);
   const [loading, setLoading] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
@@ -66,15 +54,7 @@ export default function Empleados() {
   const [filterEstado, setFilterEstado] = useState('');
   const [openForm, setOpenForm] = useState(false);
   const [selectedEmpleado, setSelectedEmpleado] = useState(null);
-  const [empresasCargadas, setEmpresasCargadas] = useState(false);
   const [openImportDialog, setOpenImportDialog] = useState(false);
-
-  // Detectar cuando las empresas han sido cargadas
-  useEffect(() => {
-    if (userEmpresas !== undefined) {
-      setEmpresasCargadas(true);
-    }
-  }, [userEmpresas]);
 
   const loadEmpleados = useCallback(async () => {
     if (!userProfile?.ownerId || !selectedSucursal) {
@@ -101,12 +81,12 @@ export default function Empleados() {
   useEffect(() => {
     if (selectedSucursal) {
       loadEmpleados();
-    } else if (empresasCargadas) {
-      // Si no hay sucursal seleccionada pero ya se cargaron las empresas, limpiar empleados
+    } else {
+      // Si no hay sucursal seleccionada, limpiar empleados
       setEmpleados([]);
       setLoading(false);
     }
-  }, [selectedSucursal, empresasCargadas, loadEmpleados]);
+  }, [selectedSucursal, loadEmpleados]);
 
   const handleOpenForm = (empleado = null) => {
     setSelectedEmpleado(empleado);
@@ -158,7 +138,7 @@ export default function Empleados() {
   const uniqueCargos = [...new Set(empleados.map(emp => emp.cargo))].filter(Boolean);
 
   // Mostrar loading mientras se cargan las sucursales
-  if (loadingSucursales || !empresasCargadas) {
+  if (loadingSucursales) {
     return (
       <Container maxWidth="xl" sx={{ py: 3 }}>
         <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '400px' }}>
@@ -209,64 +189,11 @@ export default function Empleados() {
       </Box>
 
       {/* Alertas de estado */}
-      {!userEmpresas || userEmpresas.length === 0 ? (
-        <Alert severity="error" sx={{ mb: 3 }}>
-          <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 2 }}>
-            <Typography variant="body1">
-              🏢 No hay empresas disponibles. Contacta al administrador para asignar empresas a tu usuario.
-            </Typography>
-            <Button
-              variant="contained"
-              size="small"
-              onClick={() => window.location.href = '/establecimiento'}
-            >
-              🏢 Ir a Empresas
-            </Button>
-          </Box>
-        </Alert>
-      ) : !selectedSucursal && filteredSucursales.length === 0 ? (
+      {!selectedSucursal ? (
         <SinSucursalAlert empresaId={selectedEmpresa !== 'todas' ? selectedEmpresa : undefined} />
       ) : null}
 
-      {/* Selectores de Empresa y Sucursal */}
-      <Paper sx={{ p: 2, mb: 3 }}>
-        <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap' }}>
-          <FormControl sx={{ flex: 1, minWidth: 250 }}>
-            <InputLabel>Empresa</InputLabel>
-            <Select
-              value={selectedEmpresa}
-              label="Empresa"
-              onChange={(e) => setSelectedEmpresa(e.target.value)}
-              disabled={!userEmpresas || userEmpresas.length === 0}
-              aria-label="Seleccionar empresa"
-            >
-              {userEmpresas?.map((empresa) => (
-                <MenuItem key={empresa.id} value={empresa.id}>
-                  {empresa.nombre}
-                </MenuItem>
-              ))}
-            </Select>
-          </FormControl>
-
-          <FormControl sx={{ flex: 1, minWidth: 250 }}>
-            <InputLabel>Sucursal</InputLabel>
-            <Select
-              value={selectedSucursal}
-              label="Sucursal"
-              onChange={(e) => setSelectedSucursal(e.target.value)}
-              disabled={!selectedEmpresa || filteredSucursales.length === 0 || !userEmpresas || userEmpresas.length === 0}
-              aria-label="Seleccionar sucursal"
-            >
-              {filteredSucursales.map((sucursal) => (
-                <MenuItem key={sucursal.id} value={sucursal.id}>
-                  {sucursal.nombre}
-                </MenuItem>
-              ))}
-            </Select>
-          </FormControl>
-        </Box>
-      </Paper>
-
+      
       {/* Filtros */}
       <Paper sx={{ p: 2, mb: 3 }}>
         <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap' }}>
@@ -339,12 +266,10 @@ export default function Empleados() {
           <Box sx={{ display: 'flex', justifyContent: 'center', p: 4 }}>
             <CircularProgress />
           </Box>
-        ) : !userEmpresas || userEmpresas.length === 0 || !selectedSucursal ? (
+        ) : !selectedSucursal ? (
           <Box sx={{ p: 4, textAlign: 'center' }}>
             <Typography color="text.secondary">
-              {!userEmpresas || userEmpresas.length === 0 
-                ? 'Selecciona una empresa para ver los empleados'
-                : 'Selecciona una sucursal para ver los empleados'}
+              Selecciona una sucursal para ver los empleados
             </Typography>
           </Box>
         ) : filteredEmpleados.length === 0 ? (

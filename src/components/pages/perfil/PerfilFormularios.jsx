@@ -8,10 +8,8 @@ import {
 import { Draw as DrawIcon, ExpandMore as ExpandMoreIcon } from '@mui/icons-material';
 import ShareIcon from '@mui/icons-material/Share';
 import { useState } from 'react';
-import { doc, updateDoc, deleteDoc } from 'firebase/firestore';
-import { db } from '../../../firebaseControlFile';
-import { v4 as uuidv4 } from 'uuid';
 import ContentCopyIcon from '@mui/icons-material/ContentCopy';
+import { formularioService } from '../../../services/formularioService';
 import DeleteForeverIcon from '@mui/icons-material/DeleteForever';
 import { usePermissions } from '../admin/hooks/usePermissions';
 import { useNavigate } from 'react-router-dom';
@@ -35,25 +33,31 @@ const PerfilFormularios = ({ formularios, loading }) => {
 
   const handleCompartir = async (form) => {
     if (!canCompartirFormularios) return;
-    
-    // Verificar si el formulario es propio (no copiado)
-    if (form.formularioOriginalId) {
-      logger.warn('[PerfilFormularios] No se puede compartir un formulario copiado:', form.id);
-      return;
-    }
-    
-    let publicSharedId = form.publicSharedId;
-    if (!form.esPublico || !form.publicSharedId) {
-      publicSharedId = uuidv4();
-      await updateDoc(doc(db, 'formularios', form.id), {
-        esPublico: true,
-        publicSharedId
+
+    // Verificar si ya existe snapshot en galería → mostrar confirm de actualización
+    const existing = await formularioService.getSnapshotPublico(form.id);
+    if (existing) {
+      const result = await Swal.fire({
+        title: 'Actualizar versión pública',
+        text: 'Este formulario ya está en la galería. ¿Querés actualizar la versión pública con los cambios actuales?',
+        icon: 'question',
+        showCancelButton: true,
+        confirmButtonText: 'Sí, actualizar',
+        cancelButtonText: 'Cancelar'
       });
-      logger.debug('[CompartirFormulario] Formulario actualizado como público:', form.id, publicSharedId);
+      if (!result.isConfirmed) return;
     }
-    const url = `${window.location.origin}/formularios/public/${publicSharedId}`;
-    setShareLink(url);
-    setOpenShareId(form.id);
+
+    try {
+      const { publicSharedId } = await formularioService.publicarFormulario(form.id, userProfile, form);
+      const url = `${window.location.origin}/formularios/public/${publicSharedId}`;
+      setShareLink(url);
+      setOpenShareId(form.id);
+      logger.debug('[PerfilFormularios] Formulario publicado:', form.id, publicSharedId);
+    } catch (error) {
+      logger.error('[PerfilFormularios] Error al compartir formulario:', error);
+      Swal.fire('Error', 'No se pudo compartir el formulario. Intentá de nuevo.', 'error');
+    }
   };
 
   const handleCopy = async () => {
@@ -76,7 +80,7 @@ const PerfilFormularios = ({ formularios, loading }) => {
 
     if (result.isConfirmed) {
       try {
-        await deleteDoc(doc(db, 'formularios', form.id));
+        await formularioService.deleteFormulario(form.id, { uid: userProfile?.uid }, userProfile);
         
         // Registrar log
         await registrarAccionSistema(
@@ -338,23 +342,39 @@ const PerfilFormularios = ({ formularios, loading }) => {
                     gap: isSmallMobile ? 1 : 2,
                     justifyContent: isMobile ? 'center' : 'flex-start'
                   }}>
-                    <Tooltip title={form.formularioOriginalId ? 'No puedes compartir un formulario copiado' : 'Compartir formulario'}>
-                      <span>
-                        <Button
-                          variant="outlined"
-                          color="primary"
-                          size={isSmallMobile ? "small" : "medium"}
-                          onClick={() => handleCompartir(form)}
-                          disabled={Boolean(!canCompartirFormularios || form.formularioOriginalId)}
-                          sx={{ 
-                            minWidth: isMobile ? '100%' : 'auto',
-                            py: isSmallMobile ? 1 : 1.5
-                          }}
-                        >
-                          📤 Compartir
-                        </Button>
-                      </span>
-                    </Tooltip>
+                    {(() => {
+                      const esLegacyCopia = !!form.formularioOriginalId && !form.copiadoDesde;
+                      const esCopiadoConMismoNombre = !!form.copiadoDesde && form.nombre === form.nombreOriginal;
+                      const compartirDeshabilitado = !canCompartirFormularios || esLegacyCopia || esCopiadoConMismoNombre;
+                      const tooltipCompartir = !canCompartirFormularios
+                        ? 'Sin permisos para compartir formularios'
+                        : esLegacyCopia
+                        ? 'No podés compartir un formulario copiado'
+                        : esCopiadoConMismoNombre
+                        ? 'Cambiá el nombre para poder compartirlo'
+                        : form.esPublico
+                        ? 'Actualizar versión pública en la galería'
+                        : 'Compartir formulario en la galería';
+                      return (
+                        <Tooltip title={tooltipCompartir}>
+                          <span>
+                            <Button
+                              variant="outlined"
+                              color="primary"
+                              size={isSmallMobile ? "small" : "medium"}
+                              onClick={() => handleCompartir(form)}
+                              disabled={compartirDeshabilitado}
+                              sx={{
+                                minWidth: isMobile ? '100%' : 'auto',
+                                py: isSmallMobile ? 1 : 1.5
+                              }}
+                            >
+                              📤 {form.esPublico ? 'Actualizar galería' : 'Compartir'}
+                            </Button>
+                          </span>
+                        </Tooltip>
+                      );
+                    })()}
                     
                      <Button
                       variant="outlined"
