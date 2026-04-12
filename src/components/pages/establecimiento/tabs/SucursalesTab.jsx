@@ -17,7 +17,7 @@ import SucursalCard from '../components/SucursalCard';
 import SucursalFormModal from '../components/SucursalFormModal';
 import { sucursalService } from '../../../../services/sucursalService';
 
-const SucursalesTab = ({ empresaId, empresaNombre, userEmpresas, loadEmpresasStats }) => {
+const SucursalesTab = ({ empresaId, userEmpresas, loadEmpresasStats }) => {
   const { userProfile, getEffectiveOwnerId } = useAuth();
   const navigate = useNavigate();
   const theme = useTheme();
@@ -41,12 +41,6 @@ const SucursalesTab = ({ empresaId, empresaNombre, userEmpresas, loadEmpresasSta
     targetAnualCapacitaciones: 12
   });
 
-  // Función para recargar estadísticas de sucursales
-  const reloadSucursalesStats = async () => {
-    if (sucursales && sucursales.length > 0 && userProfile?.ownerId) {
-      await loadSucursalesStats(sucursales, userProfile.ownerId);
-    }
-  };
 
   useEffect(() => {
     if (empresaId) {
