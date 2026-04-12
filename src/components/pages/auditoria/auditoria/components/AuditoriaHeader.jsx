@@ -94,16 +94,28 @@ const AuditoriaHeader = ({
                 </Typography>
               </>
             ) : (
-              <Typography variant={isMobile ? "h6" : "h4"} sx={{ 
-                fontWeight: 700,
-                background: `linear-gradient(135deg, ${theme.palette.primary.main}, ${theme.palette.secondary.main})`,
-                backgroundClip: 'text',
-                WebkitBackgroundClip: 'text',
-                WebkitTextFillColor: 'transparent',
-                fontSize: isMobile ? '1.1rem' : undefined
-              }}>
-                Nueva Auditoría
-              </Typography>
+              <Box display="flex" alignItems="center" gap={1.5}>
+                <Typography variant={isMobile ? "h6" : "h4"} sx={{ 
+                  fontWeight: 700,
+                  background: `linear-gradient(135deg, ${theme.palette.primary.main}, ${theme.palette.secondary.main})`,
+                  backgroundClip: 'text',
+                  WebkitBackgroundClip: 'text',
+                  WebkitTextFillColor: 'transparent',
+                  fontSize: isMobile ? '1.1rem' : undefined
+                }}>
+                  Nueva Auditoría
+                </Typography>
+                <Typography variant={isMobile ? "body2" : "body1"} sx={{ 
+                  color: 'text.secondary',
+                  fontWeight: 500
+                }}>
+                  {new Date().toLocaleDateString('es-ES', { 
+                    day: '2-digit', 
+                    month: '2-digit', 
+                    year: 'numeric' 
+                  })}
+                </Typography>
+              </Box>
             )}
           </Box>
         </Box>
