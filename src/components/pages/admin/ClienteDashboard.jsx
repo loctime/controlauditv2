@@ -115,11 +115,6 @@ const ClienteDashboard = React.memo(() => {
               />
             </Grid>
             <Grid item xs={12} lg={6}>
-              <ResumenGeneral
-                auditoriasPendientes={auditoriasPendientes}
-                auditoriasCompletadas={auditoriasCompletadas}
-                auditorias={auditorias}
-              />
               <AuditoriasDelDia
                 selectedDate={selectedDate}
                 auditoriasDelDia={auditoriasDelDiaSeleccionado}
@@ -283,8 +278,22 @@ const ClienteDashboard = React.memo(() => {
       {/* Pestañas */}
       <Paper elevation={2} sx={{ mb: 1 }}>
         <Box sx={{ px: 2, py: 0.5 }}>
-          {/* Tabs centrados */}
-          <Box sx={{ display: 'flex', justifyContent: 'center' }}>
+          <Box sx={{ 
+            display: 'flex', 
+            justifyContent: 'space-between', 
+            alignItems: 'center',
+            flexDirection: { xs: 'column', sm: 'row' },
+            gap: { xs: 1, sm: 0 }
+          }}>
+            {/* Resumen General inline a la izquierda */}
+            <ResumenGeneral
+              variant="inline"
+              auditoriasPendientes={auditoriasPendientes}
+              auditoriasCompletadas={auditoriasCompletadas}
+              auditorias={auditorias}
+            />
+            
+            {/* Tabs a la derecha */}
             {tabs}
           </Box>
         </Box>

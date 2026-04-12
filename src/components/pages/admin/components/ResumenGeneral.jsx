@@ -9,28 +9,40 @@ import {
   CardContent,
   useTheme,
   useMediaQuery,
-  alpha
+  alpha,
+  Chip
 } from "@mui/material";
 import { CheckCircle } from "@mui/icons-material";
 
-const ResumenGeneral = ({ auditoriasPendientes, auditoriasCompletadas, auditorias }) => {
+const ResumenGeneral = ({ auditoriasPendientes, auditoriasCompletadas, auditorias, variant }) => {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
-  const isSmallMobile = useMediaQuery(theme.breakpoints.down('xs'));
 
-  const mobileBoxStyle = {
-    mb: isMobile ? 1.5 : 3,
-    p: isMobile ? 2 : 3,
-    borderRadius: 2,
-    bgcolor: 'background.paper',
-    border: `1px solid ${theme.palette.divider}`,
-    boxShadow: '0 2px 8px rgba(0,0,0,0.05)',
-    overflow: 'hidden',
-    minHeight: isMobile ? '100px' : '120px',
-    display: 'flex',
-    flexDirection: 'column',
-    justifyContent: 'space-between'
-  };
+  // Variante inline: chips horizontales compactos
+  if (variant === 'inline') {
+    return (
+      <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
+        <Chip 
+          label={`Programadas: ${auditoriasPendientes.length}`}
+          sx={{ 
+            bgcolor: theme.palette.mode === 'dark' ? alpha(theme.palette.warning.main, 0.2) : '#fff3e0',
+            color: '#e65100',
+            fontWeight: 600,
+            border: `1px solid ${alpha(theme.palette.warning.main, 0.3)}`
+          }}
+        />
+        <Chip 
+          label={`Completadas: ${auditoriasCompletadas.length} / ${auditorias.length}`}
+          sx={{ 
+            bgcolor: theme.palette.mode === 'dark' ? alpha(theme.palette.success.main, 0.2) : '#e8f5e8',
+            color: '#2e7d32',
+            fontWeight: 600,
+            border: `1px solid ${alpha(theme.palette.success.main, 0.3)}`
+          }}
+        />
+      </Box>
+    );
+  }
 
   const auditoriasEsteMes = auditorias.filter(aud => {
     const fecha = new Date(aud.fecha);
@@ -41,43 +53,17 @@ const ResumenGeneral = ({ auditoriasPendientes, auditoriasCompletadas, auditoria
 
   return (
     <Box sx={{
-      ...mobileBoxStyle,
+      p: isMobile ? 0.75 : 1,
+      borderRadius: 2,
       backgroundColor: theme.palette.mode === 'dark' ? theme.palette.background.default : '#f5f5f5',
       mb: isMobile ? 2 : 3
     }}>
-      <Box sx={{ 
-        display: 'flex', 
-        alignItems: 'center', 
-        gap: isMobile ? 1 : 2,
-        mb: isMobile ? 1.5 : 2
-      }}>
-        <Box sx={{ 
-          p: isMobile ? 1 : 1.5, 
-          borderRadius: '50%', 
-          bgcolor: alpha(theme.palette.primary.main, 0.1),
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center'
-        }}>
-          <CheckCircle 
-            color="primary" 
-            sx={{ fontSize: isMobile ? 20 : 24 }} 
-          />
-        </Box>
-        <Typography 
-          variant={isMobile ? "body1" : "h6"} 
-          sx={{ fontWeight: 600, color: 'text.primary' }}
-        >
-          Resumen General
-        </Typography>
-      </Box>
-      
-      <Grid container spacing={isMobile ? 1 : 2} sx={{ mt: isMobile ? 1 : 2 }}>
+      <Grid container spacing={isMobile ? 0.5 : 1}>
         <Grid item xs={4}>
           <Box sx={{ 
             bgcolor: theme.palette.mode === 'dark' ? alpha(theme.palette.warning.main, 0.1) : '#fff3e0', 
             textAlign: 'center',
-            p: isMobile ? 1.5 : 2,
+            p: isMobile ? 0.75 : 1,
             borderRadius: 2,
             border: `1px solid ${alpha(theme.palette.warning.main, 0.2)}`,
             minHeight: isMobile ? '80px' : '100px',
