@@ -1024,15 +1024,7 @@ const AuditoriaRefactorizada = () => {
   // Scroll al top cuando se llega al paso de firmas (paso 3)
   useEffect(() => {
     if (activeStep === 3) {
-      // Delay para asegurar que el contenido se haya renderizado
-      setTimeout(() => {
-        window.scrollTo({ top: 0, behavior: 'smooth' });
-        // También intentar hacer scroll al Container principal
-        const container = document.querySelector('[class*="MuiContainer"]');
-        if (container) {
-          container.scrollIntoView({ behavior: 'smooth', block: 'start' });
-        }
-      }, 400);
+      window.scrollTo({ top: 0, behavior: 'instant' });
     }
   }, [activeStep]);
 
