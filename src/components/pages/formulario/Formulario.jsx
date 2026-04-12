@@ -1,7 +1,7 @@
 import logger from '@/utils/logger';
 import React, { useState } from "react";
-import { Button, TextField, Typography, Box } from "@mui/material";
-import { ArrowBack } from "@mui/icons-material";
+import { Button, TextField, Typography, Box, Paper, Chip, IconButton } from "@mui/material";
+import { ArrowBack, Add, Delete, Cancel, Save } from "@mui/icons-material";
 import { Timestamp } from "firebase/firestore";
 import { useAuth } from '@/components/context/AuthContext';
 import Swal from 'sweetalert2';
@@ -118,20 +118,6 @@ const Formulario = () => {
 
   return (
     <Box sx={{ mt: 4 }}>
-      {/* Botón para galería de formularios públicos - OCULTO */}
-      {/* <Box sx={{ mb: 3, display: 'flex', alignItems: 'center', gap: 2 }}>
-        <Button
-          variant="outlined"
-          startIcon={<PublicIcon />}
-          onClick={() => {
-            logger.debug('[Formulario] Ir a galería de formularios públicos');
-            navigate('/formularios-publicos');
-          }}
-          sx={{ borderRadius: '20px', px: 3, py: 1 }}
-        >
-          Ver Galería de Formularios Públicos
-        </Button>
-      </Box> */}
       {/* Botón Volver */}
       <Box sx={{ mb: 3, display: 'flex', alignItems: 'center', gap: 2 }}>
         <Button
@@ -154,6 +140,22 @@ const Formulario = () => {
       <Typography variant="body1" color="text.secondary" sx={{ mb: 3 }}>
         Las preguntas se deben ingresar una debajo de otra por cada sección
       </Typography>
+
+      {/* Contadores informativos */}
+      <Box sx={{ mb: 3, display: 'flex', gap: 2 }}>
+        <Chip 
+          label={`${secciones.length} secciones`} 
+          color="primary" 
+          variant="outlined" 
+          size="small" 
+        />
+        <Chip 
+          label={`${secciones.reduce((total, seccion) => total + seccion.preguntas.split('\n').filter(p => p.trim()).length, 0)} preguntas totales`} 
+          color="secondary" 
+          variant="outlined" 
+          size="small" 
+        />
+      </Box>
       
 
       
@@ -166,52 +168,138 @@ const Formulario = () => {
           fullWidth
           value={nombreFormulario}
           onChange={handleChangeNombre}
+          sx={{ mb: 3 }}
         />
-        {secciones.map((seccion, index) => (
-          <Box key={index} mt={2}>
-            <Typography variant="subtitle1">Sección {index + 1}</Typography>
-            <TextField
-              required
-              id={`nombreSeccion${index}`}
-              name={`nombreSeccion${index}`}
-              label="Nombre de la Sección"
-              fullWidth
-              value={seccion.nombre}
-              onChange={(event) => handleChangeSeccionNombre(index, event)}
-            />
-            <TextField
-              required
-              id={`preguntas${index}`}
-              name={`preguntas${index}`}
-              label="Preguntas (Ingrese una por línea)"
-              multiline
-              fullWidth
-              rows={5}
-              value={seccion.preguntas}
-              onChange={(event) => handleChangePreguntas(index, event)}
-            />
-            <Button 
-              variant="contained" 
-              color="error" 
-              onClick={() => handleEliminarSeccion(index)}
-              aria-label={`Eliminar sección ${index + 1}: ${seccion.nombre || 'sin nombre'}`}
+        
+        {/* Header de secciones */}
+        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+          <Typography variant="h6">Secciones</Typography>
+          <Button
+            variant="contained"
+            startIcon={<Add />}
+            onClick={handleAgregarSeccion}
+            sx={{ borderRadius: '20px' }}
+          >
+            Agregar sección
+          </Button>
+        </Box>
+
+        {secciones.map((seccion, index) => {
+          const preguntasArray = seccion.preguntas.split('\n').map(p => p.trim()).filter(Boolean);
+          return (
+            <Paper 
+              key={index} 
+              sx={{ 
+                mb: 3, 
+                border: '1px solid', 
+                borderColor: 'divider',
+                borderRadius: 2,
+                overflow: 'hidden'
+              }}
             >
-              Eliminar Sección
-            </Button>
-          </Box>
-        ))}
-        <Button 
-          variant="contained" 
-          color="primary" 
-          onClick={handleAgregarSeccion}
-          aria-label="Agregar nueva sección al formulario"
-        >
-          Agregar Sección
-        </Button>
-        <Button type="submit" variant="contained" color="primary">
-          Cargar Formulario a la Base de Datos
-        </Button>
+              {/* Header de la sección */}
+              <Box sx={{ 
+                display: 'flex', 
+                justifyContent: 'space-between', 
+                alignItems: 'center',
+                p: 2,
+                borderBottom: '1px solid',
+                borderColor: 'divider',
+                bgcolor: 'grey.50'
+              }}>
+                <Typography variant="subtitle1" fontWeight="bold">
+                  Sección {index + 1}
+                </Typography>
+                <IconButton
+                  color="error"
+                  onClick={() => handleEliminarSeccion(index)}
+                  aria-label={`Eliminar sección ${index + 1}: ${seccion.nombre || 'sin nombre'}`}
+                >
+                  <Delete />
+                </IconButton>
+              </Box>
+              
+              {/* Contenido de la sección */}
+              <Box sx={{ p: 2 }}>
+                <TextField
+                  required
+                  id={`nombreSeccion${index}`}
+                  name={`nombreSeccion${index}`}
+                  label="Nombre de la Sección"
+                  fullWidth
+                  value={seccion.nombre}
+                  onChange={(event) => handleChangeSeccionNombre(index, event)}
+                  sx={{ mb: 2 }}
+                />
+                <TextField
+                  required
+                  id={`preguntas${index}`}
+                  name={`preguntas${index}`}
+                  label="Preguntas (Ingrese una por línea)"
+                  multiline
+                  fullWidth
+                  rows={5}
+                  value={seccion.preguntas}
+                  onChange={(event) => handleChangePreguntas(index, event)}
+                  sx={{ mb: 2 }}
+                />
+                
+                {/* Preview de preguntas como Chips */}
+                {preguntasArray.length > 0 && (
+                  <Box sx={{ mt: 2 }}>
+                    <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
+                      Vista previa de preguntas:
+                    </Typography>
+                    <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
+                      {preguntasArray.map((pregunta, pregIndex) => (
+                        <Chip
+                          key={pregIndex}
+                          label={`${pregIndex + 1}. ${pregunta}`}
+                          variant="outlined"
+                          size="small"
+                          sx={{ maxWidth: '100%' }}
+                        />
+                      ))}
+                    </Box>
+                  </Box>
+                )}
+              </Box>
+            </Paper>
+          );
+        })}
       </form>
+      
+      {/* Footer sticky con botones */}
+      <Box sx={{ 
+        position: 'sticky', 
+        bottom: 0, 
+        bgcolor: 'background.paper',
+        p: 2,
+        borderTop: '1px solid',
+        borderColor: 'divider',
+        display: 'flex',
+        justifyContent: 'flex-end',
+        gap: 2,
+        mt: 4
+      }}>
+        <Button
+          variant="outlined"
+          startIcon={<Cancel />}
+          onClick={() => navigate('/editar')}
+          sx={{ borderRadius: '20px' }}
+        >
+          Cancelar
+        </Button>
+        <Button
+          type="submit"
+          variant="contained"
+          startIcon={<Save />}
+          onClick={handleSubmit}
+          sx={{ borderRadius: '20px' }}
+        >
+          Guardar formulario
+        </Button>
+      </Box>
     </Box>
   );
 };

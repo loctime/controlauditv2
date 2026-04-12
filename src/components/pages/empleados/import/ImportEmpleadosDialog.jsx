@@ -204,7 +204,9 @@ export default function ImportEmpleadosDialog({ open, onClose, onSuccess, empres
           {activeTab === 0 && (
             <Box>
               <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-                La fila 1 debe contener los encabezados (nombre, apellido, dni, etc.)
+                <strong>Formato del archivo Excel:</strong><br />
+                <strong>Encabezados (fila 1):</strong> nombre*&nbsp;&nbsp;&nbsp;apellido*&nbsp;&nbsp;&nbsp;dni&nbsp;&nbsp;&nbsp;email&nbsp;&nbsp;&nbsp;telefono&nbsp;&nbsp;&nbsp;cargo&nbsp;&nbsp;&nbsp;area&nbsp;&nbsp;&nbsp;tipo&nbsp;&nbsp;&nbsp;estado&nbsp;&nbsp;&nbsp;fechaIngreso<br />
+                <strong>Valores por defecto:</strong> tipo: operativo, estado: activo, fechaIngreso: hoy
               </Typography>
               <input
                 ref={fileInputRef}

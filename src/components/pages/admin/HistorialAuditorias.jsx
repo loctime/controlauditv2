@@ -1,351 +1,240 @@
-import logger from '@/utils/logger';
-//src/components/pages/admin/HistorialAuditorias.jsx
-import React, { useState, useEffect } from "react";
+import React, { useState } from 'react';
 import {
-  Typography,
-  Box,
-  Paper,
-  Table,
-  TableBody,
-  TableCell,
-  TableContainer,
-  TableHead,
-  TableRow,
-  Chip,
-  IconButton,
-  Button,
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  DialogActions,
-  TextField,
-  Grid,
-  Card,
-  CardContent,
-  Stack
-} from "@mui/material";
-import {
-  Visibility,
-  CheckCircle,
-  Schedule,
-  Business,
-  LocationOn,
-  Description,
-  CalendarToday
-} from "@mui/icons-material";
-import { getDocs, query, where, orderBy, collection } from "firebase/firestore";
-import { dbAudit } from "../../../firebaseControlFile";
-import { firestoreRoutesCore } from "../../../core/firestore/firestoreRoutes.core";
-import { toast } from 'react-toastify';
-import { useAuth } from '@/components/context/AuthContext';
+  Box, Typography, Paper, Table, TableBody, TableCell,
+  TableContainer, TableHead, TableRow, Chip, CircularProgress,
+  Dialog, DialogTitle, DialogContent, DialogActions, Button,
+  IconButton, Select, MenuItem, FormControl, LinearProgress,
+} from '@mui/material';
+import { Close, History } from '@mui/icons-material';
+import { useHistorialAuditorias } from './hooks/useHistorialAuditorias';
+
+const MESES = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
+
+// Celda individual con color según cumplimiento
+const CeldaMes = ({ realizadas, target, onClick }) => {
+  const porcentaje = target > 0 ? Math.round((realizadas / target) * 100) : null;
+
+  const getColor = () => {
+    if (target === 0 || target == null) return { bg: '#f5f5f5', text: '#999' };
+    if (porcentaje >= 100) return { bg: '#e8f5e9', text: '#2e7d32' };
+    if (porcentaje >= 80) return { bg: '#fff8e1', text: '#f57f17' };
+    if (porcentaje >= 50) return { bg: '#fff3e0', text: '#e65100' };
+    return { bg: '#ffebee', text: '#c62828' };
+  };
+
+  const colors = getColor();
+
+  return (
+    <TableCell
+      align="center"
+      onClick={realizadas > 0 || target > 0 ? onClick : undefined}
+      sx={{
+        cursor: realizadas > 0 || target > 0 ? 'pointer' : 'default',
+        bgcolor: colors.bg,
+        color: colors.text,
+        fontWeight: 600,
+        fontSize: '0.85rem',
+        p: '6px 4px',
+        border: '1px solid #e0e0e0',
+        '&:hover': realizadas > 0 || target > 0 ? { opacity: 0.8 } : {},
+        minWidth: 52
+      }}
+    >
+      {target > 0
+        ? `${realizadas}/${target}`
+        : realizadas > 0
+          ? realizadas
+          : '—'
+      }
+    </TableCell>
+  );
+};
 
 const HistorialAuditorias = () => {
-  const { userProfile } = useAuth();
-  const [auditorias, setAuditorias] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [selectedAuditoria, setSelectedAuditoria] = useState(null);
-  const [openDialog, setOpenDialog] = useState(false);
-  const [filtroEmpresa, setFiltroEmpresa] = useState('');
-  const [filtroFecha, setFiltroFecha] = useState('');
+  const añoActual = new Date().getFullYear();
+  const [añoSeleccionado, setAñoSeleccionado] = useState(añoActual);
+  const [drillDown, setDrillDown] = useState(null);
+  // { sucursal, mes, realizadas, target }
 
-  useEffect(() => {
-    cargarAuditorias();
-  }, [userProfile]);
+  const { historial, sucursales, loading } = useHistorialAuditorias(añoSeleccionado);
 
-  const cargarAuditorias = async () => {
-    try {
-      setLoading(true);
-      
-      if (!userProfile?.ownerId) {
-        setAuditorias([]);
-        return;
-      }
-
-      // Leer desde estructura owner-centric: apps/auditoria/owners/{ownerId}/auditorias_agendadas
-      const ownerId = userProfile.ownerId;
-      // Nota: auditorias_agendadas puede no estar en firestoreRoutesCore, usar construcción manual
-      const auditoriasRef = collection(dbAudit, 'apps', 'auditoria', 'owners', ownerId, 'auditorias_agendadas');
-      const q = query(
-        auditoriasRef,
-        where('estado', '==', 'completada'),
-        orderBy('fechaCompletada', 'desc')
-      );
-      
-      const snapshot = await getDocs(q);
-      const auditoriasData = snapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data()
-      }));
-      
-      setAuditorias(auditoriasData);
-      
-      logger.debug('[DEBUG] Historial cargado desde owner-centric:', {
-        total: auditoriasData.length,
-        ownerId: ownerId
-      });
-      
-    } catch (error) {
-      logger.error('Error cargando auditorías:', error);
-      toast.error('Error al cargar el historial');
-    } finally {
-      setLoading(false);
-    }
+  const getTotalAnual = (sucursalId) => {
+    if (!historial[sucursalId]) return 0;
+    return Object.values(historial[sucursalId]).reduce((a, b) => a + b, 0);
   };
 
-  const auditoriasFiltradas = auditorias.filter(auditoria => {
-    const cumpleEmpresa = !filtroEmpresa || 
-      auditoria.empresa.toLowerCase().includes(filtroEmpresa.toLowerCase());
-    const cumpleFecha = !filtroFecha || auditoria.fecha === filtroFecha;
-    return cumpleEmpresa && cumpleFecha;
-  });
+  const getTargetAnual = (sucursal) => sucursal.targetAnualAuditorias || 0;
 
-  const handleVerDetalles = (auditoria) => {
-    setSelectedAuditoria(auditoria);
-    setOpenDialog(true);
+  const getPorcentajeAnual = (sucursal) => {
+    const target = getTargetAnual(sucursal);
+    if (target === 0) return null;
+    return Math.round((getTotalAnual(sucursal.id) / target) * 100);
   };
 
-  const getEstadisticas = () => {
-    const total = auditorias.length;
-    const esteMes = auditorias.filter(aud => {
-      const fecha = new Date(aud.fecha);
-      const ahora = new Date();
-      return fecha.getMonth() === ahora.getMonth() && 
-             fecha.getFullYear() === ahora.getFullYear();
-    }).length;
-    
-    const empresasUnicas = new Set(auditorias.map(aud => aud.empresa)).size;
-    
-    return { total, esteMes, empresasUnicas };
+  const getChipAnual = (sucursal) => {
+    const pct = getPorcentajeAnual(sucursal);
+    if (pct === null) return null;
+    const color = pct >= 100 ? 'success' : pct >= 80 ? 'warning' : 'error';
+    return <Chip label={`${pct}%`} size="small" color={color} sx={{ fontWeight: 700, fontSize: '0.75rem' }} />;
   };
-
-  const estadisticas = getEstadisticas();
 
   if (loading) {
     return (
-      <Box sx={{ p: 4, textAlign: 'center' }}>
-        <Typography variant="h6">Cargando historial...</Typography>
+      <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', py: 6 }}>
+        <CircularProgress />
       </Box>
     );
   }
 
   return (
-    <Box sx={{ padding: 4 }}>
-      <Typography variant="h4" gutterBottom sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-        <CheckCircle color="primary" />
-        Historial de Auditorías Completadas
-      </Typography>
+    <Box sx={{ mt: 2 }}>
+      {/* Header con selector de año */}
+      <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 2 }}>
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+          <History color="primary" />
+          <Typography variant="h6" sx={{ fontWeight: 700 }}>
+            Cumplimiento anual por sucursal
+          </Typography>
+        </Box>
+        <FormControl size="small">
+          <Select
+            value={añoSeleccionado}
+            onChange={(e) => setAñoSeleccionado(e.target.value)}
+            sx={{ fontSize: '0.9rem' }}
+          >
+            {[añoActual - 1, añoActual, añoActual + 1].map(y => (
+              <MenuItem key={y} value={y}>{y}</MenuItem>
+            ))}
+          </Select>
+        </FormControl>
+      </Box>
 
-      {/* Estadísticas */}
-      <Grid container spacing={3} sx={{ mb: 4 }}>
-        <Grid item xs={12} md={4}>
-          <Card sx={{ bgcolor: '#e8f5e8' }}>
-            <CardContent>
-              <Typography variant="h6" color="success.main">
-                Total Completadas
-              </Typography>
-              <Typography variant="h4">{estadisticas.total}</Typography>
-            </CardContent>
-          </Card>
-        </Grid>
-        <Grid item xs={12} md={4}>
-          <Card sx={{ bgcolor: '#fff3e0' }}>
-            <CardContent>
-              <Typography variant="h6" color="warning.main">
-                Este Mes
-              </Typography>
-              <Typography variant="h4">{estadisticas.esteMes}</Typography>
-            </CardContent>
-          </Card>
-        </Grid>
-        <Grid item xs={12} md={4}>
-          <Card sx={{ bgcolor: '#e3f2fd' }}>
-            <CardContent>
-              <Typography variant="h6" color="info.main">
-                Empresas Auditadas
-              </Typography>
-              <Typography variant="h4">{estadisticas.empresasUnicas}</Typography>
-            </CardContent>
-          </Card>
-        </Grid>
-      </Grid>
+      {/* Leyenda */}
+      <Box sx={{ display: 'flex', gap: 2, mb: 2, flexWrap: 'wrap' }}>
+        {[
+          { color: '#e8f5e9', text: '≥ 100% (Cumplido)' },
+          { color: '#fff8e1', text: '≥ 80% (Bueno)' },
+          { color: '#fff3e0', text: '≥ 50% (Regular)' },
+          { color: '#ffebee', text: '< 50% (Bajo)' },
+          { color: '#f5f5f5', text: 'Sin target' }
+        ].map(({ color, text }) => (
+          <Box key={text} sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+            <Box sx={{ width: 14, height: 14, bgcolor: color, border: '1px solid #ddd', borderRadius: 0.5 }} />
+            <Typography variant="caption" color="text.secondary">{text}</Typography>
+          </Box>
+        ))}
+      </Box>
 
-      {/* Filtros */}
-      <Paper elevation={2} sx={{ p: 3, mb: 3 }}>
-        <Typography variant="h6" gutterBottom>Filtros</Typography>
-        <Grid container spacing={2}>
-          <Grid item xs={12} md={6}>
-            <TextField
-              fullWidth
-              label="Filtrar por empresa"
-              value={filtroEmpresa}
-              onChange={(e) => setFiltroEmpresa(e.target.value)}
-              placeholder="Nombre de la empresa..."
-            />
-          </Grid>
-          <Grid item xs={12} md={6}>
-            <TextField
-              fullWidth
-              label="Filtrar por fecha"
-              type="date"
-              value={filtroFecha}
-              onChange={(e) => setFiltroFecha(e.target.value)}
-              InputLabelProps={{ shrink: true }}
-            />
-          </Grid>
-        </Grid>
-      </Paper>
-
-      {/* Tabla de auditorías */}
-      <Paper elevation={2} sx={{ p: 3 }}>
-        <Typography variant="h6" gutterBottom>
-          Auditorías Completadas ({auditoriasFiltradas.length})
+      {sucursales.length === 0 ? (
+        <Typography variant="body2" color="text.secondary" sx={{ textAlign: 'center', py: 4 }}>
+          No hay sucursales registradas
         </Typography>
-        
-        {auditoriasFiltradas.length === 0 ? (
-          <Box sx={{ textAlign: 'center', py: 4 }}>
-            <Typography variant="body1" color="text.secondary">
-              No hay auditorías completadas para mostrar
-            </Typography>
-          </Box>
-        ) : (
-          <TableContainer>
-            <Table>
-              <TableHead>
-                <TableRow>
-                  <TableCell>Empresa</TableCell>
-                  <TableCell>Sucursal</TableCell>
-                  <TableCell>Formulario</TableCell>
-                  <TableCell>Fecha Programada</TableCell>
-                  <TableCell>Fecha Completada</TableCell>
-                  <TableCell>Acciones</TableCell>
-                </TableRow>
-              </TableHead>
-              <TableBody>
-                {auditoriasFiltradas.map((auditoria) => (
-                  <TableRow key={auditoria.id}>
-                    <TableCell>
-                      <Box display="flex" alignItems="center" gap={1}>
-                        <Business color="primary" />
-                        {auditoria.empresa}
-                      </Box>
-                    </TableCell>
-                    <TableCell>
-                      <Box display="flex" alignItems="center" gap={1}>
-                        <LocationOn color="secondary" />
-                        {auditoria.sucursal || 'Casa Central'}
-                      </Box>
-                    </TableCell>
-                    <TableCell>
-                      <Box display="flex" alignItems="center" gap={1}>
-                        <Description color="info" />
-                        {auditoria.formulario}
-                      </Box>
-                    </TableCell>
-                    <TableCell>
-                      <Box display="flex" alignItems="center" gap={1}>
-                        <CalendarToday color="action" />
-                        {new Date(auditoria.fecha).toLocaleDateString()}
-                      </Box>
-                    </TableCell>
-                    <TableCell>
-                      <Box display="flex" alignItems="center" gap={1}>
-                        <CheckCircle color="success" />
-                        {auditoria.fechaCompletada 
-                          ? new Date(auditoria.fechaCompletada.seconds * 1000).toLocaleDateString()
-                          : 'N/A'
-                        }
-                      </Box>
-                    </TableCell>
-                    <TableCell>
-                      <IconButton
-                        color="primary"
-                        onClick={() => handleVerDetalles(auditoria)}
-                        title="Ver detalles"
-                      >
-                        <Visibility />
-                      </IconButton>
-                    </TableCell>
-                  </TableRow>
+      ) : (
+        <TableContainer component={Paper} elevation={2} sx={{ borderRadius: 2, overflow: 'auto' }}>
+          <Table size="small" sx={{ minWidth: 800 }}>
+            <TableHead>
+              <TableRow sx={{ bgcolor: 'grey.100' }}>
+                <TableCell sx={{ fontWeight: 700, minWidth: 140 }}>Sucursal</TableCell>
+                {MESES.map(m => (
+                  <TableCell key={m} align="center" sx={{ fontWeight: 700, fontSize: '0.8rem', p: '8px 4px' }}>
+                    {m}
+                  </TableCell>
                 ))}
-              </TableBody>
-            </Table>
-          </TableContainer>
-        )}
-      </Paper>
+                <TableCell align="center" sx={{ fontWeight: 700, minWidth: 90 }}>Total</TableCell>
+                <TableCell align="center" sx={{ fontWeight: 700, minWidth: 80 }}>Cumpl.</TableCell>
+              </TableRow>
+            </TableHead>
+            <TableBody>
+              {sucursales.map(sucursal => (
+                <TableRow key={sucursal.id} sx={{ '&:hover': { bgcolor: 'action.hover' } }}>
+                  <TableCell sx={{ fontWeight: 600, fontSize: '0.85rem' }}>
+                    <Box>
+                      <Typography variant="body2" sx={{ fontWeight: 600 }}>{sucursal.nombre}</Typography>
+                      {sucursal.targetMensual > 0 && (
+                        <Typography variant="caption" color="text.secondary">
+                          Target: {sucursal.targetMensual}/mes
+                        </Typography>
+                      )}
+                    </Box>
+                  </TableCell>
+                  {Array.from({ length: 12 }, (_, i) => i + 1).map(mes => (
+                    <CeldaMes
+                      key={mes}
+                      realizadas={historial[sucursal.id]?.[mes] || 0}
+                      target={sucursal.targetMensual || 0}
+                      onClick={() => setDrillDown({
+                        sucursal,
+                        mes,
+                        realizadas: historial[sucursal.id]?.[mes] || 0,
+                        target: sucursal.targetMensual || 0
+                      })}
+                    />
+                  ))}
+                  <TableCell align="center" sx={{ fontWeight: 700 }}>
+                    {getTotalAnual(sucursal.id)} / {getTargetAnual(sucursal) || '—'}
+                  </TableCell>
+                  <TableCell align="center">
+                    {getChipAnual(sucursal)}
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </TableContainer>
+      )}
 
-      {/* Dialog de detalles */}
-      <Dialog open={openDialog} onClose={() => setOpenDialog(false)} maxWidth="md" fullWidth>
-        <DialogTitle>
-          <Box display="flex" alignItems="center" gap={1}>
-            <Visibility color="primary" />
-            Detalles de la Auditoría
-          </Box>
-        </DialogTitle>
-        <DialogContent>
-          {selectedAuditoria && (
-            <Stack spacing={2} sx={{ mt: 2 }}>
-              <Grid container spacing={2}>
-                <Grid item xs={12} md={6}>
-                  <Typography variant="subtitle2" color="primary">Empresa</Typography>
-                  <Typography variant="body1">{selectedAuditoria.empresa}</Typography>
-                </Grid>
-                <Grid item xs={12} md={6}>
-                  <Typography variant="subtitle2" color="primary">Sucursal</Typography>
-                  <Typography variant="body1">
-                    {selectedAuditoria.sucursal || 'Casa Central'}
-                  </Typography>
-                </Grid>
-                <Grid item xs={12} md={6}>
-                  <Typography variant="subtitle2" color="primary">Formulario</Typography>
-                  <Typography variant="body1">{selectedAuditoria.formulario}</Typography>
-                </Grid>
-                <Grid item xs={12} md={6}>
-                  <Typography variant="subtitle2" color="primary">Hora Programada</Typography>
-                  <Typography variant="body1">{selectedAuditoria.hora}</Typography>
-                </Grid>
-                <Grid item xs={12} md={6}>
-                  <Typography variant="subtitle2" color="primary">Fecha Programada</Typography>
-                  <Typography variant="body1">
-                    {new Date(selectedAuditoria.fecha).toLocaleDateString()}
-                  </Typography>
-                </Grid>
-                <Grid item xs={12} md={6}>
-                  <Typography variant="subtitle2" color="primary">Fecha Completada</Typography>
-                  <Typography variant="body1">
-                    {selectedAuditoria.fechaCompletada 
-                      ? new Date(selectedAuditoria.fechaCompletada.seconds * 1000).toLocaleDateString()
-                      : 'N/A'
-                    }
-                  </Typography>
-                </Grid>
-                {selectedAuditoria.descripcion && (
-                  <Grid item xs={12}>
-                    <Typography variant="subtitle2" color="primary">Descripción</Typography>
-                    <Typography variant="body1">{selectedAuditoria.descripcion}</Typography>
-                  </Grid>
+      {/* Dialog drill-down */}
+      <Dialog
+        open={!!drillDown}
+        onClose={() => setDrillDown(null)}
+        maxWidth="xs"
+        fullWidth
+      >
+        {drillDown && (
+          <>
+            <DialogTitle sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <Box>
+                <Typography variant="h6" sx={{ fontWeight: 700 }}>{drillDown.sucursal.nombre}</Typography>
+                <Typography variant="body2" color="text.secondary">
+                  {MESES[drillDown.mes - 1]} {añoSeleccionado}
+                </Typography>
+              </Box>
+              <IconButton onClick={() => setDrillDown(null)} size="small"><Close /></IconButton>
+            </DialogTitle>
+            <DialogContent>
+              <Box sx={{ textAlign: 'center', py: 2 }}>
+                <Typography variant="h3" sx={{ fontWeight: 700, color: 'primary.main' }}>
+                  {drillDown.realizadas}
+                </Typography>
+                <Typography variant="body1" color="text.secondary">
+                  auditorías realizadas
+                </Typography>
+                {drillDown.target > 0 && (
+                  <>
+                    <Typography variant="body2" sx={{ mt: 2, mb: 1 }}>
+                      Target mensual: <strong>{drillDown.target}</strong>
+                    </Typography>
+                    <LinearProgress
+                      variant="determinate"
+                      value={Math.min((drillDown.realizadas / drillDown.target) * 100, 100)}
+                      color={drillDown.realizadas >= drillDown.target ? 'success' : 'warning'}
+                      sx={{ height: 10, borderRadius: 5, mb: 1 }}
+                    />
+                    <Typography variant="h6" sx={{ fontWeight: 700 }}>
+                      {Math.round((drillDown.realizadas / drillDown.target) * 100)}% cumplido
+                    </Typography>
+                  </>
                 )}
-                <Grid item xs={12} md={6}>
-                  <Typography variant="subtitle2" color="primary">Usuario</Typography>
-                  <Typography variant="body1">{selectedAuditoria.usuarioNombre}</Typography>
-                </Grid>
-                <Grid item xs={12} md={6}>
-                  <Typography variant="subtitle2" color="primary">Estado</Typography>
-                  <Chip 
-                    label="Completada" 
-                    color="success" 
-                    icon={<CheckCircle />}
-                  />
-                </Grid>
-              </Grid>
-            </Stack>
-          )}
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setOpenDialog(false)}>Cerrar</Button>
-        </DialogActions>
+              </Box>
+            </DialogContent>
+            <DialogActions>
+              <Button onClick={() => setDrillDown(null)}>Cerrar</Button>
+            </DialogActions>
+          </>
+        )}
       </Dialog>
     </Box>
   );
 };
 
-export default HistorialAuditorias; 
+export default HistorialAuditorias;
