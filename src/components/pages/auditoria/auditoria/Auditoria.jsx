@@ -19,7 +19,11 @@ import {
   CardContent,
   Chip,
   LinearProgress,
-  Paper
+  Paper,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions
 } from "@mui/material";
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
@@ -874,16 +878,22 @@ const AuditoriaRefactorizada = () => {
     }
   }, [location.state, formularios, formularioSeleccionadoId]);
 
-  // Salto automático al paso 3 (Preguntas) si viene de agenda con todo pre-cargado
+  // Flag para evitar saltos automáticos repetidos
+  const saltoAutomaticoRealizadoRef = useRef(false);
+
+  // Salto automático al paso 2 (Preguntas) si viene de agenda con todo pre-cargado
   useEffect(() => {
+    // Solo ejecutar si no se ha realizado el salto automático antes
     if (
       location.state?.formularioId &&
       empresaSeleccionada &&
       sucursalSeleccionada &&
       formularioSeleccionadoId &&
-      activeStep === 0
+      activeStep === 0 &&
+      !saltoAutomaticoRealizadoRef.current
     ) {
       setActiveStep(2);
+      saltoAutomaticoRealizadoRef.current = true;
       logger.debug('[DEBUG Auditoria] Salto automático al paso Preguntas por agenda');
     }
   }, [location.state, empresaSeleccionada, sucursalSeleccionada, formularioSeleccionadoId, activeStep]);
@@ -1148,27 +1158,51 @@ const AuditoriaRefactorizada = () => {
         </Zoom>
       )}
 
-      {/* Snackbars */}
-      <Snackbar open={openAlertaEdicion} autoHideDuration={6000} onClose={() => setOpenAlertaEdicion(false)}>
-        <MuiAlert
-          onClose={() => setOpenAlertaEdicion(false)}
-          severity="warning"
-          action={
-            <MuiButton color="inherit" size="small" onClick={() => {
+      {/* Modal de advertencia de edición de agenda */}
+      <Dialog 
+        open={openAlertaEdicion} 
+        onClose={() => setOpenAlertaEdicion(false)}
+        maxWidth="sm"
+        fullWidth
+      >
+        <DialogTitle sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+          <Alert severity="warning" sx={{ flex: 1, m: 0 }}>
+            <Typography variant="h6" component="div">
+              Auditoría Agendada
+            </Typography>
+          </Alert>
+        </DialogTitle>
+        <DialogContent>
+          <Typography variant="body1" sx={{ mb: 2 }}>
+            Esta auditoría proviene de la agenda. ¿Deseas editar los datos igualmente?
+          </Typography>
+          <Typography variant="body2" color="text.secondary">
+            Al editar los datos, podrás modificar la empresa, sucursal y formulario seleccionados originalmente en la agenda.
+          </Typography>
+        </DialogContent>
+        <DialogActions>
+          <MuiButton 
+            onClick={() => setOpenAlertaEdicion(false)}
+            color="primary"
+          >
+            Mantener Datos
+          </MuiButton>
+          <MuiButton 
+            onClick={() => {
               setBloquearDatosAgenda(false);
               setOpenAlertaEdicion(false);
               log("El usuario desbloqueó los datos de agenda para edición manual.");
               setSnackbarMsg("Ahora puedes editar los datos de empresa, sucursal y formulario.");
               setSnackbarType("info");
               setSnackbarOpen(true);
-            }}>
-              Editar Igualmente
-            </MuiButton>
-          }
-        >
-          Esta auditoría proviene de la agenda. ¿Deseas editar los datos igualmente?
-        </MuiAlert>
-      </Snackbar>
+            }}
+            variant="contained"
+            color="warning"
+          >
+            Editar Igualmente
+          </MuiButton>
+        </DialogActions>
+      </Dialog>
       
       {/* Alerta de autoguardado - Deshabilitada para no interferir con la cámara */}
       <AutoSaveAlert
