@@ -280,20 +280,26 @@ const ClienteDashboard = React.memo(() => {
         <Box sx={{ px: 2, py: 0.5 }}>
           <Box sx={{ 
             display: 'flex', 
-            justifyContent: 'space-between', 
+            justifyContent: 'center', 
             alignItems: 'center',
             flexDirection: { xs: 'column', sm: 'row' },
-            gap: { xs: 1, sm: 0 }
+            gap: { xs: 1, sm: 2 },
+            position: 'relative'
           }}>
             {/* Resumen General inline a la izquierda */}
-            <ResumenGeneral
-              variant="inline"
-              auditoriasPendientes={auditoriasPendientes}
-              auditoriasCompletadas={auditoriasCompletadas}
-              auditorias={auditorias}
-            />
+            <Box sx={{ 
+              position: { xs: 'static', sm: 'absolute' }, 
+              left: 16 
+            }}>
+              <ResumenGeneral
+                variant="inline"
+                auditoriasPendientes={auditoriasPendientes}
+                auditoriasCompletadas={auditoriasCompletadas}
+                auditorias={auditorias}
+              />
+            </Box>
             
-            {/* Tabs a la derecha */}
+            {/* Tabs centrados */}
             {tabs}
           </Box>
         </Box>

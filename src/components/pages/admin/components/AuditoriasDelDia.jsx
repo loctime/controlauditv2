@@ -1,5 +1,5 @@
 // src/components/pages/admin/components/AuditoriasDelDia.jsx
-import React from "react";
+import React, { useState } from "react";
 import { 
   Typography, 
   Box, 
@@ -11,7 +11,12 @@ import {
   ListItemSecondaryAction,
   Stack,
   Avatar,
-  Chip
+  Chip,
+  Grid,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions
 } from "@mui/material";
 import {
   CalendarToday,
@@ -33,9 +38,10 @@ const AuditoriasDelDia = ({
   onAgendar, 
   onCompletar, 
   onEliminar,
-  canAgendarAuditorias = true // ✅ Prop para validar permisos
+  canAgendarAuditorias = true // Prop para validar permisos
 }) => {
   const navigate = useNavigate();
+  const [confirmarEliminar, setConfirmarEliminar] = useState({ abierto: false, auditoriaId: null, empresa: '' });
   // Función para obtener el nombre del usuario
   const getNombreUsuario = (encargado) => {
     if (!encargado) return null;
@@ -57,11 +63,11 @@ const AuditoriasDelDia = ({
 
   return (
     <Paper elevation={2} sx={{ 
-      p: { xs: 2, sm: 3 }, 
-      mb: 3,
+      p: { xs: 1.5, sm: 2 }, 
+      mb: 2,
       borderRadius: { xs: 1, sm: 2 }
     }}>
-      <Box display="flex" justifyContent="space-between" alignItems="center" mb={2} sx={{ 
+      <Box display="flex" justifyContent="space-between" alignItems="center" mb={1} sx={{ 
         flexDirection: { xs: 'column', sm: 'row' },
         gap: { xs: 1, sm: 0 },
         alignItems: { xs: 'stretch', sm: 'center' }
@@ -70,9 +76,9 @@ const AuditoriasDelDia = ({
           display: 'flex', 
           alignItems: 'center', 
           gap: 1,
-          fontSize: { xs: '1rem', sm: '1.25rem' }
+          fontSize: { xs: '0.95rem', sm: '1.1rem' }
         }}>
-          <CalendarToday color="primary" />
+          <CalendarToday color="primary" sx={{ fontSize: '1rem' }} />
           Auditorías del {selectedDate ? selectedDate.toLocaleDateString() : 'día seleccionado'}
         </Typography>
         {selectedDate && canAgendarAuditorias && (
@@ -104,7 +110,7 @@ const AuditoriasDelDia = ({
           flexDirection: 'column', 
           alignItems: 'center', 
           gap: 2,
-          py: 3,
+          py: 1.5,
           px: 2
         }}>
           <Box sx={{ 
@@ -141,9 +147,10 @@ const AuditoriasDelDia = ({
           {auditoriasDelDia.map((auditoria) => (
             <ListItem key={auditoria.id} divider>
               <ListItemText
+                sx={{ paddingRight: { xs: 11, sm: 20 } }}
                 primary={
                   <Box display="flex" alignItems="center" gap={1}>
-                    <Typography variant="h6" sx={{ fontWeight: 'bold' }}>
+                    <Typography variant="h6" sx={{ fontWeight: 'bold', fontSize: '0.95rem' }}>
                       {auditoria.empresa}
                     </Typography>
                     {/* Chip de estado */}
@@ -157,49 +164,55 @@ const AuditoriasDelDia = ({
                   </Box>
                 }
                 secondary={
-                  <Box>
-                    <Typography variant="body1" sx={{ mt: 1 }} component="div">
-                      <LocationOn sx={{ fontSize: '1rem', mr: 0.5, verticalAlign: 'middle' }} />
-                      {auditoria.sucursal || 'Casa Central'}
-                    </Typography>
-                    <Typography variant="body1" sx={{ mt: 0.5 }} component="div">
-                      <Schedule sx={{ fontSize: '1rem', mr: 0.5, verticalAlign: 'middle' }} />
-                      {auditoria.hora}
-                    </Typography>
-                    <Typography variant="body1" sx={{ mt: 0.5 }} component="div">
-                      <Description sx={{ fontSize: '1rem', mr: 0.5, verticalAlign: 'middle' }} />
-                      {auditoria.formulario}
-                    </Typography>
-                    {/* Información del encargado */}
-                    <Box sx={{ mt: 1, display: 'flex', alignItems: 'center', gap: 1 }}>
-                      {auditoria.encargado ? (
-                        <>
-                          <Avatar sx={{ width: 20, height: 20, fontSize: '0.7rem' }}>
-                            {getInicialUsuario(auditoria.encargado)}
-                          </Avatar>
-                          <Typography variant="body2" color="text.secondary" component="div">
-                            <Person sx={{ fontSize: '0.9rem', mr: 0.5, verticalAlign: 'middle' }} />
-                            {getNombreUsuario(auditoria.encargado)}
-                            {getEmailUsuario(auditoria.encargado) && (
-                              <span style={{ fontSize: '0.8rem', opacity: 0.7 }}>
-                                {' '}({getEmailUsuario(auditoria.encargado)})
-                              </span>
-                            )}
+                  <Grid container spacing={1}>
+                    <Grid item xs={7}>
+                      <Typography variant="body2" sx={{ mt: 0.3 }} component="div">
+                        <LocationOn sx={{ fontSize: '0.85rem', mr: 0.5, verticalAlign: 'middle' }} />
+                        {auditoria.sucursal || 'Casa Central'}
+                      </Typography>
+                      <Typography variant="body2" sx={{ mt: 0.3 }} component="div">
+                        <Schedule sx={{ fontSize: '0.85rem', mr: 0.5, verticalAlign: 'middle' }} />
+                        {auditoria.hora}
+                      </Typography>
+                      <Typography variant="body2" sx={{ mt: 0.3 }} component="div">
+                        <Description sx={{ fontSize: '0.85rem', mr: 0.5, verticalAlign: 'middle' }} />
+                        {auditoria.formulario}
+                      </Typography>
+                    </Grid>
+                    <Grid item xs={5}>
+                      {/* Información del encargado */}
+                      <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 1, mt: 0.3 }}>
+                        {auditoria.encargado ? (
+                          <>
+                            <Avatar sx={{ width: 20, height: 20, fontSize: '0.7rem' }}>
+                              {getInicialUsuario(auditoria.encargado)}
+                            </Avatar>
+                            <Box>
+                              <Typography variant="body2" color="text.secondary" component="div">
+                                <Person sx={{ fontSize: '0.85rem', mr: 0.5, verticalAlign: 'middle' }} />
+                                {getNombreUsuario(auditoria.encargado)}
+                              </Typography>
+                              {getEmailUsuario(auditoria.encargado) && (
+                                <Typography variant="body2" color="text.secondary" sx={{ fontSize: '0.8rem', opacity: 0.7 }} component="div">
+                                  ({getEmailUsuario(auditoria.encargado)})
+                                </Typography>
+                              )}
+                            </Box>
+                          </>
+                        ) : (
+                          <Typography variant="body2" color="text.secondary" sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }} component="div">
+                            <PersonOff sx={{ fontSize: '0.85rem' }} />
+                            Sin encargado
                           </Typography>
-                        </>
-                      ) : (
-                        <Typography variant="body2" color="text.secondary" sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }} component="div">
-                          <PersonOff sx={{ fontSize: '0.9rem' }} />
-                          Sin encargado asignado
+                        )}
+                      </Box>
+                      {auditoria.descripcion && (
+                        <Typography variant="body2" color="text.secondary" sx={{ mt: 0.3, fontStyle: 'italic' }} component="div">
+                          "{auditoria.descripcion}"
                         </Typography>
                       )}
-                    </Box>
-                    {auditoria.descripcion && (
-                      <Typography variant="body2" color="text.secondary" sx={{ mt: 1, fontStyle: 'italic' }} component="div">
-                        "{auditoria.descripcion}"
-                      </Typography>
-                    )}
-                  </Box>
+                    </Grid>
+                  </Grid>
                 }
               />
               <ListItemSecondaryAction>
@@ -228,7 +241,8 @@ const AuditoriasDelDia = ({
                   )}
                   <IconButton
                     color="error"
-                    onClick={() => onEliminar(auditoria.id)}
+                    size="small"
+                    onClick={() => setConfirmarEliminar({ abierto: true, auditoriaId: auditoria.id, empresa: auditoria.empresa })}
                     title="Eliminar"
                   >
                     <Delete />
@@ -239,8 +253,76 @@ const AuditoriasDelDia = ({
           ))}
         </List>
       )}
+      
+      {/* Modal de confirmación para eliminar */}
+      <Dialog 
+        open={confirmarEliminar.abierto} 
+        onClose={() => setConfirmarEliminar({ abierto: false, auditoriaId: null, empresa: '' })}
+        maxWidth="sm"
+        fullWidth
+      >
+        <DialogTitle sx={{ pb: 1 }}>
+          <Typography variant="h6" color="error" sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+            <Delete />
+            Confirmar eliminación
+          </Typography>
+        </DialogTitle>
+        <DialogContent>
+          <Typography variant="body1" sx={{ mb: 2 }}>
+            ¿Estás seguro que deseas eliminar la siguiente auditoría agendada?
+          </Typography>
+          <Box sx={{ 
+            backgroundColor: 'grey.50', 
+            p: 2, 
+            borderRadius: 1,
+            border: '1px solid',
+            borderColor: 'grey.200'
+          }}>
+            <Typography variant="body2" sx={{ mb: 0.5 }}>
+              <strong>Empresa:</strong> {confirmarEliminar.empresa}
+            </Typography>
+            <Typography variant="body2" sx={{ mb: 0.5 }}>
+              <strong>Sucursal:</strong> {auditoriasDelDia.find(a => a.id === confirmarEliminar.auditoriaId)?.sucursal || 'Casa Central'}
+            </Typography>
+            <Typography variant="body2" sx={{ mb: 0.5 }}>
+              <strong>Formulario:</strong> {auditoriasDelDia.find(a => a.id === confirmarEliminar.auditoriaId)?.formulario}
+            </Typography>
+            <Typography variant="body2" sx={{ mb: 0.5 }}>
+              <strong>Fecha:</strong> {selectedDate ? selectedDate.toLocaleDateString() : ''}
+            </Typography>
+            <Typography variant="body2">
+              <strong>Hora:</strong> {auditoriasDelDia.find(a => a.id === confirmarEliminar.auditoriaId)?.hora}
+            </Typography>
+          </Box>
+          <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
+            Esto solo eliminará la auditoría de la agenda, puedes volver a crearla cuando quieras.
+          </Typography>
+          <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
+            Esta acción no se puede deshacer.
+          </Typography>
+        </DialogContent>
+        <DialogActions sx={{ px: 3, pb: 2 }}>
+          <Button 
+            onClick={() => setConfirmarEliminar({ abierto: false, auditoriaId: null, empresa: '' })}
+            variant="outlined"
+          >
+            Cancelar
+          </Button>
+          <Button 
+            onClick={() => {
+              onEliminar(confirmarEliminar.auditoriaId);
+              setConfirmarEliminar({ abierto: false, auditoriaId: null, empresa: '' });
+            }}
+            variant="contained"
+            color="error"
+            startIcon={<Delete />}
+          >
+            Eliminar
+          </Button>
+        </DialogActions>
+      </Dialog>
     </Paper>
   );
 };
 
-export default AuditoriasDelDia; 
+export default AuditoriasDelDia;
