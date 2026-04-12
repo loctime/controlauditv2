@@ -99,7 +99,7 @@ const ClienteDashboard = React.memo(() => {
     setCurrentTab(newValue);
   }, []);
 
-  // ✅ Memoizar componentes de pestañas para evitar re-renders
+  // Memoizar componentes de pestañas para evitar re-renders
   const tabContent = useMemo(() => {
     if (currentTab === 0) {
       return (
@@ -115,6 +115,11 @@ const ClienteDashboard = React.memo(() => {
               />
             </Grid>
             <Grid item xs={12} lg={6}>
+              <ResumenGeneral
+                auditoriasPendientes={auditoriasPendientes}
+                auditoriasCompletadas={auditoriasCompletadas}
+                auditorias={auditorias}
+              />
               <AuditoriasDelDia
                 selectedDate={selectedDate}
                 auditoriasDelDia={auditoriasDelDiaSeleccionado}
@@ -123,12 +128,11 @@ const ClienteDashboard = React.memo(() => {
                 onEliminar={handleEliminarAuditoria}
                 canAgendarAuditorias={canAgendarAuditorias}
               />
+            </Grid>
+          </Grid>
+          <Grid container spacing={3}>
+            <Grid item xs={12}>
               <ProximasAuditorias auditoriasPendientes={proximasAuditorias} />
-              <ResumenGeneral
-                auditoriasPendientes={auditoriasPendientes}
-                auditoriasCompletadas={auditoriasCompletadas}
-                auditorias={auditorias}
-              />
             </Grid>
           </Grid>
         </Box>

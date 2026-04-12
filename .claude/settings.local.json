@@ -30,7 +30,10 @@
       "Read(//c/tmp/terminos_unpacked/**)",
       "Read(//tmp/**)",
       "Bash(python -c \"import tempfile; print\\(tempfile.gettempdir\\(\\)\\)\")",
-      "Bash(python -c \"import os; print\\(os.listdir\\('C:\\\\\\\\\\\\\\\\tmp\\\\\\\\\\\\\\\\terminos_unpacked'\\)\\)\")"
+      "Bash(python -c \"import os; print\\(os.listdir\\('C:\\\\\\\\\\\\\\\\tmp\\\\\\\\\\\\\\\\terminos_unpacked'\\)\\)\")",
+      "Bash(git add:*)",
+      "Bash(git commit:*)",
+      "Bash(node -c \"src/components/pages/establecimiento/components/EmpresaCard.jsx\")"
     ]
   }
 }
