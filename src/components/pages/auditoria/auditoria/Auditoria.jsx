@@ -264,6 +264,7 @@ const AuditoriaRefactorizada = () => {
     firmasValidas,
     hasUnsavedChanges,
     userProfile,
+    bloquearDatosAgenda,
     
     // Setters
     setEmpresaSeleccionada,
@@ -279,6 +280,7 @@ const AuditoriaRefactorizada = () => {
     setFirmaResponsable,
     setFirmasCompletadas,
     setNavegacionError,
+    setBloquearDatosAgenda,
     setErrores,
     setMostrarReporte,
     setAuditoriaGenerada,
@@ -843,7 +845,14 @@ const AuditoriaRefactorizada = () => {
         setSucursalSeleccionada(location.state.sucursal);
       }
     }
-  }, [location.state, empresas, sucursales, empresaSeleccionada, sucursalSeleccionada]);
+
+    // Establecer auditoriaIdAgenda y bloquear datos si viene de agenda
+    if (location.state?.auditoriaId && !auditoriaIdAgenda) {
+      setAuditoriaIdAgenda(location.state.auditoriaId);
+      setBloquearDatosAgenda(true);
+      logger.debug('[DEBUG Auditoria] Auditoría ID de agenda establecido:', location.state.auditoriaId);
+    }
+  }, [location.state, empresas, sucursales, empresaSeleccionada, sucursalSeleccionada, auditoriaIdAgenda]);
 
   // Auto-seleccionar formulario cuando viene de agenda
   useEffect(() => {

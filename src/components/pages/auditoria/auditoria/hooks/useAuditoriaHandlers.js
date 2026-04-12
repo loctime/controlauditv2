@@ -27,6 +27,7 @@ export const useAuditoriaHandlers = ({
   firmasValidas,
   hasUnsavedChanges,
   userProfile,
+  bloquearDatosAgenda,
   
   // Setters
   setEmpresaSeleccionada,
@@ -42,6 +43,7 @@ export const useAuditoriaHandlers = ({
   setFirmaResponsable,
   setFirmasCompletadas,
   setNavegacionError,
+  setBloquearDatosAgenda,
   setErrores,
   setMostrarReporte,
   setAuditoriaGenerada,
@@ -57,6 +59,41 @@ export const useAuditoriaHandlers = ({
   
   // Handlers de datos básicos
   const handleEmpresaChange = useCallback((selectedEmpresa, sucursalesDisponibles = []) => {
+    // Si está en modo agenda y intenta cambiar la empresa, advertir y desactivar modo agenda
+    if (bloquearDatosAgenda && empresaSeleccionada && selectedEmpresa !== empresaSeleccionada) {
+      Swal.fire({
+        title: '¿Editar auditoría agendada?',
+        text: 'Si cambia la empresa, la auditoría ya no estará vinculada a la agenda original. ¿Desea continuar?',
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: '#3085d6',
+        cancelButtonColor: '#6c757d',
+        confirmButtonText: 'Sí, permitir edición',
+        cancelButtonText: 'Cancelar'
+      }).then((result) => {
+        if (result.isConfirmed) {
+          // Desactivar modo agenda y permitir el cambio
+          setBloquearDatosAgenda(false);
+          setEmpresaSeleccionada(selectedEmpresa);
+          
+          // Filtrar sucursales por la empresa seleccionada
+          const sucursalesFiltradas = filtrarSucursalesPorEmpresa(sucursalesDisponibles, selectedEmpresa);
+          
+          // Auto-seleccionar si hay exactamente 1 sucursal
+          if (sucursalesFiltradas.length === 1) {
+            setSucursalSeleccionada(sucursalesFiltradas[0].nombre);
+          } else {
+            setSucursalSeleccionada("");
+          }
+          
+          setFormularioSeleccionadoId("");
+          setActiveStep(0);
+          logger.debug('[DEBUG Auditoria] Modo agenda desactivado por cambio de empresa');
+        }
+      });
+      return;
+    }
+    
     setEmpresaSeleccionada(selectedEmpresa);
     
     // Filtrar sucursales por la empresa seleccionada
@@ -71,16 +108,65 @@ export const useAuditoriaHandlers = ({
     
     setFormularioSeleccionadoId("");
     setActiveStep(0);
-  }, [setEmpresaSeleccionada, setSucursalSeleccionada, setFormularioSeleccionadoId, setActiveStep]);
+  }, [bloquearDatosAgenda, empresaSeleccionada, setEmpresaSeleccionada, setSucursalSeleccionada, setFormularioSeleccionadoId, setActiveStep, setBloquearDatosAgenda]);
 
   const handleSucursalChange = useCallback((e) => {
-    setSucursalSeleccionada(e.target.value);
-  }, [setSucursalSeleccionada]);
+    const nuevaSucursal = e.target.value;
+    
+    // Si está en modo agenda y intenta cambiar la sucursal, advertir y desactivar modo agenda
+    if (bloquearDatosAgenda && sucursalSeleccionada && nuevaSucursal !== sucursalSeleccionada) {
+      Swal.fire({
+        title: '¿Editar auditoría agendada?',
+        text: 'Si cambia la sucursal, la auditoría ya no estará vinculada a la agenda original. ¿Desea continuar?',
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: '#3085d6',
+        cancelButtonColor: '#6c757d',
+        confirmButtonText: 'Sí, permitir edición',
+        cancelButtonText: 'Cancelar'
+      }).then((result) => {
+        if (result.isConfirmed) {
+          // Desactivar modo agenda y permitir el cambio
+          setBloquearDatosAgenda(false);
+          setSucursalSeleccionada(nuevaSucursal);
+          logger.debug('[DEBUG Auditoria] Modo agenda desactivado por cambio de sucursal');
+        }
+      });
+      return;
+    }
+    
+    setSucursalSeleccionada(nuevaSucursal);
+  }, [bloquearDatosAgenda, sucursalSeleccionada, setSucursalSeleccionada, setBloquearDatosAgenda]);
 
   const handleSeleccionarFormulario = useCallback((e) => {
-    setFormularioSeleccionadoId(e.target.value);
+    const nuevoFormularioId = e.target.value;
+    
+    // Si está en modo agenda y intenta cambiar el formulario, advertir y desactivar modo agenda
+    if (bloquearDatosAgenda && formularioSeleccionadoId && nuevoFormularioId !== formularioSeleccionadoId) {
+      Swal.fire({
+        title: '¿Editar auditoría agendada?',
+        text: 'Si cambia el formulario, la auditoría ya no estará vinculada a la agenda original. ¿Desea continuar?',
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: '#3085d6',
+        cancelButtonColor: '#6c757d',
+        confirmButtonText: 'Sí, permitir edición',
+        cancelButtonText: 'Cancelar'
+      }).then((result) => {
+        if (result.isConfirmed) {
+          // Desactivar modo agenda y permitir el cambio
+          setBloquearDatosAgenda(false);
+          setFormularioSeleccionadoId(nuevoFormularioId);
+          setActiveStep(1);
+          logger.debug('[DEBUG Auditoria] Modo agenda desactivado por cambio de formulario');
+        }
+      });
+      return;
+    }
+    
+    setFormularioSeleccionadoId(nuevoFormularioId);
     setActiveStep(1);
-  }, [setFormularioSeleccionadoId, setActiveStep]);
+  }, [bloquearDatosAgenda, formularioSeleccionadoId, setFormularioSeleccionadoId, setActiveStep, setBloquearDatosAgenda]);
 
   // Refs para debounce y control de guardado
   const autoSaveTimeoutRef = useRef(null);
@@ -289,9 +375,15 @@ export const useAuditoriaHandlers = ({
   const handleAnterior = useCallback(() => {
     setNavegacionError("");
     
+    // Permitir siempre ir al paso 1 (selección de datos básicos)
+    if (activeStep === 2) {
+      setActiveStep(1);
+      return;
+    }
+    
     if (firmasValidas && activeStep > 0) {
       Swal.fire({
-        title: '⚠️ Información',
+        title: '¿Información',
         text: 'Puede navegar hacia atrás para revisar o editar. Las firmas se mantendrán si no hace cambios en las respuestas.',
         icon: 'info',
         showCancelButton: true,
@@ -320,9 +412,15 @@ export const useAuditoriaHandlers = ({
       }
     }
 
+    // Permitir siempre ir al paso 1 (selección de datos básicos)
+    if (index === 1 && activeStep > 1) {
+      setActiveStep(1);
+      return;
+    }
+
     if (firmasValidas && index < activeStep) {
       Swal.fire({
-        title: '⚠️ Información',
+        title: '¿Información',
         text: 'Puede navegar hacia atrás para revisar o editar. Las firmas se mantendrán si no hace cambios en las respuestas.',
         icon: 'info',
         showCancelButton: true,
