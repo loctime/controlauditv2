@@ -108,7 +108,7 @@ const SeccionItem = memo(({
                   '&:hover': { background: '#f5f7fa' }
                 }}
               >
-                <TableCell align="left" sx={{ fontSize: 14 }}>{pregunta}</TableCell>
+                <TableCell align="left" sx={{ fontSize: 14 }}>{typeof pregunta === 'string' ? pregunta : (pregunta.titulo || pregunta.texto || pregunta.pregunta || '(Sin texto)')}</TableCell>
                 <TableCell align="right" sx={{ p: 0 }}>
                   <Box display="flex" justifyContent="flex-end" gap={0.5}>
                     {puedeEditar && (

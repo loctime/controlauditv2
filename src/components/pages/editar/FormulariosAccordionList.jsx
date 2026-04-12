@@ -94,7 +94,7 @@ const FormulariosAccordionList = ({ formularios, onEditar, formularioSeleccionad
         formularioEdit.id,
         {
           nombre: formularioEdit.nombre,
-          estado: formularioEdit.estado,
+          estado: formularioEdit.estado ?? 'activo',
           version: formularioEdit.version,
           esPublico: formularioEdit.esPublico
         },

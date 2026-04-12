@@ -461,7 +461,7 @@ const EditarSeccionYPreguntas = ({
                       <Box display="flex" alignItems="center" gap={2} flex={1}>
                         <QuestionAnswerIcon sx={{ color: 'primary.main' }} />
                         <Typography variant="body1">
-                          {pregunta}
+                          {typeof pregunta === 'string' ? pregunta : (pregunta.titulo || pregunta.texto || pregunta.pregunta || '(Sin texto)')}
                         </Typography>
                       </Box>
                       
