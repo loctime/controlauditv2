@@ -60,14 +60,17 @@ const EmpresaCard = React.memo(({
         overflow: 'visible'
       }}
     >
-      {/* Fila principal siempre visible */}
+      {/* Fila principal siempre visible — click en cualquier lado expande */}
       <CardContent
+        onClick={() => onToggleRow(empresa.id)}
         sx={{
           display: 'flex',
           alignItems: 'center',
           gap: 2,
           py: 2,
-          '&:last-child': { pb: 2 }
+          cursor: 'pointer',
+          '&:last-child': { pb: 2 },
+          '&:hover': { backgroundColor: alpha(theme.palette.action.hover, 0.04) }
         }}
       >
         {/* Avatar / Logo */}
@@ -118,32 +121,38 @@ const EmpresaCard = React.memo(({
 
         {/* Stats resumidas */}
         <Box sx={{ display: 'flex', gap: 3, alignItems: 'center', flexShrink: 0 }}>
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-            <StorefrontIcon sx={{ fontSize: 16, color: 'text.secondary' }} />
-            <Typography variant="body2" color="text.secondary">
-              {stats.sucursales}
-            </Typography>
-          </Box>
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-            <PeopleIcon sx={{ fontSize: 16, color: 'text.secondary' }} />
-            <Typography variant="body2" color="text.secondary">
-              {stats.empleados}
-            </Typography>
-          </Box>
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-            <ReportProblemIcon
-              sx={{
-                fontSize: 16,
-                color: stats.accidentesAbiertos > 0 ? 'error.main' : 'text.secondary'
-              }}
-            />
-            <Typography
-              variant="body2"
-              color={stats.accidentesAbiertos > 0 ? 'error.main' : 'text.secondary'}
-            >
-              {stats.accidentes}
-            </Typography>
-          </Box>
+          <Tooltip title="Sucursales">
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+              <StorefrontIcon sx={{ fontSize: 16, color: 'text.secondary' }} />
+              <Typography variant="body2" color="text.secondary">
+                {stats.sucursales}
+              </Typography>
+            </Box>
+          </Tooltip>
+          <Tooltip title="Empleados">
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+              <PeopleIcon sx={{ fontSize: 16, color: 'text.secondary' }} />
+              <Typography variant="body2" color="text.secondary">
+                {stats.empleados}
+              </Typography>
+            </Box>
+          </Tooltip>
+          <Tooltip title={stats.accidentesAbiertos > 0 ? `${stats.accidentesAbiertos} abierto(s)` : 'Accidentes'}>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+              <ReportProblemIcon
+                sx={{
+                  fontSize: 16,
+                  color: stats.accidentesAbiertos > 0 ? 'error.main' : 'text.secondary'
+                }}
+              />
+              <Typography
+                variant="body2"
+                color={stats.accidentesAbiertos > 0 ? 'error.main' : 'text.secondary'}
+              >
+                {stats.accidentes}
+              </Typography>
+            </Box>
+          </Tooltip>
         </Box>
 
         {/* Acciones: editar, operarios, eliminar */}
@@ -182,7 +191,7 @@ const EmpresaCard = React.memo(({
           <Tooltip title={isExpanded ? 'Ocultar sucursales' : 'Ver sucursales'}>
             <IconButton
               size="small"
-              onClick={() => onToggleRow(empresa.id)}
+              onClick={(e) => { e.stopPropagation(); onToggleRow(empresa.id); }}
               aria-label={isExpanded ? `Ocultar detalles de ${empresa.nombre}` : `Mostrar detalles de ${empresa.nombre}`}
             >
               {isExpanded ? <ExpandLessIcon /> : <ExpandMoreIcon />}
