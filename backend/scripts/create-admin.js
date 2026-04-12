@@ -12,7 +12,7 @@ import admin from '../firebaseAdmin.js';
 // ===============================
 // CONFIGURACIÓN OWNER
 // ===============================
-const EMAIL = 'congreso@controlaudit.com';
+const EMAIL = 'nuevo2@gmail.com';
 const PASSWORD = '123123123';
 const DISPLAY_NAME = 'Owner Principal';
 

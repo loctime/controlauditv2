@@ -29,8 +29,10 @@ import SchoolIcon from '@mui/icons-material/School';
 import ReportProblemIcon from '@mui/icons-material/ReportProblem';
 import { useNavigate } from "react-router-dom";
 import Swal from 'sweetalert2';
+import { sucursalService } from '../../../services/sucursalService';
 import { useAuth } from '@/components/context/AuthContext';
 import AddEmpresaModal from "./AddEmpresaModal";
+import SucursalFormModal from "./components/SucursalFormModal";
 import EliminarEmpresa from "./EliminarEmpresa";
 import EditarEmpresaModal from "./EditarEmpresa";
 import EmpresaOperariosDialog from "./EmpresaOperariosDialog";
@@ -98,6 +100,20 @@ const EstablecimientosContainer = () => {
 
   const [openModal, setOpenModal] = useState(false);
   const [verificando, setVerificando] = useState(false);
+
+  // Estado para flujo post-creación de empresa → sucursal
+  const [postCreacionEmpresaId, setPostCreacionEmpresaId] = useState(null);
+  const [openSucursalPostCreacion, setOpenSucursalPostCreacion] = useState(false);
+  const [sucursalPostCreacionForm, setSucursalPostCreacionForm] = useState({
+    nombre: '',
+    direccion: '',
+    telefono: '',
+    horasSemanales: 40,
+    targetMensual: 0,
+    targetAnualAuditorias: 12,
+    targetMensualCapacitaciones: 1,
+    targetAnualCapacitaciones: 12
+  });
   const [openEditModal, setOpenEditModal] = useState(false);
   const [openOperariosModal, setOpenOperariosModal] = useState(false);
   const [selectedEmpresaForOperarios, setSelectedEmpresaForOperarios] = useState(null);
@@ -135,6 +151,51 @@ const EstablecimientosContainer = () => {
   const handleCloseModal = () => {
     setOpenModal(false);
     resetEmpresa();
+  };
+
+  const handleCrearSucursalPostEmpresa = (empresaId) => {
+    setPostCreacionEmpresaId(empresaId);
+    setSucursalPostCreacionForm({
+      nombre: '',
+      direccion: '',
+      telefono: '',
+      horasSemanales: 40,
+      targetMensual: 0,
+      targetAnualAuditorias: 12,
+      targetMensualCapacitaciones: 1,
+      targetAnualCapacitaciones: 12
+    });
+    setOpenSucursalPostCreacion(true);
+  };
+
+  const handleCerrarSucursalPostCreacion = () => {
+    setOpenSucursalPostCreacion(false);
+    setPostCreacionEmpresaId(null);
+  };
+
+  const handleSucursalPostCreacionChange = (e) => {
+    const { name, value } = e.target;
+    setSucursalPostCreacionForm(prev => ({ ...prev, [name]: value }));
+  };
+
+  const handleSubmitSucursalPostCreacion = async () => {
+    if (!sucursalPostCreacionForm.nombre.trim()) {
+      Swal.fire({ icon: 'error', title: 'Error', text: 'El nombre de la sucursal es requerido' });
+      return;
+    }
+    try {
+      await sucursalService.crearSucursalCompleta(
+        ownerId,
+        { ...sucursalPostCreacionForm, empresaId: postCreacionEmpresaId },
+        { uid: userProfile?.uid || null, role: userProfile?.role || null }
+      );
+      Swal.fire({ icon: 'success', title: 'Éxito', text: 'Sucursal creada exitosamente' });
+      setOpenSucursalPostCreacion(false);
+      setPostCreacionEmpresaId(null);
+    } catch (error) {
+      logger.error('[EstablecimientosContainer] Error creando sucursal post-empresa:', error);
+      Swal.fire({ icon: 'error', title: 'Error', text: error.message || 'Error al crear la sucursal' });
+    }
   };
 
   const handleVerificarEmpresas = async () => {
@@ -302,14 +363,15 @@ const EstablecimientosContainer = () => {
             logger.debug('[EstablecimientosContainer] ownerId:', ownerId);
             logger.debug('[EstablecimientosContainer] empresa:', empresa);
             try {
-              await handleAddEmpresa();
-              logger.debug('[EstablecimientosContainer] ✅ handleAddEmpresa completado, cerrando modal');
-              setOpenModal(false);
+              const empresaId = await handleAddEmpresa();
+              logger.debug('[EstablecimientosContainer] ✅ handleAddEmpresa completado, empresaId:', empresaId);
+              return empresaId;
             } catch (error) {
               logger.error('[EstablecimientosContainer] ❌ ERROR en handleAddEmpresa:', error);
-              throw error; // Re-lanzar para que se muestre el error
+              throw error;
             }
           }}
+          onCrearSucursal={handleCrearSucursalPostEmpresa}
           empresa={empresa}
           handleInputChange={handleInputChange}
           handleLogoChange={handleLogoChange}
@@ -341,6 +403,15 @@ const EstablecimientosContainer = () => {
           ownerId={ownerId}
         />
       )}
+
+      <SucursalFormModal
+        open={openSucursalPostCreacion}
+        onClose={handleCerrarSucursalPostCreacion}
+        formData={sucursalPostCreacionForm}
+        onChange={handleSucursalPostCreacionChange}
+        onSubmit={handleSubmitSucursalPostCreacion}
+        isEditing={false}
+      />
     </Box>
   );
 };

@@ -1,5 +1,6 @@
 import React from 'react';
 import { Alert, Box, Typography, Button } from '@mui/material';
+import SinSucursalAlert from '@/components/common/SinSucursalAlert';
 
 /**
  * Alertas contextuales
@@ -21,18 +22,7 @@ const AccidentesAlertas = React.memo(({ userEmpresas, selectedEmpresa, sucursale
   }
 
   if (selectedEmpresa !== 'todas' && sucursalesFiltradas.length === 0) {
-    return (
-      <Alert severity="warning">
-        <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 2 }}>
-          <Typography variant="body1">
-            🏪 No hay sucursales disponibles para la empresa seleccionada.
-          </Typography>
-          <Button variant="contained" size="small" onClick={() => window.location.href = '/establecimiento'}>
-            🏪 Crear Sucursales
-          </Button>
-        </Box>
-      </Alert>
-    );
+    return <SinSucursalAlert empresaId={selectedEmpresa} />;
   }
 
   return null;

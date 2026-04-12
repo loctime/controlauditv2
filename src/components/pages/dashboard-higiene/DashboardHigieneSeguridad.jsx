@@ -49,6 +49,7 @@ import IndiceComparacion from './components/IndiceComparacion';
 import CapacitacionesMetrics from './components/CapacitacionesMetrics';
 import AccidentesBreakdown from './components/AccidentesBreakdown';
 import ErrorBoundary from '../../common/ErrorBoundary';
+import SinSucursalAlert from '../../common/SinSucursalAlert';
 import { useIndicesCalculator } from './hooks/useIndicesCalculator';
 import { useDashboardDataFetch } from './hooks/useDashboardDataFetch';
 import { useCapacitacionesMetrics } from './hooks/useCapacitacionesMetrics';
@@ -372,82 +373,71 @@ const DashboardHigieneSeguridad = () => {
           )}
 
           {/* Información del contexto */}
-          <Alert severity={
-            !userEmpresas || userEmpresas.length === 0 ? "error" :
-            (selectedSucursal === 'todas' || sucursalSeleccionada) ? "info" : "warning"
-          } sx={{ flex: 1, minWidth: '300px' }}>
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, flexWrap: 'wrap' }}>
-              <BusinessIcon />
-             
-              {!userEmpresas || userEmpresas.length === 0 ? (
-                <>
-                  <Typography variant="body1">
-                    <strong>No hay empresas disponibles</strong> - Contacta al administrador
-                  </Typography>
-                  <Button
-                    variant="outlined"
-                    size="small"
-                    onClick={() => window.location.href = '/establecimiento'}
-                    sx={{ ml: 2 }}
-                  >
-                    🏢 Ir a Empresas
-                  </Button>
-                </>
-              ) : selectedEmpresa === 'todas' ? (
-                <>
-                  <Typography variant="body1">
-                    <strong>Todas las empresas</strong> - Todas las sucursales
-                  </Typography>
-                  <Chip 
-                    label={selectedYear} 
-                    size="small" 
-                    color="primary" 
-                  />
-                </>
-              ) : selectedSucursal === 'todas' ? (
-                <>
-                  <Typography variant="body1">
-                    <strong>{empresaSeleccionada.nombre}</strong> - Todas las sucursales
-                  </Typography>
-                  <Chip 
-                    label={selectedYear} 
-                    size="small" 
-                    color="primary" 
-                  />
-                </>
-              ) : sucursalSeleccionada ? (
-                <>
-                  <Typography variant="body1">
-                    <strong>{empresaSeleccionada.nombre}</strong> - {sucursalSeleccionada.nombre}
-                  </Typography>
-                  <Chip 
-                    label={selectedYear} 
-                    size="small" 
-                    color="primary" 
-                  />
-                  <Chip 
-                    label={`${sucursalSeleccionada.horasSemanales || 40}h/semana`}
-                    size="small" 
-                    color="secondary" 
-                  />
-                </>
-              ) : (
-                <>
-                  <Typography variant="body1">
-                    <strong>{empresaSeleccionada?.nombre || 'Empresa'}</strong> - No hay sucursales disponibles
-                  </Typography>
-                  <Button
-                    variant="outlined"
-                    size="small"
-                    onClick={() => window.location.href = '/establecimiento'}
-                    sx={{ ml: 2 }}
-                  >
-                    🏪 Ir a Sucursales
-                  </Button>
-                </>
-              )}
-            </Box>
-          </Alert>
+          {selectedEmpresa !== 'todas' && userEmpresas?.length > 0 && selectedSucursal !== 'todas' && !sucursalSeleccionada ? (
+            <SinSucursalAlert empresaId={selectedEmpresa} />
+          ) : (
+            <Alert severity={
+              !userEmpresas || userEmpresas.length === 0 ? "error" : "info"
+            } sx={{ flex: 1, minWidth: '300px' }}>
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, flexWrap: 'wrap' }}>
+                <BusinessIcon />
+
+                {!userEmpresas || userEmpresas.length === 0 ? (
+                  <>
+                    <Typography variant="body1">
+                      <strong>No hay empresas disponibles</strong> - Contacta al administrador
+                    </Typography>
+                    <Button
+                      variant="outlined"
+                      size="small"
+                      onClick={() => window.location.href = '/establecimiento'}
+                      sx={{ ml: 2 }}
+                    >
+                      🏢 Ir a Empresas
+                    </Button>
+                  </>
+                ) : selectedEmpresa === 'todas' ? (
+                  <>
+                    <Typography variant="body1">
+                      <strong>Todas las empresas</strong> - Todas las sucursales
+                    </Typography>
+                    <Chip
+                      label={selectedYear}
+                      size="small"
+                      color="primary"
+                    />
+                  </>
+                ) : selectedSucursal === 'todas' ? (
+                  <>
+                    <Typography variant="body1">
+                      <strong>{empresaSeleccionada.nombre}</strong> - Todas las sucursales
+                    </Typography>
+                    <Chip
+                      label={selectedYear}
+                      size="small"
+                      color="primary"
+                    />
+                  </>
+                ) : (
+                  <>
+                    <Typography variant="body1">
+                      <strong>{empresaSeleccionada.nombre}</strong> - {sucursalSeleccionada.nombre}
+                    </Typography>
+                    <Chip
+                      label={selectedYear}
+                      size="small"
+                      color="primary"
+                    />
+                    <Chip
+                      label={`${sucursalSeleccionada.horasSemanales || 40}h/semana`}
+                      size="small"
+                      color="secondary"
+                    />
+                  </>
+                )}
+              </Box>
+            </Alert>
+          )}
         </Box>
         
         {/* Selector de Año */}

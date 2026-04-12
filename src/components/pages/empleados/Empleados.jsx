@@ -34,6 +34,7 @@ import { useGlobalSelection } from '../../../hooks/useGlobalSelection';
 import EmpleadoFormModal from './EmpleadoForm';
 import ImportEmpleadosDialog from './import/ImportEmpleadosDialog';
 import { empleadoService } from '../../../services/empleadoService';
+import SinSucursalAlert from '@/components/common/SinSucursalAlert';
 
 export default function Empleados() {
   const { userProfile, loadingSucursales, role } = useAuth();
@@ -224,20 +225,7 @@ export default function Empleados() {
           </Box>
         </Alert>
       ) : !selectedSucursal && filteredSucursales.length === 0 ? (
-        <Alert severity="warning" sx={{ mb: 3 }}>
-          <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 2 }}>
-            <Typography variant="body1">
-              🏪 No hay sucursales disponibles para la empresa seleccionada.
-            </Typography>
-            <Button
-              variant="contained"
-              size="small"
-              onClick={() => window.location.href = '/establecimiento'}
-            >
-              🏪 Crear Sucursales
-            </Button>
-          </Box>
-        </Alert>
+        <SinSucursalAlert empresaId={selectedEmpresa !== 'todas' ? selectedEmpresa : undefined} />
       ) : null}
 
       {/* Selectores de Empresa y Sucursal */}

@@ -32,6 +32,7 @@ import CapacitacionesEmptyState from './components/CapacitacionesEmptyState';
 import CapacitacionesTable from './components/CapacitacionesTable';
 import CapacitacionDetailPanelV2 from './components/CapacitacionDetailPanelV2';
 import CapacitacionesPersonalTable from '../dashboard/components/CapacitacionesPersonalTable';
+import SinSucursalAlert from '@/components/common/SinSucursalAlert';
 
 export default function Capacitaciones() {
   const { userProfile, userSucursales, loadingSucursales, getUserSucursales, userEmpresas, loadingEmpresas } = useAuth();
@@ -205,43 +206,7 @@ export default function Capacitaciones() {
   if (!sucursalesDisponibles || sucursalesDisponibles.length === 0) {
     return (
       <Container maxWidth="xl" sx={{ py: 3 }}>
-        <Alert severity="warning" sx={{ mb: 2 }}>
-          No tienes sucursales asignadas. Contacta con el administrador.
-        </Alert>
-        
-        <Paper sx={{ p: 2, mb: 2 }}>
-          <Typography variant="h6" sx={{ mb: 2 }}>🔍 Información de Debug:</Typography>
-          <Typography variant="body2">
-            <strong>userProfile:</strong> {userProfile ? '✅ Cargado' : '❌ No cargado'}<br/>
-            <strong>userEmpresas:</strong> {userEmpresas?.length || 0} empresas<br/>
-            <strong>userSucursales:</strong> {userSucursales?.length || 0} sucursales<br/>
-            <strong>loadingSucursales:</strong> {loadingSucursales ? '⏳ Cargando...' : '✅ Terminado'}<br/>
-            <strong>localSucursales:</strong> {localSucursales?.length || 0} sucursales locales
-          </Typography>
-        </Paper>
-        
-        <Box sx={{ display: 'flex', gap: 2 }}>
-          <Button
-            variant="contained"
-            onClick={() => window.location.reload()}
-          >
-            🔄 Recargar Página Completa
-          </Button>
-          <Button
-            variant="outlined"
-            onClick={() => {
-              logger.debug('🔍 Estado actual:', {
-                userProfile,
-                userEmpresas,
-                userSucursales,
-                localSucursales,
-                loadingSucursales
-              });
-            }}
-          >
-            📊 Ver Estado en Consola
-          </Button>
-        </Box>
+        <SinSucursalAlert empresaId={selectedEmpresa || undefined} />
       </Container>
     );
   }

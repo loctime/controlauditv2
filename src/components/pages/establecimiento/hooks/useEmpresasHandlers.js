@@ -146,13 +146,7 @@ export const useEmpresasHandlers = (ownerId, updateEmpresa, onEmpresaCreated) =>
       });
 
       logger.debug('[useEmpresasHandlers][handleAddEmpresa] ✅ ===== ÉXITO COMPLETO =====');
-      
-      Swal.fire({
-        icon: 'success',
-        title: 'Éxito',
-        text: 'Empresa creada exitosamente'
-      });
-      
+
       // Invalidar y refrescar la query de empresas para actualizar la lista
       // Esperar un momento para que Firestore propague los cambios
       await new Promise(resolve => setTimeout(resolve, 1000));
@@ -172,6 +166,8 @@ export const useEmpresasHandlers = (ownerId, updateEmpresa, onEmpresaCreated) =>
       if (onEmpresaCreated) {
         onEmpresaCreated();
       }
+
+      return empresaId;
     } catch (error) {
       console.group('[Firestore ERROR]');
       logger.error('code:', error.code);
