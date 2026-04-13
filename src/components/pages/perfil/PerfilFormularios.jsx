@@ -1,4 +1,5 @@
 import logger from '@/utils/logger';
+import { FEATURES } from '../../../config/features';
 import React from 'react';
 import {
   Box, Typography, ListItem, ListItemAvatar, Avatar, ListItemText, Alert,
@@ -342,7 +343,7 @@ const PerfilFormularios = ({ formularios, loading }) => {
                     gap: isSmallMobile ? 1 : 2,
                     justifyContent: isMobile ? 'center' : 'flex-start'
                   }}>
-                    {(() => {
+                    {FEATURES.GALERIA_FORMULARIOS_PUBLICOS && (() => {
                       const esLegacyCopia = !!form.formularioOriginalId && !form.copiadoDesde;
                       const esCopiadoConMismoNombre = !!form.copiadoDesde && form.nombre === form.nombreOriginal;
                       const compartirDeshabilitado = !canCompartirFormularios || esLegacyCopia || esCopiadoConMismoNombre;

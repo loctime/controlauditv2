@@ -1,4 +1,5 @@
 import logger from '@/utils/logger';
+import { FEATURES } from '../../../config/features';
 import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import {
   Box, Tabs, Tab, Typography, Accordion, AccordionSummary, AccordionDetails,
@@ -354,7 +355,7 @@ const EditarFormulario = () => {
       >
         <Tab label="Mis formularios" />
         <Tab label="Crear nuevo" />
-        <Tab label="Galería pública" />
+        {FEATURES.GALERIA_FORMULARIOS_PUBLICOS && <Tab label="Galería pública" />}
       </Tabs>
 
       {/* ═══════════════════════════════════════════════════════════════════
@@ -485,22 +486,26 @@ const EditarFormulario = () => {
                       ) : null
                     )}
 
-                    {/* Footer: compartir */}
-                    <Divider sx={{ my: 2 }} />
-                    <Box sx={{ display: 'flex', justifyContent: 'flex-end' }}>
-                      <Tooltip title={tooltipCompartir}>
-                        <span>
-                          <Button
-                            variant="outlined"
-                            size="small"
-                            onClick={() => handleCompartir(form)}
-                            disabled={compartirDeshabilitado}
-                          >
-                            {form.esPublico ? '🔄 Actualizar en galería' : '📤 Compartir a galería'}
-                          </Button>
-                        </span>
-                      </Tooltip>
-                    </Box>
+                    {/* Footer: compartir — oculto hasta activar GALERIA_FORMULARIOS_PUBLICOS */}
+                    {FEATURES.GALERIA_FORMULARIOS_PUBLICOS && (
+                      <>
+                        <Divider sx={{ my: 2 }} />
+                        <Box sx={{ display: 'flex', justifyContent: 'flex-end' }}>
+                          <Tooltip title={tooltipCompartir}>
+                            <span>
+                              <Button
+                                variant="outlined"
+                                size="small"
+                                onClick={() => handleCompartir(form)}
+                                disabled={compartirDeshabilitado}
+                              >
+                                {form.esPublico ? '🔄 Actualizar en galería' : '📤 Compartir a galería'}
+                              </Button>
+                            </span>
+                          </Tooltip>
+                        </Box>
+                      </>
+                    )}
                   </AccordionDetails>
                 </Accordion>
               );
@@ -623,9 +628,9 @@ const EditarFormulario = () => {
       </TabPanel>
 
       {/* ═══════════════════════════════════════════════════════════════════
-          TAB 3 — Galería pública
+          TAB 3 — Galería pública (oculto hasta activar FEATURES.GALERIA_FORMULARIOS_PUBLICOS)
       ═══════════════════════════════════════════════════════════════════ */}
-      <TabPanel value={activeTab} index={2}>
+      {FEATURES.GALERIA_FORMULARIOS_PUBLICOS && <TabPanel value={activeTab} index={2}>
         <Typography variant="h6" fontWeight={700} sx={{ mb: 2 }}>Galería de Formularios Públicos</Typography>
 
         {!userProfile && (
@@ -750,7 +755,7 @@ const EditarFormulario = () => {
             })}
           </Grid>
         )}
-      </TabPanel>
+      </TabPanel>}
 
       {/* Dialog: link de formulario compartido */}
       <Dialog open={shareDialogOpen} onClose={() => setShareDialogOpen(false)} maxWidth="sm" fullWidth>
