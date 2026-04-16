@@ -82,16 +82,9 @@ export default function PreguntasYSeccion({
   const [currentImagePregunta, setCurrentImagePregunta] = useState(null);
   const [openPreguntasNoContestadas, setOpenPreguntasNoContestadas] = useState(false);
 
-  // Estabilizar dependencias para evitar loop infinito
-  const dependenciasEstables = useMemo(() => ({
-    seccionesKey: secciones.map(s => s?.preguntas?.length || 0).join(','),
-    respuestasKey: JSON.stringify(respuestasExistentes),
-    comentariosKey: JSON.stringify(comentariosExistentes),
-    imagenesKey: JSON.stringify(imagenesExistentes),
-    clasificacionesKey: JSON.stringify(clasificacionesExistentes),
-    accionesKey: JSON.stringify(accionesRequeridasExistentes)
-  }), [secciones, respuestasExistentes, comentariosExistentes, imagenesExistentes, clasificacionesExistentes, accionesRequeridasExistentes]);
-
+  // Dependencias del efecto de normalización.
+  // Los props existentes provienen del estado del padre, así que sus referencias son estables
+  // entre renders; no hace falta serializar con JSON.stringify (bloqueaba el hilo en móvil).
   useEffect(() => {
     if (!secciones.length) return;
 
@@ -133,7 +126,7 @@ export default function PreguntasYSeccion({
           .map((_, preguntaIndex) => accionesRequeridasExistentes?.[seccionIndex]?.[preguntaIndex] || null)
       )
     );
-  }, [dependenciasEstables]);
+  }, [secciones, respuestasExistentes, comentariosExistentes, imagenesExistentes, clasificacionesExistentes, accionesRequeridasExistentes]);
 
   const handleRespuestaChange = (seccionIndex, preguntaIndex, value) => {
     const next = respuestas.map((seccion, idx) =>

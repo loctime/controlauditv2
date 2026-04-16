@@ -296,38 +296,36 @@ const AuditoriaRefactorizada = () => {
     showConfirmation: true
   });
 
-  // Estabilizar dependencias para detección de cambios
-  const datosAuditoriaEstables = useMemo(() => ({
-    empresaId: empresaSeleccionada?.id,
-    sucursal: sucursalSeleccionada,
-    formulario: formularioSeleccionadoId,
-    respuestasHash: JSON.stringify(respuestas),
-    comentariosHash: JSON.stringify(comentarios),
-    imagenesHash: JSON.stringify(imagenes),
-    clasificacionesHash: JSON.stringify(clasificaciones),
-    accionesRequeridasHash: JSON.stringify(accionesRequeridas)
-  }), [empresaSeleccionada, sucursalSeleccionada, formularioSeleccionadoId, respuestas, comentarios, imagenes, clasificaciones, accionesRequeridas]);
-
-  // Detectar cambios en los datos de auditoría
+  // Detectar cambios en los datos de auditoría.
+  // Una vez marcado "sucio", no revalidar — el JSON.stringify previo bloqueaba el hilo en móvil.
   useEffect(() => {
-    const hasData = empresaSeleccionada || sucursalSeleccionada || formularioSeleccionadoId || 
-                   respuestas.some(seccion => seccion.some(resp => resp !== '')) ||
-                   comentarios.some(seccion => seccion.some(com => com !== '')) ||
-                   imagenes.some(seccion => seccion.some(img => Array.isArray(img) ? img.length > 0 : img !== null)) ||
-                   clasificaciones.some(seccion => seccion.some(clas => clas && (clas.condicion || clas.actitud))) ||
-                   accionesRequeridas.some(seccion => seccion.some(acc => acc && acc.requiereAccion && acc.accionTexto));
-    
-    // Solo actualizar si hay datos y el estado actual es false (evitar setState innecesario)
-    if (hasData) {
-      setHasUnsavedChanges(prev => prev === false ? true : prev);
+    if (hasUnsavedChanges) return;
+    if (empresaSeleccionada || sucursalSeleccionada || formularioSeleccionadoId) {
+      setHasUnsavedChanges(true);
+      return;
     }
-  }, [datosAuditoriaEstables]);
+    const hasNested =
+      respuestas.some(seccion => seccion.some(resp => resp !== '')) ||
+      comentarios.some(seccion => seccion.some(com => com !== '')) ||
+      imagenes.some(seccion => seccion.some(img => Array.isArray(img) ? img.length > 0 : img !== null)) ||
+      clasificaciones.some(seccion => seccion.some(clas => clas && (clas.condicion || clas.actitud))) ||
+      accionesRequeridas.some(seccion => seccion.some(acc => acc && acc.requiereAccion && acc.accionTexto));
+    if (hasNested) setHasUnsavedChanges(true);
+  }, [hasUnsavedChanges, empresaSeleccionada, sucursalSeleccionada, formularioSeleccionadoId, respuestas, comentarios, imagenes, clasificaciones, accionesRequeridas]);
 
   // Refs para evitar bucle infinito en restauración
   const restoreAttemptedRef = useRef(false);
   const restoreRetriesRef = useRef(0);
   const isRestoringRef = useRef(false);
   const MAX_RESTORE_RETRIES = 10; // Máximo 10 segundos de espera
+
+  // Refs "espejo" para leer el estado actual desde efectos sin depender de él
+  const respuestasRef = useRef(respuestas);
+  const comentariosRef = useRef(comentarios);
+  const accionesRequeridasRef = useRef(accionesRequeridas);
+  useEffect(() => { respuestasRef.current = respuestas; }, [respuestas]);
+  useEffect(() => { comentariosRef.current = comentarios; }, [comentarios]);
+  useEffect(() => { accionesRequeridasRef.current = accionesRequeridas; }, [accionesRequeridas]);
 
   // Intentar restaurar auditoría al cargar
   useEffect(() => {
@@ -841,27 +839,29 @@ const AuditoriaRefactorizada = () => {
     if (formularioSeleccionadoId) {
       const configuracion = configurarFormulario(formularioSeleccionadoId, formularios);
       setSecciones(configuracion.secciones);
-      
-      // Verificar si hay datos existentes en respuestas, comentarios o accionesRequeridas
-      const tieneRespuestasExistentes = respuestas && respuestas.length > 0 && 
-        respuestas.some(seccion => seccion && seccion.some(resp => resp !== '' && resp !== null && resp !== undefined));
-      
-      const tieneComentariosExistentes = comentarios && comentarios.length > 0 && 
-        comentarios.some(seccion => seccion && seccion.some(com => com !== '' && com !== null && com !== undefined));
-      
-      const tieneAccionesRequeridasExistentes = accionesRequeridas && accionesRequeridas.length > 0 && 
-        accionesRequeridas.some(seccion => seccion && seccion.some(acc => acc !== null && acc !== undefined));
-      
+
+      // Leer vía refs: evita que los setState de este mismo efecto lo re-disparen en bucle
+      const rCurr = respuestasRef.current;
+      const cCurr = comentariosRef.current;
+      const aCurr = accionesRequeridasRef.current;
+
+      const tieneRespuestasExistentes = rCurr && rCurr.length > 0 &&
+        rCurr.some(seccion => seccion && seccion.some(resp => resp !== '' && resp !== null && resp !== undefined));
+
+      const tieneComentariosExistentes = cCurr && cCurr.length > 0 &&
+        cCurr.some(seccion => seccion && seccion.some(com => com !== '' && com !== null && com !== undefined));
+
+      const tieneAccionesRequeridasExistentes = aCurr && aCurr.length > 0 &&
+        aCurr.some(seccion => seccion && seccion.some(acc => acc !== null && acc !== undefined));
+
       const tieneDatosExistentes = tieneRespuestasExistentes || tieneComentariosExistentes || tieneAccionesRequeridasExistentes;
-      
+
       if (!tieneDatosExistentes) {
         setRespuestas(configuracion.respuestas);
         setComentarios(configuracion.comentarios);
         setImagenes(configuracion.imagenes);
         setClasificaciones(configuracion.clasificaciones);
       } else {
-        // Si hay datos existentes, solo asegurar que las secciones coincidan
-        // pero mantener los datos existentes
         logger.debug('🔄 [Auditoria] Manteniendo datos existentes al cambiar formulario', {
           tieneRespuestas: tieneRespuestasExistentes,
           tieneComentarios: tieneComentariosExistentes,
@@ -869,7 +869,7 @@ const AuditoriaRefactorizada = () => {
         });
       }
     }
-  }, [formularioSeleccionadoId, formularios, respuestas, comentarios, accionesRequeridas]);
+  }, [formularioSeleccionadoId, formularios]);
 
   // Configurar datos de agenda
   useEffect(() => {
