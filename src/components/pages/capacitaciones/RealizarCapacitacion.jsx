@@ -34,19 +34,14 @@ import { dbAudit } from '../../../firebaseControlFile';
 import { firestoreRoutesCore } from '../../../core/firestore/firestoreRoutes.core';
 import { planAnualService } from '../../../services/planAnualService';
 import { useAuth } from '@/components/context/AuthContext';
+import { useGlobalSelection } from '../../../hooks/useGlobalSelection';
 import { normalizeEmpleado } from '../../../utils/firestoreUtils';
 import Swal from 'sweetalert2';
 import ConfirmacionGuardadoModal from './ConfirmacionGuardadoModal';
 
-export default function RealizarCapacitacion({ 
-  selectedEmpresa, 
-  setSelectedEmpresa, 
-  selectedSucursal, 
-  setSelectedSucursal,
-  userEmpresas,
-  userSucursales
-}) {
+export default function RealizarCapacitacion() {
   const { userProfile } = useAuth();
+  const { selectedEmpresa, selectedSucursal, userEmpresas, userSucursales: globalUserSucursales } = useGlobalSelection();
   const [planesAnuales, setPlanesAnuales] = useState([]);
   const [planAnualSeleccionado, setPlanAnualSeleccionado] = useState('');
   const [capacitacionSeleccionada, setCapacitacionSeleccionada] = useState('');
@@ -60,9 +55,9 @@ export default function RealizarCapacitacion({
   const [openConfirmacionModal, setOpenConfirmacionModal] = useState(false);
 
   // Filtrar sucursales por empresa seleccionada
-  const sucursalesDisponibles = selectedEmpresa 
-    ? userSucursales.filter(s => s.empresaId === selectedEmpresa)
-    : userSucursales;
+  const sucursalesDisponibles = selectedEmpresa
+    ? globalUserSucursales.filter(s => s.empresaId === selectedEmpresa)
+    : globalUserSucursales;
   
   logger.debug('[RealizarCapacitacion] userSucursales:', userSucursales.length);
   logger.debug('[RealizarCapacitacion] selectedEmpresa:', selectedEmpresa);
@@ -311,60 +306,6 @@ export default function RealizarCapacitacion({
     <Box>
       {/* Selectores superiores */}
       <Paper sx={{ p: 2, mb: 3, bgcolor: 'primary.50' }}>
-        <Box sx={{ display: 'flex', gap: 2, alignItems: 'center', flexWrap: 'wrap', mb: 2 }}>
-          {/* Selector Empresa */}
-          <FormControl sx={{ minWidth: 200, flex: 1 }}>
-            <InputLabel>Empresa</InputLabel>
-            <Select
-              value={selectedEmpresa}
-              label="Empresa"
-              onChange={(e) => setSelectedEmpresa(e.target.value)}
-              startAdornment={<BusinessIcon sx={{ mr: 1, color: 'primary.main' }} />}
-            >
-              <MenuItem value="">
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                  <BusinessIcon fontSize="small" />
-                  <em>Todas las empresas</em>
-                </Box>
-              </MenuItem>
-              {userEmpresas.map((empresa) => (
-                <MenuItem key={empresa.id} value={empresa.id}>
-                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                    <BusinessIcon fontSize="small" />
-                    {empresa.nombre}
-                  </Box>
-                </MenuItem>
-              ))}
-            </Select>
-          </FormControl>
-
-          {/* Selector Sucursal */}
-          <FormControl sx={{ minWidth: 200, flex: 1 }}>
-            <InputLabel>Sucursal</InputLabel>
-            <Select
-              value={selectedSucursal}
-              label="Sucursal"
-              onChange={(e) => setSelectedSucursal(e.target.value)}
-              startAdornment={<StorefrontIcon sx={{ mr: 1, color: 'primary.main' }} />}
-            >
-              <MenuItem value="">
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                  <StorefrontIcon fontSize="small" />
-                  <em>Todas las sucursales</em>
-                </Box>
-              </MenuItem>
-              {sucursalesDisponibles.map((sucursal) => (
-                <MenuItem key={sucursal.id} value={sucursal.id}>
-                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                    <StorefrontIcon fontSize="small" />
-                    {sucursal.nombre}
-                  </Box>
-                </MenuItem>
-              ))}
-            </Select>
-          </FormControl>
-        </Box>
-
         {/* Información contextual */}
         {selectedEmpresa && selectedSucursal && (
           <Box sx={{ mt: 2, p: 2, bgcolor: 'grey.50', borderRadius: 1 }}>
