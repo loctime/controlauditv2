@@ -35,6 +35,7 @@ import { usePWAInstall } from '../../../hooks/usePWAInstall';
 import GetAppIcon from '@mui/icons-material/GetApp';
 import InfoIcon from '@mui/icons-material/Info';
 import AssignmentTurnedInIcon from '@mui/icons-material/AssignmentTurnedIn';
+import TriangularEmpresaSucursalSelector from './TriangularEmpresaSucursalSelector';
 import OfflineIndicator from '../../common/OfflineIndicator';
 import OfflineIndicatorMobile from '../../common/OfflineIndicatorMobile';
 import { getSidebarItems } from '../../../config/menuConfig';
@@ -317,9 +318,9 @@ function Navbar(props) {
           alignItems: "center",
           minHeight: { xs: 72, sm: 64 },
           height: { xs: 'auto', sm: 'auto' },
-          py: { xs: 0.5, sm: 1 },
-          pt: { xs: 'calc(4px + env(safe-area-inset-top))', sm: 'calc(8px + env(safe-area-inset-top))' },
-          px: { xs: 0.5, sm: 1 },
+          py: { xs: 0, sm: 1 },
+          pt: { xs: 'calc(0px + env(safe-area-inset-top))', sm: 'calc(8px + env(safe-area-inset-top))' },
+          px: { xs: 0, sm: 1 },
           position: "relative",
           zIndex: 2,
           flexShrink: 0,
@@ -463,78 +464,65 @@ function Navbar(props) {
             </IconButton>
           </Box>
 
-          {/* Controles del lado derecho - móvil (una sola fila) */}
+          {/* Controles móvil: una sola fila pegada a ambos bordes del toolbar */}
           <Box sx={{
             display: { xs: 'flex', sm: 'none' },
             alignItems: 'center',
-            gap: 0.5,
+            gap: 0,
             height: '100%',
             flex: 1,
             minWidth: 0,
-            justifyContent: 'flex-end',
-            pr: 0,
-            mr: '-8px', // permite que el hamburger roce/sobresalga del borde
+            justifyContent: 'flex-start',
           }}>
-            {/* Botón Auditoría */}
+            {/* Botón Auditoría, pegado al borde izquierdo */}
             {user && !isBloqueado && (
-              <IconButton
+              <Box
                 component={Link}
                 to="/auditoria"
-                color="inherit"
-                aria-label="Ir a Auditoría"
                 sx={{
                   color: '#fff',
                   backgroundColor: 'rgba(255,255,255,0.18)',
-                  borderRadius: 1,
-                  px: 0.75,
-                  height: 30,
-                  gap: 0.4,
+                  px: 1,
+                  height: 60,
+                  gap: 0.25,
                   flexShrink: 0,
+                  display: 'flex',
+                  flexDirection: 'column',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  textDecoration: 'none',
                   '&:hover': { backgroundColor: 'rgba(255,255,255,0.28)' },
                 }}
               >
-                <AssignmentTurnedInIcon sx={{ fontSize: '1rem' }} />
-                <Typography variant="caption" sx={{ color: '#fff', fontWeight: 600, lineHeight: 1, fontSize: '0.72rem' }}>
+                <AssignmentTurnedInIcon sx={{ fontSize: '1.1rem', color: '#fff' }} />
+                <Typography variant="caption" sx={{ color: '#fff', fontWeight: 700, lineHeight: 1, fontSize: '0.7rem' }}>
                   Auditoría
                 </Typography>
-              </IconButton>
+              </Box>
             )}
 
-            {/* Selectores apilados Empresa / Sucursal */}
+            {/* Selectores Empresa/Sucursal en triángulos cruzados */}
             {user && !isBloqueado && empresasDisponibles.length > 0 && (
-              <Box sx={{
-                display: 'flex',
-                flexDirection: 'column',
-                gap: 0.25,
-                flexShrink: 1,
-                minWidth: 0,
-                '& > *': { minWidth: 0 }
-              }}>
-                <EmpresaSelector
-                  empresas={empresasDisponibles}
-                  selectedEmpresa={navSelectedEmpresa}
-                  onEmpresaChange={navSetEmpresa}
-                  embedded={true}
-                  compact={true}
-                />
-                <SucursalSelector
-                  sucursales={sucursalesDisponibles}
-                  selectedSucursal={navSelectedSucursal}
-                  onSucursalChange={navSetSucursal}
-                  embedded={true}
-                  compact={true}
-                />
-              </Box>
+              <TriangularEmpresaSucursalSelector
+                empresas={empresasDisponibles}
+                sucursales={sucursalesDisponibles}
+                selectedEmpresa={navSelectedEmpresa}
+                selectedSucursal={navSelectedSucursal}
+                onEmpresaChange={navSetEmpresa}
+                onSucursalChange={navSetSucursal}
+                width={110}
+                height={60}
+              />
             )}
 
             {/* Sync / indicador offline */}
             {userProfile && (
-              <Box sx={{ flexShrink: 0 }}>
+              <Box sx={{ flexShrink: 0, display: 'flex', alignItems: 'center', px: 0.5 }}>
                 <OfflineIndicatorMobile userProfile={userProfile} />
               </Box>
             )}
 
-            {/* Owner chip (solo en casos muy específicos) */}
+            {/* Owner chip (edge case) */}
             {selectedOwnerEmail && (
               <Chip
                 label={selectedOwnerEmail}
@@ -555,24 +543,24 @@ function Navbar(props) {
             )}
 
             {/* Superdev */}
-            <Box sx={{ flexShrink: 0 }}>
+            <Box sx={{ flexShrink: 0, display: 'flex', alignItems: 'center' }}>
               <SuperdevSelector />
             </Box>
 
-            {/* Hamburguesa pegado al borde (las líneas "salen" del viewport) */}
+            {/* Hamburguesa pegado al borde derecho (líneas "salen" del viewport) */}
             <IconButton
               color="inherit"
               aria-label="open drawer"
               onClick={handleDrawerToggle}
               sx={{
-                width: 36,
-                height: 36,
+                width: 40,
+                height: 40,
                 flexShrink: 0,
                 p: 0,
-                ml: 0,
+                marginLeft: 'auto',
                 '& .MuiSvgIcon-root': {
-                  fontSize: '1.75rem',
-                  transform: 'translateX(6px)'
+                  fontSize: '2rem',
+                  transform: 'translateX(8px)'
                 },
                 '&:focus': { outline: 'none' },
                 '&:active': { backgroundColor: 'transparent' },
