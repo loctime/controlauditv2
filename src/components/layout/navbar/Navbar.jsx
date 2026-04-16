@@ -316,7 +316,7 @@ function Navbar(props) {
           display: "flex",
           justifyContent: { xs: "space-between", md: "center" },
           alignItems: "center",
-          minHeight: { xs: 72, sm: 64 },
+          minHeight: { xs: 60, sm: 64 },
           height: { xs: 'auto', sm: 'auto' },
           py: { xs: 0, sm: 1 },
           pt: { xs: 'calc(0px + env(safe-area-inset-top))', sm: 'calc(8px + env(safe-area-inset-top))' },
@@ -482,8 +482,8 @@ function Navbar(props) {
                 sx={{
                   color: '#fff',
                   backgroundColor: 'rgba(255,255,255,0.18)',
-                  px: 0.5,
-                  height: 72,
+                  px: 0,
+                  height: 60,
                   gap: 0.3,
                   flex: '0 0 20%',
                   display: 'flex',
@@ -503,7 +503,7 @@ function Navbar(props) {
 
             {/* Zona central (60%): selectores Empresa/Sucursal en triángulos cruzados */}
             {user && !isBloqueado && empresasDisponibles.length > 0 && (
-              <Box sx={{ flex: '0 0 60%', height: 72, display: 'flex', alignItems: 'stretch' }}>
+              <Box sx={{ flex: '0 0 60%', height: 60, display: 'flex', alignItems: 'stretch' }}>
                 <TriangularEmpresaSucursalSelector
                   empresas={empresasDisponibles}
                   sucursales={sucursalesDisponibles}
@@ -512,7 +512,7 @@ function Navbar(props) {
                   onEmpresaChange={navSetEmpresa}
                   onSucursalChange={navSetSucursal}
                   width="100%"
-                  height={72}
+                  height={60}
                 />
               </Box>
             )}
@@ -520,11 +520,11 @@ function Navbar(props) {
             {/* Zona derecha (20%): sync + hamburger */}
             <Box sx={{
               flex: '0 0 20%',
-              height: 72,
+              height: 60,
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'space-between',
-              pl: 0.5,
+              pl: 0,
             }}>
               {userProfile && (
                 <Box sx={{ flexShrink: 0, display: 'flex', alignItems: 'center' }}>
@@ -612,7 +612,7 @@ function Navbar(props) {
         sx={{
           flexGrow: 1,
           pt: {
-            xs: 'calc(80px + env(safe-area-inset-top))',
+            xs: 'calc(72px + env(safe-area-inset-top))',
             sm: 'calc(72px + env(safe-area-inset-top))',
             md: 'calc(64px + env(safe-area-inset-top))'
           },
