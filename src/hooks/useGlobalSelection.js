@@ -4,6 +4,7 @@ import { useAuth } from '@/components/context/AuthContext';
 /**
  * Hook global para manejar la selección de empresa y sucursal
  * Expone API unificada con valores normalizados (nunca null/undefined)
+ * Persiste la selección en localStorage
  */
 export const useGlobalSelection = () => {
   const {
@@ -14,6 +15,19 @@ export const useGlobalSelection = () => {
     setSelectedEmpresa: setGlobalSelectedEmpresa,
     setSelectedSucursal: setGlobalSelectedSucursal
   } = useAuth();
+
+  // Persistir en localStorage cuando cambian los valores
+  useEffect(() => {
+    if (globalSelectedEmpresa) {
+      localStorage.setItem('controlaudit_selectedEmpresa', globalSelectedEmpresa);
+    }
+  }, [globalSelectedEmpresa]);
+
+  useEffect(() => {
+    if (globalSelectedSucursal) {
+      localStorage.setItem('controlaudit_selectedSucursal', globalSelectedSucursal);
+    }
+  }, [globalSelectedSucursal]);
 
   // Normalizar valores: convertir null/undefined/'' a "todas", validar existencia
   const empresaId = useMemo(() => {
@@ -54,6 +68,14 @@ export const useGlobalSelection = () => {
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [userEmpresas, isTodasEmpresas]);
+
+  // Auto-seleccionar única sucursal si solo hay una disponible
+  useEffect(() => {
+    if (sucursalesDisponibles && sucursalesDisponibles.length === 1 && isTodasSucursales) {
+      setGlobalSelectedSucursal(sucursalesDisponibles[0].id);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [sucursalesDisponibles, isTodasSucursales]);
 
   // Filtrar sucursales SOLO por empresa seleccionada
   const sucursalesDisponibles = useMemo(() => {

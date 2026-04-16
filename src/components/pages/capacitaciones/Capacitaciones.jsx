@@ -56,10 +56,6 @@ export default function Capacitaciones() {
   
   // Estado para forzar refresh del cache de la tabla
   const [tableRefreshKey, setTableRefreshKey] = useState(0);
-  
-  // Estado para pestaña "Realizar Capacitación" (filtros independientes)
-  const [realizarCapSelectedEmpresa, setRealizarCapSelectedEmpresa] = useState('');
-  const [realizarCapSelectedSucursal, setRealizarCapSelectedSucursal] = useState('');
 
   // Filtros locales (tipo y estado son específicos de capacitaciones)
   const [filterTipo, setFilterTipo] = useState('');
@@ -350,14 +346,7 @@ export default function Capacitaciones() {
 
       {/* Pestaña "Realizar Capacitación" */}
       {activeTab === 1 && (
-        <RealizarCapacitacion
-          selectedEmpresa={realizarCapSelectedEmpresa}
-          setSelectedEmpresa={setRealizarCapSelectedEmpresa}
-          selectedSucursal={realizarCapSelectedSucursal}
-          setSelectedSucursal={setRealizarCapSelectedSucursal}
-          userEmpresas={userEmpresas}
-          userSucursales={userSucursales}
-        />
+        <RealizarCapacitacion />
       )}
 
       {/* Modales */}
