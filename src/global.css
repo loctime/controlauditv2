@@ -1,7 +1,3 @@
-html {
-  zoom: 0.85;
-}
-
 /* Variables globales para modo claro */
 :root {
   --color-bg: #f5f5f5;
@@ -67,52 +63,26 @@ html, body {
 
 /* Responsive adjustments */
 @media (max-width: 600px) {
-  .main-app-container {
-    padding: 2px;
-  }
-  
   .card {
     padding: 8px;
     margin-bottom: 8px;
   }
-  
+
   .MuiContainer-root {
-    padding-left: 2px !important;
-    padding-right: 2px !important;
-    max-width: none !important;
-  }
-  
-  .MuiBox-root {
-    padding: 8px !important;
-  }
-  
-  .MuiPaper-root {
-    padding: 8px !important;
+    padding-left: 8px !important;
+    padding-right: 8px !important;
   }
 }
 
 @media (max-width: 480px) {
-  .main-app-container {
-    padding: 1px;
-  }
-  
   .card {
     padding: 6px;
     margin-bottom: 6px;
   }
-  
+
   .MuiContainer-root {
-    padding-left: 1px !important;
-    padding-right: 1px !important;
-    max-width: none !important;
-  }
-  
-  .MuiBox-root {
-    padding: 6px !important;
-  }
-  
-  .MuiPaper-root {
-    padding: 6px !important;
+    padding-left: 4px !important;
+    padding-right: 4px !important;
   }
 }
 
