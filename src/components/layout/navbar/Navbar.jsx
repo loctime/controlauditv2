@@ -344,6 +344,7 @@ function Navbar(props) {
           minHeight: { xs: 56, sm: 64 },
           height: { xs: 'auto', sm: 'auto' },
           py: { xs: 0.5, sm: 1 },
+          pt: { xs: 'calc(4px + env(safe-area-inset-top))', sm: 'calc(8px + env(safe-area-inset-top))' },
           px: { xs: 1, sm: 1 },
           position: "relative",
           zIndex: 2,
@@ -609,15 +610,18 @@ function Navbar(props) {
         </Drawer>
       </Box>
       
-      <Box 
-        component="main" 
+      <Box
+        component="main"
         className="main-content-wrapper"
-        sx={{ 
-          flexGrow: 1, 
-          pt: { xs: 8, sm: 9 }, // Compensar altura reducida del Navbar
+        sx={{
+          flexGrow: 1,
+          pt: {
+            xs: 'calc(56px + env(safe-area-inset-top))',
+            sm: 'calc(64px + env(safe-area-inset-top))'
+          },
           pb: { xs: 1, sm: 2, md: 3 },
-          width: "100%", 
-          minHeight: "100vh", 
+          width: "100%",
+          minHeight: "100vh",
           px: { xs: 1, sm: 2, md: 3 }
         }}
       >
