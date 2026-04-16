@@ -30,9 +30,6 @@ import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import Swal from 'sweetalert2';
 import { useAuth } from '@/components/context/AuthContext';
 import { reporteService } from "../../../../services/reporteService";
-import { db, dbAudit } from "../../../../firebaseControlFile";
-import { collection, getDocs, query, where } from "firebase/firestore";
-import { firestoreRoutesCore } from "../../../../core/firestore/firestoreRoutes.core";
 
 // Hooks personalizados
 import { useAuditoriaState } from "./hooks/useAuditoriaState";
@@ -47,7 +44,7 @@ import AutoSaveAlert from "./components/AutoSaveAlert";
 import AuditoriaHeader from "./components/AuditoriaHeader";
 import AlertasFaltantes from "./components/AlertasFaltantes";
 import { createAuditoriaSteps } from "./components/AuditoriaSteps";
-import SugerenciaAgenda from "./components/SugerenciaAgenda";
+import DialogoSincronizarAgenda from "./components/DialogoSincronizarAgenda";
 // import OfflineDebugLogs from "./components/OfflineDebugLogs"; // Comentado temporalmente para probar error en Edge PWA
 
 // Servicios
@@ -72,6 +69,7 @@ import {
   verificarFirmasCompletadas,
   generarHashAuditoria
 } from "./utils/auditoriaUtils";
+import { buscarAgendasMatch } from "./utils/agendaMatchUtils";
 import {
   generarContenidoImpresion,
   abrirImpresionNativa,
@@ -122,8 +120,10 @@ const AuditoriaRefactorizada = () => {
   const [cargandoDatosRespaldo, setCargandoDatosRespaldo] = useState(false);
   const [datosRespaldoCargados, setDatosRespaldoCargados] = useState(false);
 
-  // Estado para sugerencia de agendas pendientes (Etapa 2)
-  const [agendasPendientes, setAgendasPendientes] = useState([]);
+  // Estado del diálogo de sincronización con agenda (se abre al avanzar desde el paso de formulario)
+  const [agendaMatches, setAgendaMatches] = useState([]);
+  const [dialogoAgendaOpen, setDialogoAgendaOpen] = useState(false);
+  const [buscandoAgenda, setBuscandoAgenda] = useState(false);
 
   // Cargar datos de respaldo si no están disponibles (solo una vez)
   useEffect(() => {
@@ -164,42 +164,6 @@ const AuditoriaRefactorizada = () => {
     const timer = setTimeout(cargarDatosRespaldo, 1000);
     return () => clearTimeout(timer);
   }, [userProfile, datosRespaldoCargados]);
-
-  // Cargar agendas pendientes próximas (±7 días) sin filtro de empresa/sucursal/encargado
-  useEffect(() => {
-    const cargarAgendasPendientes = async () => {
-      if (!userProfile?.ownerId || location.state?.auditoriaId) return;
-
-      try {
-        const ownerId = userProfile.ownerId;
-        const agendaRef = collection(dbAudit, ...firestoreRoutesCore.auditorias_agendadas(ownerId));
-        const q = query(agendaRef, where('estado', '==', 'agendada'));
-        const snap = await getDocs(q);
-
-        const hoy = new Date();
-        hoy.setHours(0, 0, 0, 0);
-        const limite = new Date(hoy);
-        limite.setDate(hoy.getDate() + 7);
-        const desde = new Date(hoy);
-        desde.setDate(hoy.getDate() - 7);
-
-        const agendas = snap.docs
-          .map(d => ({ id: d.id, ...d.data() }))
-          .filter(a => {
-            if (!a.fecha) return false;
-            const fecha = new Date(a.fecha + 'T00:00:00');
-            return fecha >= desde && fecha <= limite;
-          })
-          .sort((a, b) => a.fecha.localeCompare(b.fecha));
-
-        setAgendasPendientes(agendas);
-      } catch (error) {
-        logger.debug('[Auditoria] Error cargando agendas pendientes:', error);
-      }
-    };
-
-    cargarAgendasPendientes();
-  }, [userProfile?.ownerId, location.state?.auditoriaId]);
 
   // Hook para manejar todo el estado
   const auditoriaState = useAuditoriaState();
@@ -731,6 +695,69 @@ const AuditoriaRefactorizada = () => {
     return resultado;
   }, [estadoPasos]);
 
+  // Wrapper de handleSiguiente: en el paso 1 (formulario) detecta si existen auditorías
+  // agendadas que coincidan (empresa + sucursal + formulario, ±7 días) y ofrece vincular.
+  const PASO_FORMULARIO = 1;
+  const handleSiguienteConDeteccionAgenda = useCallback(async () => {
+    const esPasoFormulario = activeStep === PASO_FORMULARIO;
+    const yaVinculada = Boolean(auditoriaIdAgenda);
+    const datosListos = Boolean(
+      empresaSeleccionada && sucursalSeleccionada && formularioSeleccionadoId
+    );
+
+    if (!esPasoFormulario || yaVinculada || !datosListos || buscandoAgenda) {
+      handleSiguiente(pasoCompletoAuditoria);
+      return;
+    }
+
+    try {
+      setBuscandoAgenda(true);
+      const matches = await buscarAgendasMatch({
+        ownerId: userProfile?.ownerId,
+        empresaId: empresaSeleccionada?.id,
+        empresaNombre: empresaSeleccionada?.nombre || empresaSeleccionada,
+        sucursal: sucursalSeleccionada,
+        formularioId: formularioSeleccionadoId,
+      });
+
+      if (matches.length > 0) {
+        setAgendaMatches(matches);
+        setDialogoAgendaOpen(true);
+      } else {
+        handleSiguiente(pasoCompletoAuditoria);
+      }
+    } catch (error) {
+      logger.debug('[Auditoria] Error en detección de agenda:', error);
+      handleSiguiente(pasoCompletoAuditoria);
+    } finally {
+      setBuscandoAgenda(false);
+    }
+  }, [
+    activeStep,
+    auditoriaIdAgenda,
+    empresaSeleccionada,
+    sucursalSeleccionada,
+    formularioSeleccionadoId,
+    userProfile?.ownerId,
+    buscandoAgenda,
+    handleSiguiente,
+    pasoCompletoAuditoria,
+  ]);
+
+  const handleVincularAgenda = useCallback((agenda) => {
+    setAuditoriaIdAgenda(agenda.id);
+    setDialogoAgendaOpen(false);
+    setSnackbarMsg(`Auditoría vinculada con la agenda del ${agenda.fecha}`);
+    setSnackbarType('success');
+    setSnackbarOpen(true);
+    handleSiguiente(pasoCompletoAuditoria);
+  }, [setAuditoriaIdAgenda, setSnackbarMsg, setSnackbarType, setSnackbarOpen, handleSiguiente, pasoCompletoAuditoria]);
+
+  const handleContinuarSinVincular = useCallback(() => {
+    setDialogoAgendaOpen(false);
+    handleSiguiente(pasoCompletoAuditoria);
+  }, [handleSiguiente, pasoCompletoAuditoria]);
+
   // Estado para forzar re-render
   const [forceUpdate, setForceUpdate] = useState(0);
 
@@ -1054,10 +1081,6 @@ const AuditoriaRefactorizada = () => {
         </Alert>
       )}
       
-      {/* Sugerencia de agendas pendientes (Etapa 2) */}
-      <SugerenciaAgenda agendas={agendasPendientes} />
-
-      
       {/* Header con navegación y progreso */}
       <AuditoriaHeader
         navigate={navigate}
@@ -1084,6 +1107,15 @@ const AuditoriaRefactorizada = () => {
         formularios={formularios}
       />
 
+      {/* Diálogo de sincronización con auditoría agendada (detectado al avanzar desde el paso de formulario) */}
+      <DialogoSincronizarAgenda
+        open={dialogoAgendaOpen}
+        matches={agendaMatches}
+        onVincular={handleVincularAgenda}
+        onContinuarSinVincular={handleContinuarSinVincular}
+        onClose={handleContinuarSinVincular}
+      />
+
       {/* Contenido principal */}
       {!auditoriaGenerada ? (
         <AuditoriaStepper
@@ -1096,7 +1128,7 @@ const AuditoriaRefactorizada = () => {
           navegacionError={navegacionError}
           errores={errores}
           handleAnterior={handleAnterior}
-          handleSiguiente={() => handleSiguiente(pasoCompletoAuditoria)}
+          handleSiguiente={handleSiguienteConDeteccionAgenda}
           handleForzarActualizacion={handleForzarActualizacion}
           isSaving={isSaving}
           // Props para los componentes
