@@ -133,13 +133,8 @@ a{
   }
 }
 
-/* SOLUCIÓN SIMPLE: Espaciado correcto para navbar fijo */
+/* Padding-top se maneja desde `sx` en Navbar.jsx para respetar los breakpoints
+   del Toolbar MUI (56px xs / 64px sm+). No agregar reglas aquí. */
 .main-content-wrapper {
-  padding-top: 56px !important; /* Desktop */
-}
-
-@media (max-width: 768px) {
-  .main-content-wrapper {
-    padding-top: 48px !important; /* Móvil */
-  }
+  /* vacío a propósito */
 }

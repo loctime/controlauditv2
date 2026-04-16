@@ -44,7 +44,7 @@ const CameraPreview = ({
     <Box sx={{ 
       position: 'relative', 
       width: '100%', 
-      height: isMobile ? '100vh' : '500px',
+      height: isMobile ? '100dvh' : '500px',
       backgroundColor: '#000',
       overflow: 'hidden',
       display: 'flex',
@@ -52,8 +52,8 @@ const CameraPreview = ({
       justifyContent: 'center',
       // Asegurar que ocupe toda la pantalla en móvil
       ...(isMobile && {
-        minHeight: '100vh',
-        minWidth: '100vw',
+        minHeight: '100dvh',
+        minWidth: '100%',
         position: 'fixed',
         top: 0,
         left: 0,

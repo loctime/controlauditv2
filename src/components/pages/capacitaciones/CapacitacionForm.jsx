@@ -9,7 +9,9 @@ import {
   TextField,
   Grid,
   MenuItem,
-  CircularProgress
+  CircularProgress,
+  useMediaQuery,
+  useTheme
 } from '@mui/material';
 import { Timestamp } from 'firebase/firestore';
 import { useAuth } from '@/components/context/AuthContext';
@@ -17,6 +19,8 @@ import { capacitacionService } from '../../../services/capacitacionService';
 
 export default function CapacitacionForm({ open, onClose, onSave, sucursalId, empresaId }) {
   const { userProfile } = useAuth();
+  const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
   const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState({
     nombre: '',
@@ -77,7 +81,7 @@ export default function CapacitacionForm({ open, onClose, onSave, sucursalId, em
   };
 
   return (
-    <Dialog open={open} onClose={onClose} maxWidth="md" fullWidth>
+    <Dialog open={open} onClose={onClose} maxWidth="md" fullWidth fullScreen={isMobile}>
       <form onSubmit={handleSubmit}>
         <DialogTitle>Nueva Capacitación</DialogTitle>
         

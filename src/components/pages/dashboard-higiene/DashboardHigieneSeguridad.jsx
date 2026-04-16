@@ -24,7 +24,9 @@ import {
   DialogActions,
   FormGroup,
   FormControlLabel,
-  Checkbox
+  Checkbox,
+  useMediaQuery,
+  useTheme
 } from '@mui/material';
 import {
   TrendingUp as TrendingUpIcon,
@@ -60,6 +62,8 @@ import { generarReporteDashboard } from '../../../utils/dashboardReportGenerator
 import { toast } from 'react-toastify';
 
 const DashboardHigieneSeguridad = () => {
+  const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
   const { userEmpresas, userSucursales } = useAuth();
   const { selectedEmpresa, setSelectedEmpresa, selectedSucursal, setSelectedSucursal, sucursalesFiltradas } = useGlobalSelection();
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
@@ -551,11 +555,12 @@ const DashboardHigieneSeguridad = () => {
       </Popover>
 
       {/* Modal de Opciones de Reporte */}
-      <Dialog 
-        open={openOpcionesModal} 
+      <Dialog
+        open={openOpcionesModal}
         onClose={() => setOpenOpcionesModal(false)}
         maxWidth="sm"
         fullWidth
+        fullScreen={isMobile}
       >
         <DialogTitle>
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>

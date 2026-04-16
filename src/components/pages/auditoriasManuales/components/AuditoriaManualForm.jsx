@@ -10,7 +10,9 @@ import {
   Grid,
   MenuItem,
   CircularProgress,
-  Alert
+  Alert,
+  useMediaQuery,
+  useTheme
 } from '@mui/material';
 import { Timestamp } from 'firebase/firestore';
 import { useAuth } from '@/components/context/AuthContext';
@@ -26,6 +28,8 @@ export default function AuditoriaManualForm({
   onSave, 
   auditoria = null 
 }) {
+  const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
   const { userProfile, userEmpresas, userSucursales } = useAuth();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
@@ -177,7 +181,7 @@ export default function AuditoriaManualForm({
       onClose={onClose} 
       maxWidth="md" 
       fullWidth
-      fullScreen={window.innerWidth < 600}
+      fullScreen={isMobile}
     >
       <form onSubmit={handleSubmit}>
         <DialogTitle>

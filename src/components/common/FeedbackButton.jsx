@@ -218,9 +218,9 @@ const FeedbackButton = () => {
         onClick={handleOpen}
         sx={{
           position: 'fixed',
-          bottom: 24,
-          right: 24,
-          zIndex: 1000,
+          bottom: 'calc(24px + env(safe-area-inset-bottom))',
+          right: 'calc(24px + env(safe-area-inset-right))',
+          zIndex: 1200,
           boxShadow: 3
         }}
       >

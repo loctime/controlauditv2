@@ -174,7 +174,26 @@ export default function TrainingMatrixTable({
         ))}
       </Box>
 
-      <TableContainer ref={tableScrollRef} component={Paper} sx={{ overflowX: 'auto' }}>
+      <TableContainer
+        ref={tableScrollRef}
+        component={Paper}
+        sx={{
+          overflowX: 'auto',
+          WebkitOverflowScrolling: 'touch',
+          position: 'relative',
+          '&::after': {
+            content: '""',
+            position: 'absolute',
+            top: 0,
+            right: 0,
+            bottom: 0,
+            width: 24,
+            background: 'linear-gradient(to left, rgba(0,0,0,0.15), transparent)',
+            pointerEvents: 'none',
+            display: { xs: 'block', md: 'none' }
+          }
+        }}
+      >
         <Table size="small" stickyHeader sx={{ borderCollapse: 'collapse' }}>
           <TableHead>
             {/* Row 1: month headers */}

@@ -26,6 +26,8 @@ import {
   TextField,
   Tooltip,
   Typography,
+  useMediaQuery,
+  useTheme,
 } from '@mui/material';
 import EditIcon from '@mui/icons-material/Edit';
 import DeleteIcon from '@mui/icons-material/Delete';
@@ -56,6 +58,8 @@ function complianceLabelFromValidUntil(validUntil) {
 }
 
 export default function CatalogScreen({ onNavigateToPlans }) {
+  const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
   const { userProfile, userEmpresas = [], userSucursales = [] } = useAuth();
   const ownerId = userProfile?.ownerId;
 
@@ -517,7 +521,7 @@ export default function CatalogScreen({ onNavigateToPlans }) {
         </Grid>
       </Grid>
 
-      <Dialog open={Boolean(editItem)} onClose={() => setEditItem(null)} maxWidth="sm" fullWidth>
+      <Dialog open={Boolean(editItem)} onClose={() => setEditItem(null)} maxWidth="sm" fullWidth fullScreen={isMobile}>
         <DialogTitle>Editar tipo de capacitación</DialogTitle>
         <DialogContent>
           <Stack spacing={1.5} sx={{ mt: 1 }}>
@@ -578,6 +582,7 @@ export default function CatalogScreen({ onNavigateToPlans }) {
         onClose={() => !addToPlanSaving && closeAddToPlanModal()}
         maxWidth="xs"
         fullWidth
+        fullScreen={isMobile}
       >
         <DialogTitle>
           Agregar a plan anual {addToPlanItem ? `: ${addToPlanItem.name}` : ''}
@@ -720,7 +725,7 @@ export default function CatalogScreen({ onNavigateToPlans }) {
         </DialogActions>
       </Dialog>
 
-      <Dialog open={Boolean(recordsDialogItem)} onClose={() => setRecordsDialogItem(null)} maxWidth="md" fullWidth>
+      <Dialog open={Boolean(recordsDialogItem)} onClose={() => setRecordsDialogItem(null)} maxWidth="md" fullWidth fullScreen={isMobile}>
         <DialogTitle>Registros: {recordsDialogItem?.name}</DialogTitle>
         <DialogContent>
           {recordsLoading ? (

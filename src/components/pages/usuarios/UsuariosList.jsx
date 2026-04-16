@@ -352,14 +352,14 @@ const UsuariosList = ({ ownerId: propOwnerId, showAddButton = true }) => {
       ) : !Array.isArray(usuarios) || usuarios.length === 0 ? (
         <Alert severity="info">No hay usuarios para mostrar.</Alert>
       ) : (
-        <TableContainer component={Paper}>
+        <TableContainer component={Paper} sx={{ overflowX: 'auto', WebkitOverflowScrolling: 'touch' }}>
           <Table>
             <TableHead>
               <TableRow>
                 <TableCell>Nombre</TableCell>
                 <TableCell>Email</TableCell>
-                <TableCell>Empresas</TableCell>
-                <TableCell>Fecha de creación</TableCell>
+                <TableCell sx={{ display: { xs: 'none', md: 'table-cell' } }}>Empresas</TableCell>
+                <TableCell sx={{ display: { xs: 'none', md: 'table-cell' } }}>Fecha de creación</TableCell>
                 <TableCell>Acciones</TableCell>
               </TableRow>
             </TableHead>
@@ -382,7 +382,7 @@ const UsuariosList = ({ ownerId: propOwnerId, showAddButton = true }) => {
                     </Box>
                   </TableCell>
                   <TableCell>{usuario.email || usuario.id}</TableCell>
-                  <TableCell>
+                  <TableCell sx={{ display: { xs: 'none', md: 'table-cell' } }}>
                     {usuario.empresas && usuario.empresas.length > 0 ? (
                       <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
                         {usuario.empresas.map((empresa) => (
@@ -400,7 +400,7 @@ const UsuariosList = ({ ownerId: propOwnerId, showAddButton = true }) => {
                       </Typography>
                     )}
                   </TableCell>
-                  <TableCell>
+                  <TableCell sx={{ display: { xs: 'none', md: 'table-cell' } }}>
                     {(() => {
                       // Soporta Firestore Timestamp, string ISO o Date
                       const fecha = usuario.createdAt;

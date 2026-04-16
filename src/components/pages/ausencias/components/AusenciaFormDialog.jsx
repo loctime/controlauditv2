@@ -18,7 +18,9 @@ import {
   Tooltip,
   Typography,
   Chip,
-  Box
+  Box,
+  useMediaQuery,
+  useTheme
 } from '@mui/material';
 import Autocomplete from '@mui/material/Autocomplete';
 import CloseIcon from '@mui/icons-material/Close';
@@ -126,6 +128,8 @@ export default function AusenciaFormDialog({
   initialData = null
 }) {
   const { userProfile } = useAuth();
+  const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
   const [form, setForm] = useState(getInitialState);
   const [empleados, setEmpleados] = useState([]);
   const [loadingEmployees, setLoadingEmployees] = useState(false);
@@ -415,7 +419,7 @@ export default function AusenciaFormDialog({
   };
 
   return (
-    <Dialog open={open} onClose={onClose} maxWidth='sm' fullWidth>
+    <Dialog open={open} onClose={onClose} maxWidth='sm' fullWidth fullScreen={isMobile}>
       <DialogTitle sx={{ fontWeight: 700 }}>
         {isEditMode ? 'Editar ausencia' : 'Registrar ausencia'}
       </DialogTitle>

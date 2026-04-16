@@ -758,7 +758,7 @@ const EditarFormulario = () => {
       </TabPanel>}
 
       {/* Dialog: link de formulario compartido */}
-      <Dialog open={shareDialogOpen} onClose={() => setShareDialogOpen(false)} maxWidth="sm" fullWidth>
+      <Dialog open={shareDialogOpen} onClose={() => setShareDialogOpen(false)} maxWidth="sm" fullWidth fullScreen={isSmall}>
         <DialogTitle>Formulario publicado en galería</DialogTitle>
         <DialogContent>
           <Typography sx={{ mb: 2 }}>Compartí este link con otros administradores:</Typography>
