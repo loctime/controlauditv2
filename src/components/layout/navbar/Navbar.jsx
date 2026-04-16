@@ -38,6 +38,7 @@ import { useColorMode } from '../../context/ColorModeContext';
 import { usePWAInstall } from '../../../hooks/usePWAInstall';
 import GetAppIcon from '@mui/icons-material/GetApp';
 import InfoIcon from '@mui/icons-material/Info';
+import AssignmentTurnedInIcon from '@mui/icons-material/AssignmentTurnedIn';
 import OfflineIndicator from '../../common/OfflineIndicator';
 import OfflineIndicatorMobile from '../../common/OfflineIndicatorMobile';
 import { getSidebarItems } from '../../../config/menuConfig';
@@ -226,29 +227,7 @@ function Navbar(props) {
           </Box>
         </Box>
       )}
-      {user && !isBloqueado && empresasDisponibles.length > 0 && (
-        <Box sx={{ p: 2, borderBottom: '1px solid rgba(255,255,255,0.1)', display: 'flex', flexDirection: 'column', gap: 1 }}>
-          {/* Solo mostrar selectores en móvil */}
-          {isMobile && (
-            <>
-              <EmpresaSelector
-                empresas={empresasDisponibles}
-                selectedEmpresa={navSelectedEmpresa}
-                onEmpresaChange={navSetEmpresa}
-                embedded={true}
-                compact={true}
-              />
-              <SucursalSelector
-                sucursales={sucursalesDisponibles}
-                selectedSucursal={navSelectedSucursal}
-                onSucursalChange={navSetSucursal}
-                embedded={true}
-                compact={true}
-              />
-            </>
-          )}
-        </Box>
-      )}
+      {/* Los selectores Empresa/Sucursal en móvil se muestran en la fila inferior del navbar */}
       {isBloqueado ? (
         <Box sx={{ p: 2 }}>
           <Alert severity="error" sx={{ mb: 2 }}>
@@ -583,6 +562,73 @@ function Navbar(props) {
           </Box>
 
         </Toolbar>
+
+        {/* Fila inferior móvil: botón Auditoría + selectores Empresa/Sucursal */}
+        {user && !isBloqueado && (
+          <Box
+            sx={{
+              display: { xs: 'flex', md: 'none' },
+              alignItems: 'center',
+              gap: 1,
+              px: 1,
+              py: 0.75,
+              borderTop: '1px solid rgba(255,255,255,0.1)',
+              backgroundColor: theme.palette.primary.main,
+              overflowX: 'auto',
+              WebkitOverflowScrolling: 'touch',
+              '&::-webkit-scrollbar': { display: 'none' },
+              scrollbarWidth: 'none',
+              minHeight: 44,
+            }}
+          >
+            <IconButton
+              component={Link}
+              to="/auditoria"
+              color="inherit"
+              size="small"
+              aria-label="Ir a Auditoría"
+              title="Auditoría"
+              sx={{
+                color: '#fff',
+                backgroundColor: 'rgba(255,255,255,0.15)',
+                borderRadius: 1,
+                px: 1,
+                flexShrink: 0,
+                height: 32,
+                gap: 0.5,
+                '&:hover': { backgroundColor: 'rgba(255,255,255,0.25)' },
+              }}
+            >
+              <AssignmentTurnedInIcon fontSize="small" />
+              <Typography variant="caption" sx={{ color: '#fff', fontWeight: 600, lineHeight: 1 }}>
+                Auditoría
+              </Typography>
+            </IconButton>
+
+            {empresasDisponibles.length > 0 && (
+              <Box sx={{ flexShrink: 0 }}>
+                <EmpresaSelector
+                  empresas={empresasDisponibles}
+                  selectedEmpresa={navSelectedEmpresa}
+                  onEmpresaChange={navSetEmpresa}
+                  embedded={true}
+                  compact={true}
+                />
+              </Box>
+            )}
+            {empresasDisponibles.length > 0 && (
+              <Box sx={{ flexShrink: 0 }}>
+                <SucursalSelector
+                  sucursales={sucursalesDisponibles}
+                  selectedSucursal={navSelectedSucursal}
+                  onSucursalChange={navSetSucursal}
+                  embedded={true}
+                  compact={true}
+                />
+              </Box>
+            )}
+          </Box>
+        )}
       </AppBar>
       
       <Box component="nav" aria-label="mailbox folders">
@@ -616,8 +662,9 @@ function Navbar(props) {
         sx={{
           flexGrow: 1,
           pt: {
-            xs: 'calc(56px + env(safe-area-inset-top))',
-            sm: 'calc(64px + env(safe-area-inset-top))'
+            xs: 'calc(100px + env(safe-area-inset-top))',
+            sm: 'calc(108px + env(safe-area-inset-top))',
+            md: 'calc(64px + env(safe-area-inset-top))'
           },
           pb: { xs: 1, sm: 2, md: 3 },
           width: "100%",
