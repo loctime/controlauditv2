@@ -31,10 +31,6 @@ import { CalendarToday, DateRange } from '@mui/icons-material';
 import { doc, getDoc } from 'firebase/firestore';
 import { dbAudit } from '../../../firebaseControlFile';
 import { firestoreRoutesCore } from '../../../core/firestore/firestoreRoutes.core';
-import Brightness4Icon from '@mui/icons-material/Brightness4';
-import Brightness7Icon from '@mui/icons-material/Brightness7';
-import Switch from '@mui/material/Switch';
-import { useColorMode } from '../../context/ColorModeContext';
 import { usePWAInstall } from '../../../hooks/usePWAInstall';
 import GetAppIcon from '@mui/icons-material/GetApp';
 import InfoIcon from '@mui/icons-material/Info';
@@ -64,7 +60,6 @@ function Navbar(props) {
     setSucursal: navSetSucursal,
   } = useGlobalSelection();
 
-  const { mode, toggleColorMode } = useColorMode();
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
   const { canInstall, handleInstall, handleShowInfo } = usePWAInstall();
@@ -314,17 +309,17 @@ function Navbar(props) {
           }
         }}
       >
-        {/* Fila superior: Navegación principal */}
+        {/* Navegación principal (una sola fila, también en móvil) */}
         <Toolbar sx={{
-          gap: { xs: 1, sm: 1.5 },
+          gap: { xs: 0.5, sm: 1.5 },
           display: "flex",
           justifyContent: { xs: "space-between", md: "center" },
           alignItems: "center",
-          minHeight: { xs: 56, sm: 64 },
+          minHeight: { xs: 72, sm: 64 },
           height: { xs: 'auto', sm: 'auto' },
           py: { xs: 0.5, sm: 1 },
           pt: { xs: 'calc(4px + env(safe-area-inset-top))', sm: 'calc(8px + env(safe-area-inset-top))' },
-          px: { xs: 1, sm: 1 },
+          px: { xs: 0.5, sm: 1 },
           position: "relative",
           zIndex: 2,
           flexShrink: 0,
@@ -444,24 +439,6 @@ function Navbar(props) {
             {/* Selector Superdev (solo visible para usuarios con permisos) */}
             <SuperdevSelector />
 
-            {/* Icono de tema (solo sol) */}
-            <IconButton 
-              onClick={toggleColorMode} 
-              color="inherit" 
-              aria-label="Alternar modo claro/oscuro"
-              size="small"
-              sx={{ 
-                width: 24,
-                height: 24,
-                mr: 0.25,
-                '& .MuiSvgIcon-root': {
-                  fontSize: '0.9rem'
-                }
-              }}
-            >
-              <Brightness7Icon />
-            </IconButton>
-            
             {/* Botón de menú hamburguesa */}
             <IconButton
               color="inherit"
@@ -486,127 +463,53 @@ function Navbar(props) {
             </IconButton>
           </Box>
 
-          {/* Controles del lado derecho - móvil */}
-          <Box sx={{ 
-            display: { xs: 'flex', sm: 'none' }, 
-            alignItems: 'center', 
-            gap: 1,
-            height: '100%'
+          {/* Controles del lado derecho - móvil (una sola fila) */}
+          <Box sx={{
+            display: { xs: 'flex', sm: 'none' },
+            alignItems: 'center',
+            gap: 0.5,
+            height: '100%',
+            flex: 1,
+            minWidth: 0,
+            justifyContent: 'flex-end',
+            pr: 0,
+            mr: '-8px', // permite que el hamburger roce/sobresalga del borde
           }}>
-            {/* Indicador offline para móvil */}
-            {userProfile && (
-              <OfflineIndicatorMobile userProfile={userProfile} />
-            )}
-
-            {/* Indicador de owner seleccionado para móvil */}
-            {selectedOwnerEmail && (
-              <Chip
-                label={`Viendo como: ${selectedOwnerEmail}`}
-                color="warning"
-                size="small"
+            {/* Botón Auditoría */}
+            {user && !isBloqueado && (
+              <IconButton
+                component={Link}
+                to="/auditoria"
+                color="inherit"
+                aria-label="Ir a Auditoría"
                 sx={{
-                  color: '#ffffff',
-                  backgroundColor: 'rgba(255, 152, 0, 0.2)',
-                  borderColor: '#ff9800',
-                  borderWidth: 1,
-                  borderStyle: 'solid',
-                  fontSize: '0.7rem',
-                  height: 24,
+                  color: '#fff',
+                  backgroundColor: 'rgba(255,255,255,0.18)',
+                  borderRadius: 1,
+                  px: 0.75,
+                  height: 30,
+                  gap: 0.4,
+                  flexShrink: 0,
+                  '&:hover': { backgroundColor: 'rgba(255,255,255,0.28)' },
                 }}
-              />
+              >
+                <AssignmentTurnedInIcon sx={{ fontSize: '1rem' }} />
+                <Typography variant="caption" sx={{ color: '#fff', fontWeight: 600, lineHeight: 1, fontSize: '0.72rem' }}>
+                  Auditoría
+                </Typography>
+              </IconButton>
             )}
 
-            {/* Selector Superdev para móvil (solo visible para usuarios con permisos) */}
-            <Box sx={{ display: { xs: 'flex', sm: 'none' } }}>
-              <SuperdevSelector />
-            </Box>
-
-            {/* Switch de tema para móvil */}
-            <IconButton 
-              onClick={toggleColorMode} 
-              color="inherit" 
-              aria-label="Alternar modo claro/oscuro"
-              size="small"
-              sx={{ 
-                width: 32,
-                height: 32,
-                '& .MuiSvgIcon-root': {
-                  fontSize: '1.1rem'
-                }
-              }}
-            >
-              {mode === 'dark' ? <Brightness7Icon /> : <Brightness4Icon />}
-            </IconButton>
-            
-            {/* Botón de menú hamburguesa */}
-            <IconButton
-              color="inherit"
-              aria-label="open drawer"
-              onClick={handleDrawerToggle}
-              sx={{ 
-                width: 32,
-                height: 32,
-                '& .MuiSvgIcon-root': {
-                  fontSize: '1.2rem'
-                },
-                '&:focus': {
-                  outline: 'none'
-                },
-                '&:active': {
-                  backgroundColor: 'transparent'
-                }
-              }}
-            >
-              <MenuIcon />
-            </IconButton>
-          </Box>
-
-        </Toolbar>
-
-        {/* Fila inferior móvil: botón Auditoría + selectores Empresa/Sucursal */}
-        {user && !isBloqueado && (
-          <Box
-            sx={{
-              display: { xs: 'flex', md: 'none' },
-              alignItems: 'center',
-              gap: 1,
-              px: 1,
-              py: 0.75,
-              borderTop: '1px solid rgba(255,255,255,0.1)',
-              backgroundColor: theme.palette.primary.main,
-              overflowX: 'auto',
-              WebkitOverflowScrolling: 'touch',
-              '&::-webkit-scrollbar': { display: 'none' },
-              scrollbarWidth: 'none',
-              minHeight: 44,
-            }}
-          >
-            <IconButton
-              component={Link}
-              to="/auditoria"
-              color="inherit"
-              size="small"
-              aria-label="Ir a Auditoría"
-              title="Auditoría"
-              sx={{
-                color: '#fff',
-                backgroundColor: 'rgba(255,255,255,0.15)',
-                borderRadius: 1,
-                px: 1,
-                flexShrink: 0,
-                height: 32,
-                gap: 0.5,
-                '&:hover': { backgroundColor: 'rgba(255,255,255,0.25)' },
-              }}
-            >
-              <AssignmentTurnedInIcon fontSize="small" />
-              <Typography variant="caption" sx={{ color: '#fff', fontWeight: 600, lineHeight: 1 }}>
-                Auditoría
-              </Typography>
-            </IconButton>
-
-            {empresasDisponibles.length > 0 && (
-              <Box sx={{ flexShrink: 0 }}>
+            {/* Selectores apilados Empresa / Sucursal */}
+            {user && !isBloqueado && empresasDisponibles.length > 0 && (
+              <Box sx={{
+                display: 'flex',
+                flexDirection: 'column',
+                gap: 0.25,
+                flexShrink: 1,
+                minWidth: 0,
+                '& > *': { minWidth: 0 }
+              }}>
                 <EmpresaSelector
                   empresas={empresasDisponibles}
                   selectedEmpresa={navSelectedEmpresa}
@@ -614,10 +517,6 @@ function Navbar(props) {
                   embedded={true}
                   compact={true}
                 />
-              </Box>
-            )}
-            {empresasDisponibles.length > 0 && (
-              <Box sx={{ flexShrink: 0 }}>
                 <SucursalSelector
                   sucursales={sucursalesDisponibles}
                   selectedSucursal={navSelectedSucursal}
@@ -627,8 +526,63 @@ function Navbar(props) {
                 />
               </Box>
             )}
+
+            {/* Sync / indicador offline */}
+            {userProfile && (
+              <Box sx={{ flexShrink: 0 }}>
+                <OfflineIndicatorMobile userProfile={userProfile} />
+              </Box>
+            )}
+
+            {/* Owner chip (solo en casos muy específicos) */}
+            {selectedOwnerEmail && (
+              <Chip
+                label={selectedOwnerEmail}
+                color="warning"
+                size="small"
+                sx={{
+                  color: '#ffffff',
+                  backgroundColor: 'rgba(255, 152, 0, 0.2)',
+                  borderColor: '#ff9800',
+                  borderWidth: 1,
+                  borderStyle: 'solid',
+                  fontSize: '0.65rem',
+                  height: 20,
+                  maxWidth: 80,
+                  flexShrink: 1,
+                }}
+              />
+            )}
+
+            {/* Superdev */}
+            <Box sx={{ flexShrink: 0 }}>
+              <SuperdevSelector />
+            </Box>
+
+            {/* Hamburguesa pegado al borde (las líneas "salen" del viewport) */}
+            <IconButton
+              color="inherit"
+              aria-label="open drawer"
+              onClick={handleDrawerToggle}
+              sx={{
+                width: 36,
+                height: 36,
+                flexShrink: 0,
+                p: 0,
+                ml: 0,
+                '& .MuiSvgIcon-root': {
+                  fontSize: '1.75rem',
+                  transform: 'translateX(6px)'
+                },
+                '&:focus': { outline: 'none' },
+                '&:active': { backgroundColor: 'transparent' },
+              }}
+            >
+              <MenuIcon />
+            </IconButton>
           </Box>
-        )}
+
+        </Toolbar>
       </AppBar>
       
       <Box component="nav" aria-label="mailbox folders">
@@ -662,8 +616,8 @@ function Navbar(props) {
         sx={{
           flexGrow: 1,
           pt: {
-            xs: 'calc(100px + env(safe-area-inset-top))',
-            sm: 'calc(108px + env(safe-area-inset-top))',
+            xs: 'calc(80px + env(safe-area-inset-top))',
+            sm: 'calc(72px + env(safe-area-inset-top))',
             md: 'calc(64px + env(safe-area-inset-top))'
           },
           pb: { xs: 1, sm: 2, md: 3 },
