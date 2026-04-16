@@ -26,14 +26,14 @@ export default function TriangularEmpresaSucursalSelector({
   const empresaLabel = useMemo(() => {
     if (!selectedEmpresa || selectedEmpresa === 'todas') return 'Todas';
     const found = empresas.find((e) => e.id === selectedEmpresa);
-    return truncate(found?.nombre || 'Empresa', 9);
+    return truncate(found?.nombre || 'Empresa', 14);
   }, [selectedEmpresa, empresas]);
 
   const sucursalLabel = useMemo(() => {
     if (!sucursales || sucursales.length === 0) return 'Sin suc.';
     if (!selectedSucursal || selectedSucursal === 'todas') return 'Todas';
     const found = sucursales.find((s) => s.id === selectedSucursal);
-    return truncate(found?.nombre || 'Sucursal', 9);
+    return truncate(found?.nombre || 'Sucursal', 14);
   }, [selectedSucursal, sucursales]);
 
   const sucursalesDisabled = !sucursales || sucursales.length === 0;
@@ -66,9 +66,9 @@ export default function TriangularEmpresaSucursalSelector({
         <Typography
           sx={{
             position: 'absolute',
-            bottom: 3,
-            left: 5,
-            fontSize: '0.68rem',
+            bottom: 6,
+            left: 8,
+            fontSize: '0.8rem',
             fontWeight: 700,
             lineHeight: 1,
             color: '#1976d2',
@@ -96,9 +96,9 @@ export default function TriangularEmpresaSucursalSelector({
         <Typography
           sx={{
             position: 'absolute',
-            top: 3,
-            right: 5,
-            fontSize: '0.68rem',
+            top: 6,
+            right: 8,
+            fontSize: '0.8rem',
             fontWeight: 700,
             lineHeight: 1,
             color: sucursalesDisabled ? '#9ca3af' : '#1976d2',

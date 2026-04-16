@@ -474,7 +474,7 @@ function Navbar(props) {
             minWidth: 0,
             justifyContent: 'flex-start',
           }}>
-            {/* Botón Auditoría, pegado al borde izquierdo */}
+            {/* Zona izquierda (20%): botón Auditoría */}
             {user && !isBloqueado && (
               <Box
                 component={Link}
@@ -482,10 +482,10 @@ function Navbar(props) {
                 sx={{
                   color: '#fff',
                   backgroundColor: 'rgba(255,255,255,0.18)',
-                  px: 1,
-                  height: 60,
-                  gap: 0.25,
-                  flexShrink: 0,
+                  px: 0.5,
+                  height: 72,
+                  gap: 0.3,
+                  flex: '0 0 20%',
                   display: 'flex',
                   flexDirection: 'column',
                   alignItems: 'center',
@@ -494,80 +494,88 @@ function Navbar(props) {
                   '&:hover': { backgroundColor: 'rgba(255,255,255,0.28)' },
                 }}
               >
-                <AssignmentTurnedInIcon sx={{ fontSize: '1.1rem', color: '#fff' }} />
+                <AssignmentTurnedInIcon sx={{ fontSize: '1.4rem', color: '#fff' }} />
                 <Typography variant="caption" sx={{ color: '#fff', fontWeight: 700, lineHeight: 1, fontSize: '0.7rem' }}>
                   Auditoría
                 </Typography>
               </Box>
             )}
 
-            {/* Selectores Empresa/Sucursal en triángulos cruzados */}
+            {/* Zona central (60%): selectores Empresa/Sucursal en triángulos cruzados */}
             {user && !isBloqueado && empresasDisponibles.length > 0 && (
-              <TriangularEmpresaSucursalSelector
-                empresas={empresasDisponibles}
-                sucursales={sucursalesDisponibles}
-                selectedEmpresa={navSelectedEmpresa}
-                selectedSucursal={navSelectedSucursal}
-                onEmpresaChange={navSetEmpresa}
-                onSucursalChange={navSetSucursal}
-                width={110}
-                height={60}
-              />
-            )}
-
-            {/* Sync / indicador offline */}
-            {userProfile && (
-              <Box sx={{ flexShrink: 0, display: 'flex', alignItems: 'center', px: 0.5 }}>
-                <OfflineIndicatorMobile userProfile={userProfile} />
+              <Box sx={{ flex: '0 0 60%', height: 72, display: 'flex', alignItems: 'stretch' }}>
+                <TriangularEmpresaSucursalSelector
+                  empresas={empresasDisponibles}
+                  sucursales={sucursalesDisponibles}
+                  selectedEmpresa={navSelectedEmpresa}
+                  selectedSucursal={navSelectedSucursal}
+                  onEmpresaChange={navSetEmpresa}
+                  onSucursalChange={navSetSucursal}
+                  width="100%"
+                  height={72}
+                />
               </Box>
             )}
 
-            {/* Owner chip (edge case) */}
-            {selectedOwnerEmail && (
-              <Chip
-                label={selectedOwnerEmail}
-                color="warning"
-                size="small"
+            {/* Zona derecha (20%): sync + hamburger */}
+            <Box sx={{
+              flex: '0 0 20%',
+              height: 72,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              pl: 0.5,
+            }}>
+              {userProfile && (
+                <Box sx={{ flexShrink: 0, display: 'flex', alignItems: 'center' }}>
+                  <OfflineIndicatorMobile userProfile={userProfile} />
+                </Box>
+              )}
+
+              {selectedOwnerEmail && (
+                <Chip
+                  label={selectedOwnerEmail}
+                  color="warning"
+                  size="small"
+                  sx={{
+                    color: '#ffffff',
+                    backgroundColor: 'rgba(255, 152, 0, 0.2)',
+                    borderColor: '#ff9800',
+                    borderWidth: 1,
+                    borderStyle: 'solid',
+                    fontSize: '0.65rem',
+                    height: 20,
+                    maxWidth: 60,
+                    flexShrink: 1,
+                  }}
+                />
+              )}
+
+              <Box sx={{ flexShrink: 0, display: 'flex', alignItems: 'center' }}>
+                <SuperdevSelector />
+              </Box>
+
+              <IconButton
+                color="inherit"
+                aria-label="open drawer"
+                onClick={handleDrawerToggle}
                 sx={{
-                  color: '#ffffff',
-                  backgroundColor: 'rgba(255, 152, 0, 0.2)',
-                  borderColor: '#ff9800',
-                  borderWidth: 1,
-                  borderStyle: 'solid',
-                  fontSize: '0.65rem',
-                  height: 20,
-                  maxWidth: 80,
-                  flexShrink: 1,
+                  width: 44,
+                  height: 44,
+                  flexShrink: 0,
+                  p: 0,
+                  ml: 'auto',
+                  '& .MuiSvgIcon-root': {
+                    fontSize: '2.2rem',
+                    transform: 'translateX(10px)'
+                  },
+                  '&:focus': { outline: 'none' },
+                  '&:active': { backgroundColor: 'transparent' },
                 }}
-              />
-            )}
-
-            {/* Superdev */}
-            <Box sx={{ flexShrink: 0, display: 'flex', alignItems: 'center' }}>
-              <SuperdevSelector />
+              >
+                <MenuIcon />
+              </IconButton>
             </Box>
-
-            {/* Hamburguesa pegado al borde derecho (líneas "salen" del viewport) */}
-            <IconButton
-              color="inherit"
-              aria-label="open drawer"
-              onClick={handleDrawerToggle}
-              sx={{
-                width: 40,
-                height: 40,
-                flexShrink: 0,
-                p: 0,
-                marginLeft: 'auto',
-                '& .MuiSvgIcon-root': {
-                  fontSize: '2rem',
-                  transform: 'translateX(8px)'
-                },
-                '&:focus': { outline: 'none' },
-                '&:active': { backgroundColor: 'transparent' },
-              }}
-            >
-              <MenuIcon />
-            </IconButton>
           </Box>
 
         </Toolbar>
