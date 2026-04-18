@@ -358,7 +358,7 @@ export default function PreguntaItem({
           label={<Typography variant="body2">Accion requerida</Typography>}
         />
 
-        <Collapse in={expandedAccion || (accionData.requiereAccion && accionData.accionTexto)}>
+        <Collapse in={expandedAccion || !!(accionData.requiereAccion && accionData.accionTexto)}>
           <Box sx={{ mt: 1, p: 2, borderRadius: 1, bgcolor: 'warning.50', border: `1px solid ${theme.palette.warning.light}` }}>
             <TextField
               fullWidth

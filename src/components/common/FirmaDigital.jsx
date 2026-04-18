@@ -115,7 +115,7 @@ const FirmaDigital = ({
       >
         <DialogTitle>
           <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-            <Typography variant="h6">
+            <Typography variant="h6" component="div">
               Seleccionar Firma
             </Typography>
             <IconButton onClick={handleCancelar}>
