@@ -1,18 +1,13 @@
 import logger from '@/utils/logger';
-import { FEATURES } from '../../../config/features';
 import React from 'react';
 import {
-  Box, Typography, ListItem, ListItemAvatar, Avatar, ListItemText, Alert,
-  Accordion, AccordionSummary, AccordionDetails, Chip, Button, Tooltip, Dialog, DialogTitle, DialogContent, DialogActions, TextField,
-  useTheme, useMediaQuery, alpha, Card, CardContent, IconButton
+  Box, Typography, Alert,
+  Chip, Button, Tooltip, Card, CardContent, Avatar,
+  useTheme, useMediaQuery, alpha
 } from '@mui/material';
-import { Draw as DrawIcon, ExpandMore as ExpandMoreIcon } from '@mui/icons-material';
-import ShareIcon from '@mui/icons-material/Share';
-import { useState } from 'react';
-import ContentCopyIcon from '@mui/icons-material/ContentCopy';
+import { Draw as DrawIcon } from '@mui/icons-material';
 import { formularioService } from '../../../services/formularioService';
 import DeleteForeverIcon from '@mui/icons-material/DeleteForever';
-import { usePermissions } from '../admin/hooks/usePermissions';
 import { useNavigate } from 'react-router-dom';
 import Swal from 'sweetalert2';
 import { registrarAccionSistema } from '../../../utils/firestoreUtils';
@@ -23,49 +18,9 @@ const PerfilFormularios = ({ formularios, loading }) => {
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
   const isSmallMobile = useMediaQuery(theme.breakpoints.down('sm'));
   const { userProfile } = useAuth();
-  
-  // Log de depuración
+
   logger.debug('[PerfilFormularios] formularios:', formularios);
-  const [openShareId, setOpenShareId] = useState(null);
-  const [shareLink, setShareLink] = useState('');
-  const [copying, setCopying] = useState(false);
-  const { canCompartirFormularios } = usePermissions();
   const navigate = useNavigate();
-
-  const handleCompartir = async (form) => {
-    if (!canCompartirFormularios) return;
-
-    // Verificar si ya existe snapshot en galería → mostrar confirm de actualización
-    const existing = await formularioService.getSnapshotPublico(form.id);
-    if (existing) {
-      const result = await Swal.fire({
-        title: 'Actualizar versión pública',
-        text: 'Este formulario ya está en la galería. ¿Querés actualizar la versión pública con los cambios actuales?',
-        icon: 'question',
-        showCancelButton: true,
-        confirmButtonText: 'Sí, actualizar',
-        cancelButtonText: 'Cancelar'
-      });
-      if (!result.isConfirmed) return;
-    }
-
-    try {
-      const { publicSharedId } = await formularioService.publicarFormulario(form.id, userProfile, form);
-      const url = `${window.location.origin}/formularios/public/${publicSharedId}`;
-      setShareLink(url);
-      setOpenShareId(form.id);
-      logger.debug('[PerfilFormularios] Formulario publicado:', form.id, publicSharedId);
-    } catch (error) {
-      logger.error('[PerfilFormularios] Error al compartir formulario:', error);
-      Swal.fire('Error', 'No se pudo compartir el formulario. Intentá de nuevo.', 'error');
-    }
-  };
-
-  const handleCopy = async () => {
-    setCopying(true);
-    await navigator.clipboard.writeText(shareLink);
-    setTimeout(() => setCopying(false), 1000);
-  };
 
   const handleEliminarFormulario = async (form) => {
     const result = await Swal.fire({
@@ -82,22 +37,17 @@ const PerfilFormularios = ({ formularios, loading }) => {
     if (result.isConfirmed) {
       try {
         await formularioService.deleteFormulario(form.id, { uid: userProfile?.uid }, userProfile);
-        
-        // Registrar log
+
         await registrarAccionSistema(
           userProfile?.uid,
           `Formulario eliminado: ${form.nombre}`,
-          {
-            formularioId: form.id,
-            nombre: form.nombre
-          },
+          { formularioId: form.id, nombre: form.nombre },
           'eliminar',
           'formulario',
           form.id
         );
-        
+
         Swal.fire('Eliminado', 'El formulario ha sido eliminado exitosamente.', 'success');
-        // Recargar la página para actualizar la lista
         window.location.reload();
       } catch (error) {
         logger.error('Error al eliminar formulario:', error);
@@ -107,30 +57,26 @@ const PerfilFormularios = ({ formularios, loading }) => {
   };
 
   return (
-    <Box sx={{ 
+    <Box sx={{
       p: isSmallMobile ? 1 : 3,
       bgcolor: 'background.paper',
       borderRadius: 3,
       border: `1px solid ${alpha(theme.palette.divider, 0.3)}`,
       boxShadow: '0 2px 12px rgba(0,0,0,0.08)'
     }}>
-      {/* Header con título y botón de gestión */}
-      <Box sx={{ 
-        display: 'flex', 
-        justifyContent: 'space-between', 
-        alignItems: 'center', 
+      {/* Header */}
+      <Box sx={{
+        display: 'flex',
+        justifyContent: 'space-between',
+        alignItems: 'center',
         mb: isSmallMobile ? 3 : 4,
         flexDirection: isMobile ? 'column' : 'row',
         gap: isSmallMobile ? 2 : 3
       }}>
         <Box sx={{ textAlign: isMobile ? 'center' : 'left' }}>
-          <Typography 
-            variant={isSmallMobile ? "h5" : "h4"} 
-            sx={{ 
-              fontWeight: 700, 
-              color: 'primary.main',
-              mb: 1
-            }}
+          <Typography
+            variant={isSmallMobile ? "h5" : "h4"}
+            sx={{ fontWeight: 700, color: 'primary.main', mb: 1 }}
           >
             📋 Mis Formularios
           </Typography>
@@ -138,7 +84,7 @@ const PerfilFormularios = ({ formularios, loading }) => {
             {formularios.length} formulario(s) registrado(s)
           </Typography>
         </Box>
-        
+
         <Button
           variant="contained"
           color="primary"
@@ -146,25 +92,19 @@ const PerfilFormularios = ({ formularios, loading }) => {
             logger.debug('[PerfilFormularios] Navegando a /editar');
             navigate('/editar');
           }}
-          sx={{ 
+          sx={{
             py: isSmallMobile ? 1.5 : 2,
             px: isSmallMobile ? 3 : 4,
             fontSize: isSmallMobile ? '0.875rem' : '1rem',
             fontWeight: 600,
             borderRadius: 2,
-            '&:hover': {
-              transform: 'translateY(-1px)',
-              boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
-              transition: 'all 0.2s ease'
-            },
-            transition: 'all 0.2s ease'
           }}
         >
           🔧 Gestionar Formularios
         </Button>
       </Box>
-      
-      {/* Contenido de formularios */}
+
+      {/* Contenido */}
       {loading ? (
         <Box sx={{
           bgcolor: alpha(theme.palette.info.main, 0.05),
@@ -194,11 +134,7 @@ const PerfilFormularios = ({ formularios, loading }) => {
           </Typography>
         </Box>
       ) : (
-        <Box sx={{ 
-          display: 'flex', 
-          flexDirection: 'column', 
-          gap: isSmallMobile ? 2 : 3 
-        }}>
+        <Box sx={{ display: 'flex', flexDirection: 'column', gap: isSmallMobile ? 2 : 3 }}>
           {formularios.map((form) => (
             <Card key={form.id} sx={{
               bgcolor: 'background.paper',
@@ -214,62 +150,43 @@ const PerfilFormularios = ({ formularios, loading }) => {
             }}>
               <CardContent sx={{ p: isSmallMobile ? 2 : 4 }}>
                 {/* Header del formulario */}
-                <Box sx={{ 
-                  display: 'flex', 
+                <Box sx={{
+                  display: 'flex',
                   flexDirection: isMobile ? 'column' : 'row',
                   alignItems: isMobile ? 'center' : 'flex-start',
                   gap: isSmallMobile ? 2 : 3,
                   mb: isSmallMobile ? 2 : 3
                 }}>
-                  <Box sx={{ 
-                    display: 'flex', 
-                    justifyContent: 'center',
-                    mb: isMobile ? 2 : 0
-                  }}>
-                    <Avatar 
-                      sx={{ 
-                        width: isSmallMobile ? 60 : 80, 
-                        height: isSmallMobile ? 60 : 80,
-                        bgcolor: 'primary.main'
-                      }}
-                    >
+                  <Box sx={{ display: 'flex', justifyContent: 'center', mb: isMobile ? 2 : 0 }}>
+                    <Avatar sx={{
+                      width: isSmallMobile ? 60 : 80,
+                      height: isSmallMobile ? 60 : 80,
+                      bgcolor: 'primary.main'
+                    }}>
                       <DrawIcon fontSize="large" />
                     </Avatar>
                   </Box>
-                  
-                  <Box sx={{ 
-                    flex: 1,
-                    textAlign: isMobile ? 'center' : 'left',
-                    minWidth: 0
-                  }}>
-                    <Typography 
-                      variant={isSmallMobile ? "h6" : "h5"} 
-                      sx={{ 
-                        fontWeight: 600, 
-                        color: 'primary.main',
-                        mb: 1,
-                        wordBreak: 'break-word'
-                      }}
+
+                  <Box sx={{ flex: 1, textAlign: isMobile ? 'center' : 'left', minWidth: 0 }}>
+                    <Typography
+                      variant={isSmallMobile ? "h6" : "h5"}
+                      sx={{ fontWeight: 600, color: 'primary.main', mb: 1, wordBreak: 'break-word' }}
                     >
                       {form.nombre}
                     </Typography>
-                    
+
                     {form.descripcion && (
-                      <Typography 
-                        variant="body2" 
+                      <Typography
+                        variant="body2"
                         color="text.secondary"
-                        sx={{ 
-                          mb: 2,
-                          wordBreak: 'break-word',
-                          textAlign: isMobile ? 'center' : 'left'
-                        }}
+                        sx={{ mb: 2, wordBreak: 'break-word', textAlign: isMobile ? 'center' : 'left' }}
                       >
                         {form.descripcion}
                       </Typography>
                     )}
-                    
-                    <Box sx={{ 
-                      display: 'flex', 
+
+                    <Box sx={{
+                      display: 'flex',
                       flexDirection: 'column',
                       gap: isSmallMobile ? 1 : 2,
                       alignItems: isMobile ? 'center' : 'flex-start'
@@ -282,131 +199,67 @@ const PerfilFormularios = ({ formularios, loading }) => {
                       </Typography>
                     </Box>
                   </Box>
-                  
-                  <Box sx={{ 
-                    display: 'flex', 
-                    flexDirection: 'column',
-                    gap: 1,
-                    alignItems: isMobile ? 'center' : 'flex-end'
-                  }}>
-                    {form.formularioOriginalId && (
-                      <Chip 
-                        label="Copia" 
-                        size={isSmallMobile ? "small" : "medium"}
-                        color="warning" 
-                        sx={{ fontWeight: 600 }}
-                      />
-                    )}
-                    {form.esPublico && (
-                      <Chip 
-                        label="Público" 
-                        size={isSmallMobile ? "small" : "medium"}
-                        color="success" 
-                        sx={{ fontWeight: 600 }}
-                      />
-                    )}
+
+                  <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1, alignItems: isMobile ? 'center' : 'flex-end' }}>
                     {Array.isArray(form.compartidoCon) && form.compartidoCon.length > 0 && (
-                      <Chip 
-                        label="Compartido" 
+                      <Chip
+                        label="Compartido"
                         size={isSmallMobile ? "small" : "medium"}
-                        color="info" 
+                        color="info"
                         sx={{ fontWeight: 600 }}
                       />
                     )}
                   </Box>
                 </Box>
-                
-                {/* Acciones del formulario */}
+
+                {/* Acciones */}
                 <Box sx={{
                   bgcolor: alpha(theme.palette.primary.main, 0.03),
                   borderRadius: 2,
                   p: isSmallMobile ? 2 : 3,
                   border: `1px solid ${alpha(theme.palette.primary.main, 0.08)}`
                 }}>
-                  <Typography 
-                    variant="subtitle1" 
-                    sx={{ 
-                      fontWeight: 600, 
-                      mb: 2, 
-                      color: 'primary.main',
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: 0.5
-                    }}
-                  >
+                  <Typography variant="subtitle1" sx={{
+                    fontWeight: 600,
+                    mb: 2,
+                    color: 'primary.main',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 0.5
+                  }}>
                     🔗 Acciones
                   </Typography>
-                  
-                  <Box sx={{ 
-                    display: 'flex', 
+
+                  <Box sx={{
+                    display: 'flex',
                     flexDirection: isMobile ? 'column' : 'row',
                     gap: isSmallMobile ? 1 : 2,
                     justifyContent: isMobile ? 'center' : 'flex-start'
                   }}>
-                    {FEATURES.GALERIA_FORMULARIOS_PUBLICOS && (() => {
-                      const esLegacyCopia = !!form.formularioOriginalId && !form.copiadoDesde;
-                      const esCopiadoConMismoNombre = !!form.copiadoDesde && form.nombre === form.nombreOriginal;
-                      const compartirDeshabilitado = !canCompartirFormularios || esLegacyCopia || esCopiadoConMismoNombre;
-                      const tooltipCompartir = !canCompartirFormularios
-                        ? 'Sin permisos para compartir formularios'
-                        : esLegacyCopia
-                        ? 'No podés compartir un formulario copiado'
-                        : esCopiadoConMismoNombre
-                        ? 'Cambiá el nombre para poder compartirlo'
-                        : form.esPublico
-                        ? 'Actualizar versión pública en la galería'
-                        : 'Compartir formulario en la galería';
-                      return (
-                        <Tooltip title={tooltipCompartir}>
-                          <span>
-                            <Button
-                              variant="outlined"
-                              color="primary"
-                              size={isSmallMobile ? "small" : "medium"}
-                              onClick={() => handleCompartir(form)}
-                              disabled={compartirDeshabilitado}
-                              sx={{
-                                minWidth: isMobile ? '100%' : 'auto',
-                                py: isSmallMobile ? 1 : 1.5
-                              }}
-                            >
-                              📤 {form.esPublico ? 'Actualizar galería' : 'Compartir'}
-                            </Button>
-                          </span>
-                        </Tooltip>
-                      );
-                    })()}
-                    
-                     <Button
+                    <Button
                       variant="outlined"
                       color="secondary"
                       size={isSmallMobile ? "small" : "medium"}
                       onClick={() => navigate(`/editar?id=${form.id}`)}
-                      sx={{ 
-                        minWidth: isMobile ? '100%' : 'auto',
-                        py: isSmallMobile ? 1 : 1.5
-                      }}
+                      sx={{ minWidth: isMobile ? '100%' : 'auto', py: isSmallMobile ? 1 : 1.5 }}
                     >
                       ✏️ Editar
                     </Button>
-                     
-                     <Tooltip title="Eliminar formulario">
-                       <span>
-                         <Button
-                           variant="outlined"
-                           color="error"
-                           size={isSmallMobile ? "small" : "medium"}
-                           onClick={() => handleEliminarFormulario(form)}
-                           startIcon={<DeleteForeverIcon />}
-                           sx={{ 
-                             minWidth: isMobile ? '100%' : 'auto',
-                             py: isSmallMobile ? 1 : 1.5
-                           }}
-                         >
-                           🗑️ Eliminar
-                         </Button>
-                       </span>
-                     </Tooltip>
+
+                    <Tooltip title="Eliminar formulario">
+                      <span>
+                        <Button
+                          variant="outlined"
+                          color="error"
+                          size={isSmallMobile ? "small" : "medium"}
+                          onClick={() => handleEliminarFormulario(form)}
+                          startIcon={<DeleteForeverIcon />}
+                          sx={{ minWidth: isMobile ? '100%' : 'auto', py: isSmallMobile ? 1 : 1.5 }}
+                        >
+                          🗑️ Eliminar
+                        </Button>
+                      </span>
+                    </Tooltip>
                   </Box>
                 </Box>
               </CardContent>
@@ -414,38 +267,6 @@ const PerfilFormularios = ({ formularios, loading }) => {
           ))}
         </Box>
       )}
-      
-      {/* Diálogo para compartir */}
-      <Dialog open={openShareId !== null} onClose={() => setOpenShareId(null)}>
-        <DialogTitle>Compartir Formulario</DialogTitle>
-        <DialogContent>
-          <Typography>
-            ¡Listo! Comparte este link con otros administradores:
-          </Typography>
-          <Box sx={{ display: 'flex', alignItems: 'center', mt: 2 }}>
-            <TextField
-              value={shareLink}
-              fullWidth
-              InputProps={{ readOnly: true }}
-              size="small"
-            />
-            <Button
-              onClick={handleCopy}
-              startIcon={<ContentCopyIcon />}
-              sx={{ ml: 1 }}
-              disabled={copying}
-            >
-              {copying ? 'Copiado!' : 'Copiar'}
-            </Button>
-          </Box>
-          <Typography variant="body2" color="text.secondary" sx={{ mt: 2 }}>
-            Cualquier administrador podrá ver y copiar este formulario a su sistema.
-          </Typography>
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setOpenShareId(null)}>Cerrar</Button>
-        </DialogActions>
-      </Dialog>
     </Box>
   );
 };
