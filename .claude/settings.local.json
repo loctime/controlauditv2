@@ -34,7 +34,9 @@
       "Bash(git add:*)",
       "Bash(git commit:*)",
       "Bash(node -c \"src/components/pages/establecimiento/components/EmpresaCard.jsx\")",
-      "Bash(grep -h \"formularioService\\\\.\" /c/Users/User/Desktop/controlauditv2/src/components/pages/formulario/*.jsx /c/Users/User/Desktop/controlauditv2/src/components/pages/editar/*.jsx)"
+      "Bash(grep -h \"formularioService\\\\.\" /c/Users/User/Desktop/controlauditv2/src/components/pages/formulario/*.jsx /c/Users/User/Desktop/controlauditv2/src/components/pages/editar/*.jsx)",
+      "Bash(gh pr *)",
+      "Bash(git push *)"
     ]
   }
 }
