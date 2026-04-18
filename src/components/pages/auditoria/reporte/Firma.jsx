@@ -23,20 +23,35 @@ import './Firma.css';
 const Firma = ({ title, setFirmaURL, firmaExistente }) => {
   const theme = useTheme();
   const sigCanvas = useRef({});
+  const containerRef = useRef(null);
   const [hasSignature, setHasSignature] = useState(false);
   const [isSaved, setIsSaved] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
+  const [containerWidth, setContainerWidth] = useState(400);
 
   // Detectar si es dispositivo móvil
   useEffect(() => {
     const checkMobile = () => {
       setIsMobile(window.innerWidth <= 768 || 'ontouchstart' in window);
     };
-    
+
     checkMobile();
     window.addEventListener('resize', checkMobile);
-    
+
     return () => window.removeEventListener('resize', checkMobile);
+  }, []);
+
+  // Sincronizar el ancho del canvas con el contenedor real para evitar desplazamiento de trazos
+  useEffect(() => {
+    if (!containerRef.current) return;
+    const observer = new ResizeObserver(entries => {
+      for (const entry of entries) {
+        const width = Math.floor(entry.contentRect.width);
+        if (width > 0) setContainerWidth(width);
+      }
+    });
+    observer.observe(containerRef.current);
+    return () => observer.disconnect();
   }, []);
 
   useEffect(() => {
@@ -100,14 +115,14 @@ const Firma = ({ title, setFirmaURL, firmaExistente }) => {
 
   // Configuraciones optimizadas para móvil y desktop
   const canvasConfig = {
-    width: isMobile ? 300 : 400,
-    height: isMobile ? 120 : 100,
+    width: containerWidth,
+    height: isMobile ? 120 : 150,
     className: 'sigCanvas',
-    style: { 
-      width: '100%', 
-      height: isMobile ? '120px' : '100px',
+    style: {
+      width: '100%',
+      height: isMobile ? '120px' : '150px',
       border: 'none',
-      touchAction: 'none', // Mejora la respuesta táctil
+      touchAction: 'none',
       cursor: 'crosshair'
     }
   };
@@ -183,8 +198,8 @@ const Firma = ({ title, setFirmaURL, firmaExistente }) => {
             </Alert>
           )}
 
-          <Box sx={{ 
-            border: '2px solid', 
+          <Box ref={containerRef} sx={{
+            border: '2px solid',
             borderColor: hasSignature ? 'primary.main' : 'grey.300',
             borderRadius: 1,
             p: 1,

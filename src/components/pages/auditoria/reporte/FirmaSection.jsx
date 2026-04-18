@@ -145,12 +145,10 @@ const NativeSignaturePad = React.forwardRef(({ minWidth = 1, backgroundColor = '
     if (!isDrawing.current || !lastPoint.current) return;
     const ctx = canvasRef.current.getContext('2d', { willReadFrequently: true });
     const prev = lastPoint.current;
-    const midX = (prev.x + x) / 2;
-    const midY = (prev.y + y) / 2;
 
     ctx.beginPath();
     ctx.moveTo(prev.x, prev.y);
-    ctx.quadraticCurveTo(prev.x, prev.y, midX, midY);
+    ctx.lineTo(x, y);
     ctx.strokeStyle = '#000';
     ctx.lineWidth = minWidth + 1.5;
     ctx.lineCap = 'round';
