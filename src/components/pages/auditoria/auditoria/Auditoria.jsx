@@ -403,19 +403,29 @@ const AuditoriaRefactorizada = () => {
             ? Math.round((preguntasRespondidas / totalPreguntas) * 100) 
             : 0;
 
+          // Obtener información del formulario, empresa y sucursal
+          const formularioInfo = savedData.formularioSeleccionadoId 
+            ? formularios.find(f => f.id === savedData.formularioSeleccionadoId)
+            : null;
+          const empresaInfo = savedData.empresaSeleccionada;
+          const sucursalInfo = savedData.sucursalSeleccionada;
+
           // Mostrar confirmación con información del progreso
           const shouldRestore = await Swal.fire({
-            title: '🔄 Auditoría encontrada',
+            title: 'Auditoría encontrada',
             html: `
               <p>Se encontró una auditoría guardada automáticamente.</p>
               <p style="margin-top: 10px;">
                 <strong>Progreso:</strong> ${preguntasRespondidas} de ${totalPreguntas} preguntas respondidas (${porcentajeProgreso}%)
               </p>
+              ${formularioInfo ? `<p style="margin-top: 10px;"><strong>Formulario:</strong> ${formularioInfo.nombre}</p>` : ''}
+              ${empresaInfo ? `<p style="margin-top: 10px;"><strong>Empresa:</strong> ${empresaInfo.nombre || empresaInfo}</p>` : ''}
+              ${sucursalInfo ? `<p style="margin-top: 10px;"><strong>Sucursal:</strong> ${sucursalInfo.nombre || sucursalInfo}</p>` : ''}
               <p style="margin-top: 10px;">¿Quieres continuar donde lo dejaste?</p>
             `,
             icon: 'question',
             showCancelButton: true,
-            confirmButtonText: 'Sí, Continuar !',
+            confirmButtonText: 'Si, Continuar!',
             cancelButtonText: 'Comenzar una nueva',
             reverseButtons: true
           });
