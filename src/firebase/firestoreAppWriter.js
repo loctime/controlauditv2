@@ -84,6 +84,11 @@ export async function updateDocWithAppId(docRef, data) {
   return updateDoc(docRef, dataWithAppId);
 }
 
+export async function upsertDocWithAppId(docRef, data) {
+  const dataWithAppId = injectAppId(data);
+  return setDoc(docRef, dataWithAppId, { merge: true });
+}
+
 /**
  * Proxy para deleteDoc (no requiere appId, pero se mantiene consistencia)
  * @param {DocumentReference} docRef - Referencia al documento

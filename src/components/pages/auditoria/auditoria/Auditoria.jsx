@@ -415,8 +415,8 @@ const AuditoriaRefactorizada = () => {
             `,
             icon: 'question',
             showCancelButton: true,
-            confirmButtonText: 'Continuar',
-            cancelButtonText: 'Comenzar nueva',
+            confirmButtonText: 'Sí, Continuar !',
+            cancelButtonText: 'Comenzar una nueva',
             reverseButtons: true
           });
 

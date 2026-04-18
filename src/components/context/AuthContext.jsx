@@ -5,7 +5,7 @@ import { auth } from "../../firebaseControlFile";
 import { onAuthStateChanged, signOut } from "firebase/auth";
 import { doc, getDoc } from "firebase/firestore";
 import { db } from "../../firebaseControlFile";
-import { updateDocWithAppId } from '../../firebase/firestoreAppWriter';
+import { updateDocWithAppId, upsertDocWithAppId } from '../../firebase/firestoreAppWriter';
 import { registrarAccionSistema } from '../../utils/firestoreUtils';
 import { useUserManagement } from '../../hooks/useUserManagement';
 import { empresaService } from '../../services/empresaService';
@@ -662,7 +662,7 @@ const AuthContextComponent = ({ children }) => {
 
     try {
       const userRef = doc(db, "apps", "auditoria", "owners", userContext.ownerId, "usuarios", user.uid);
-      await updateDocWithAppId(userRef, updates);
+      await upsertDocWithAppId(userRef, updates);
       
       await registrarAccionSistema(
         user.uid,
