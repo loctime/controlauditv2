@@ -3,7 +3,6 @@ import { doc, setDoc, getDoc, deleteDoc, query, where, getDocs, collection } fro
 import { dbAudit } from '../../../../../firebaseControlFile';
 import { firestoreRoutesCore } from '../../../../../core/firestore/firestoreRoutes.core';
 import { getOfflineDatabase, generateOfflineId, checkStorageLimit } from '../../../../../services/offlineDatabase';
-import syncQueueService from '../../../../../services/syncQueue';
 import { canWriteToFirestore, isContextComplete } from '../../../../../utils/firestoreWriteCheck';
 class AutoSaveService {
   constructor() {
@@ -537,6 +536,7 @@ class AutoSaveService {
       // Encolar para sincronización solo si estamos offline y los datos no están en Firestore
       // Si hay conexión, no se encola: el próximo autoguardado irá directo a Firestore
       if (!savedToFirestore) {
+        const { default: syncQueueService } = await import('../../../../../services/syncQueue');
         await syncQueueService.enqueueAuditoria(saveData, 1, { origin: 'autosave' });
         logger.debug('Auditoría encolada para sincronización con Firestore', { 
           auditoriaId,
@@ -963,6 +963,7 @@ class AutoSaveService {
       let queueStats = null;
       if (hasSyncQueue) {
         try {
+          const { default: syncQueueService } = await import('../../../../../services/syncQueue');
           queueStats = await syncQueueService.getQueueStats();
         } catch (queueError) {
           logger.debug('Error al obtener estadísticas de cola:', queueError);

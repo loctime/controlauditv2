@@ -7,7 +7,6 @@ import { uploadFiles } from '../../../services/unifiedFileService';
 import { validateFile } from '../../../services/fileValidationPolicy';
 import { prepararDatosParaFirestore, registrarAccionSistema } from '../../../utils/firestoreUtils';
 import { getOfflineDatabase, generateOfflineId } from '../../../services/offlineDatabase';
-import syncQueueService from '../../../services/syncQueue';
 import AccionesRequeridasService from '../../../services/accionesRequeridasService';
 
 const SCHEMA_VERSION = 1;
@@ -521,6 +520,7 @@ class AuditoriaService {
         await this.guardarFotosOffline(datosAuditoria.imagenes, auditoriaId, db);
       }
 
+      const { default: syncQueueService } = await import('../../../services/syncQueue');
       await syncQueueService.enqueueAuditoria(saveData, 1, { origin: 'manual' });
       return auditoriaId;
     } catch (error) {

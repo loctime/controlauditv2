@@ -69,14 +69,6 @@ export const useGlobalSelection = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [userEmpresas, isTodasEmpresas]);
 
-  // Auto-seleccionar única sucursal si solo hay una disponible
-  useEffect(() => {
-    if (sucursalesDisponibles && sucursalesDisponibles.length === 1 && isTodasSucursales) {
-      setGlobalSelectedSucursal(sucursalesDisponibles[0].id);
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [sucursalesDisponibles, isTodasSucursales]);
-
   // Filtrar sucursales SOLO por empresa seleccionada
   const sucursalesDisponibles = useMemo(() => {
     if (isTodasEmpresas) {
@@ -84,6 +76,14 @@ export const useGlobalSelection = () => {
     }
     return userSucursales?.filter(s => s.empresaId === empresaId) || [];
   }, [empresaId, isTodasEmpresas, userSucursales]);
+
+  // Auto-seleccionar única sucursal si solo hay una disponible
+  useEffect(() => {
+    if (sucursalesDisponibles && sucursalesDisponibles.length === 1 && isTodasSucursales) {
+      setGlobalSelectedSucursal(sucursalesDisponibles[0].id);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [sucursalesDisponibles, isTodasSucursales]);
 
   // Resetear sucursal a 'todas' cuando la empresa cambia y la sucursal actual no pertenece a ella
   useEffect(() => {
