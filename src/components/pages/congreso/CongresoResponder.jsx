@@ -31,15 +31,6 @@ const OPCIONES = [
 const getTextoPregunta = (p, idx) =>
   typeof p === 'string' ? p : p?.texto || p?.text || `Pregunta ${idx + 1}`;
 
-const safeStringify = (v) => {
-  try {
-    if (typeof v === 'string') return v;
-    return JSON.stringify(v);
-  } catch {
-    return String(v);
-  }
-};
-
 export default function CongresoResponder() {
   const navigate = useNavigate();
   const [estado, setEstado] = useState('iniciando');
@@ -47,34 +38,7 @@ export default function CongresoResponder() {
   const [formulario, setFormulario] = useState(null);
   const [respuestas, setRespuestas] = useState([]);
   const [enviando, setEnviando] = useState(false);
-  const [debugLogs, setDebugLogs] = useState([]);
-  const [showDebug, setShowDebug] = useState(true);
   const inicializadoRef = useRef(false);
-
-  const log = (msg, extra) => {
-    const hora = new Date().toLocaleTimeString('es-AR', { hour12: false });
-    const linea = extra !== undefined ? `${msg} → ${safeStringify(extra)}` : msg;
-    setDebugLogs((prev) => [...prev, `[${hora}] ${linea}`]);
-  };
-
-  // Capturar errores globales que se escapan de los try/catch para que aparezcan en pantalla.
-  useEffect(() => {
-    const onErr = (e) => {
-      const src = e?.error?.message || e?.message || 'error desconocido';
-      log('window.onerror', src);
-    };
-    const onRej = (e) => {
-      const r = e?.reason;
-      const msg = r?.code ? `${r.code}: ${r.message}` : r?.message || String(r);
-      log('unhandledrejection', msg);
-    };
-    window.addEventListener('error', onErr);
-    window.addEventListener('unhandledrejection', onRej);
-    return () => {
-      window.removeEventListener('error', onErr);
-      window.removeEventListener('unhandledrejection', onRej);
-    };
-  }, []);
 
   useEffect(() => {
     if (inicializadoRef.current) return;
@@ -82,7 +46,6 @@ export default function CongresoResponder() {
 
     const inicializar = async () => {
       try {
-        log('1. Esperando estado inicial de auth');
         // Esperar a que firebase resuelva el estado de auth inicial.
         await new Promise((resolve) => {
           const unsub = onAuthStateChanged(auth, () => {
@@ -90,47 +53,26 @@ export default function CongresoResponder() {
             resolve();
           });
         });
-        log('2. Auth inicial resuelto', { user: auth.currentUser?.email || 'ninguno' });
 
         // Loguear como cuenta del congreso si no es la activa.
         if (auth.currentUser?.email !== CONGRESO_CONFIG.EMAIL) {
-          log('3. Iniciando sesión como', CONGRESO_CONFIG.EMAIL);
-          const cred = await signInWithEmailAndPassword(
+          await signInWithEmailAndPassword(
             auth,
             CONGRESO_CONFIG.EMAIL,
             CONGRESO_CONFIG.PASSWORD
           );
-          log('4. Login OK', { uid: cred.user.uid });
-        } else {
-          log('3. Ya había sesión activa del congreso');
         }
 
         const ownerId = auth.currentUser?.uid;
-        if (!ownerId) throw new Error('No se pudo iniciar sesión (currentUser null).');
-        log('5. ownerId', ownerId);
-
-        // Verificar custom claims (si la regla las requiere la lectura/escritura fallará con permission-denied).
-        try {
-          const tokenResult = await auth.currentUser.getIdTokenResult();
-          log('6. Claims', {
-            role: tokenResult.claims.role,
-            appId: tokenResult.claims.appId,
-            ownerId: tokenResult.claims.ownerId,
-          });
-        } catch (e) {
-          log('6. Claims ERROR', e?.message);
-        }
+        if (!ownerId) throw new Error('No se pudo iniciar sesión.');
 
         // Buscar el formulario del congreso por nombre.
-        log('7. Buscando formulario por nombre', CONGRESO_CONFIG.FORM_NAME);
         const formulariosRef = collection(
           dbAudit,
           ...firestoreRoutesCore.formularios(ownerId)
         );
         const q = query(formulariosRef, where('nombre', '==', CONGRESO_CONFIG.FORM_NAME));
         const snap = await getDocs(q);
-        log('8. Query resuelta', { size: snap.size });
-
         if (snap.empty) {
           throw new Error(
             `No se encontró el formulario "${CONGRESO_CONFIG.FORM_NAME}".`
@@ -140,23 +82,15 @@ export default function CongresoResponder() {
         const data = { id: doc.id, ...doc.data() };
         const secciones = Array.isArray(data.secciones) ? data.secciones : [];
         if (secciones.length === 0) throw new Error('El formulario no tiene secciones.');
-        log('9. Formulario cargado', {
-          id: data.id,
-          secciones: secciones.length,
-          preguntas: secciones.reduce((a, s) => a + (s.preguntas?.length || 0), 0),
-        });
 
         setFormulario(data);
         setRespuestas(
           secciones.map((s) => Array((s.preguntas || []).length).fill(''))
         );
         setEstado('listo');
-        log('10. Listo para responder');
       } catch (err) {
         const codigo = err?.code ? `[${err.code}] ` : '';
-        const mensaje = `${codigo}${err?.message || 'Error inesperado al cargar el formulario.'}`;
-        log('ERROR', mensaje);
-        setMensajeError(mensaje);
+        setMensajeError(`${codigo}${err?.message || 'Error inesperado al cargar el formulario.'}`);
         setEstado('error');
       }
     };
@@ -181,7 +115,6 @@ export default function CongresoResponder() {
     try {
       const ownerId = auth.currentUser?.uid;
       if (!ownerId) throw new Error('Sesión perdida.');
-      log('E1. Enviando', { ownerId });
 
       const flat = respuestas.flat();
       const conformes = flat.filter((v) => v === 'Conforme').length;
@@ -224,59 +157,38 @@ export default function CongresoResponder() {
         fechaCreacion: new Date().toISOString(),
       };
 
-      log('E2. Guardando reporte en Firestore');
       const reportesRef = collection(
         dbAudit,
         ...firestoreRoutesCore.reportes(ownerId)
       );
-      const docRef = await addDoc(reportesRef, reporte);
-      log('E3. Reporte guardado', { id: docRef.id });
+      await addDoc(reportesRef, reporte);
 
       // Cerrar sesión y mandar a gracias.
       await auth.signOut().catch(() => {});
       navigate('/congreso/gracias', { replace: true });
     } catch (err) {
       const codigo = err?.code ? `[${err.code}] ` : '';
-      const mensaje = `${codigo}${err?.message || 'No se pudo guardar la respuesta.'}`;
-      log('ENVIAR ERROR', mensaje);
-      setMensajeError(mensaje);
+      setMensajeError(`${codigo}${err?.message || 'No se pudo guardar la respuesta.'}`);
       setEstado('error');
     } finally {
       setEnviando(false);
     }
   };
 
-  const debug = (
-    <DebugPanel
-      estado={estado}
-      logs={debugLogs}
-      visible={showDebug}
-      onToggle={() => setShowDebug((v) => !v)}
-    />
-  );
-
   if (estado === 'iniciando') {
-    return (
-      <>
-        {debug}
-        <Pantalla mensaje="Cargando formulario..." />
-      </>
-    );
+    return <Pantalla mensaje="Cargando formulario..." />;
   }
 
   if (estado === 'error') {
     return (
-      <>
-        {debug}
-        <Pantalla
-          mensaje={mensajeError}
-          accion={
-            <button onClick={() => window.location.reload()} style={btnPrimario}>
-              Reintentar
-            </button>
-          }
-        />
-      </>
+      <Pantalla
+        mensaje={mensajeError}
+        accion={
+          <button onClick={() => window.location.reload()} style={btnPrimario}>
+            Reintentar
+          </button>
+        }
+      />
     );
   }
 
@@ -290,7 +202,6 @@ export default function CongresoResponder() {
         color: T.text,
       }}
     >
-      {debug}
       <div style={{ maxWidth: 640, margin: '0 auto' }}>
         <header style={{ textAlign: 'center', marginBottom: 24 }}>
           <div
@@ -426,55 +337,6 @@ const btnPrimario = {
   fontFamily: T.fontSans,
   boxShadow: `0 6px 20px ${T.blue}55`,
 };
-
-function DebugPanel({ estado, logs, visible, onToggle }) {
-  return (
-    <div
-      style={{
-        position: 'fixed',
-        top: 0,
-        left: 0,
-        right: 0,
-        zIndex: 9999,
-        background: 'rgba(15,23,42,0.94)',
-        color: '#e2e8f0',
-        fontFamily: "'JetBrains Mono', monospace",
-        fontSize: 11,
-        padding: '6px 10px',
-        borderBottom: '2px solid #1d4ed8',
-        maxHeight: visible ? '40vh' : 26,
-        overflow: 'auto',
-        transition: 'max-height .2s',
-      }}
-    >
-      <div
-        onClick={onToggle}
-        style={{
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'center',
-          cursor: 'pointer',
-          userSelect: 'none',
-        }}
-      >
-        <span>
-          <strong style={{ color: '#93c5fd' }}>DEBUG</strong> · estado:{' '}
-          {estado} · logs: {logs.length}
-        </span>
-        <span style={{ color: '#64748b' }}>{visible ? '▲ ocultar' : '▼ ver'}</span>
-      </div>
-      {visible && (
-        <div style={{ marginTop: 6, lineHeight: 1.45, whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>
-          {logs.length === 0 ? (
-            <div style={{ color: '#64748b' }}>Sin logs aún...</div>
-          ) : (
-            logs.map((l, i) => <div key={i}>{l}</div>)
-          )}
-        </div>
-      )}
-    </div>
-  );
-}
 
 function Pantalla({ mensaje, accion }) {
   return (
