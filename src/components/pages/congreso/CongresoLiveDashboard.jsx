@@ -3,11 +3,13 @@ import { collection, query, where, onSnapshot, getDocs } from 'firebase/firestor
 import { db } from '../../../firebaseControlFile';
 import { useAuth } from '@/components/context/AuthContext';
 import { useNavigate } from 'react-router-dom';
+import { QRCodeSVG } from 'qrcode.react';
 import {
   Chart as ChartJS, ArcElement, Tooltip, Legend,
   CategoryScale, LinearScale, PointElement, LineElement, Filler,
 } from 'chart.js';
 import { Doughnut, Line } from 'react-chartjs-2';
+import { CONGRESO_CONFIG } from '../../../config/congreso';
 
 ChartJS.register(ArcElement, Tooltip, Legend, CategoryScale, LinearScale, PointElement, LineElement, Filler);
 
@@ -196,7 +198,8 @@ export default function CongresoLiveDashboard() {
   if (!formularioSeleccionado) {
     return <SelectorScreen formularios={formulariosDisponibles} loading={loadingForms} value={formularioTmp} onChange={setFormularioTmp} onStart={() => { if (formularioTmp) setFormularioSeleccionado(formularioTmp); }} onBack={() => navigate('/reporte')} />;
   }
-  return <DashboardScreen formulario={formularioSeleccionado} analisis={analisis} reloj={reloj} onVolver={() => { setFormularioSeleccionado(null); setFormularioTmp(''); setReportes([]); setAnalisis(null); }} />;
+  const esCongresoActivo = formularioSeleccionado === CONGRESO_CONFIG.FORM_NAME;
+  return <DashboardScreen formulario={formularioSeleccionado} analisis={analisis} reloj={reloj} mostrarQR={esCongresoActivo} onVolver={() => { setFormularioSeleccionado(null); setFormularioTmp(''); setReportes([]); setAnalisis(null); }} />;
 }
 
 // ─── Selector ─────────────────────────────────────────────────────────────────
@@ -230,7 +233,7 @@ function SelectorScreen({ formularios, loading, value, onChange, onStart, onBack
 }
 
 // ─── Dashboard ────────────────────────────────────────────────────────────────
-function DashboardScreen({ formulario, analisis, reloj, onVolver }) {
+function DashboardScreen({ formulario, analisis, reloj, mostrarQR, onVolver }) {
   const sin = !analisis || analisis.totalAuditorias === 0;
 
   return (
@@ -248,8 +251,8 @@ function DashboardScreen({ formulario, analisis, reloj, onVolver }) {
         {/* HEADER */}
         <Header formulario={formulario} reloj={reloj} onVolver={onVolver} />
 
-        {/* FILA SUPERIOR: 6 KPIs + Donut */}
-        <div style={{ display:'grid', gridTemplateColumns:'repeat(6,1fr) 280px', gap:12, alignItems:'stretch' }}>
+        {/* FILA SUPERIOR: 6 KPIs + Donut (+ QR opcional) */}
+        <div style={{ display:'grid', gridTemplateColumns: mostrarQR ? 'repeat(6,1fr) 280px 280px' : 'repeat(6,1fr) 280px', gap:12, alignItems:'stretch' }}>
           <KpiCard label="Auditorías"      value={sin?'—':analisis.totalAuditorias}  color={T.blue}   />
           <KpiCard label="Puntaje Prom."   value={sin?'—':`${analisis.puntajePromedio}%`} color="#0e7490" />
           <KpiCard label="Conformes"       value={sin?'—':analisis.totalConformes}    color={T.green}  />
@@ -260,6 +263,7 @@ function DashboardScreen({ formulario, analisis, reloj, onVolver }) {
             <div style={{ fontSize:10, fontWeight:700, color:T.textDim, textTransform:'uppercase', letterSpacing:1, marginBottom:10 }}>Distribución</div>
             {sin ? <Vacio small /> : <DonutChart distribucion={analisis.distribucion} />}
           </div>
+          {mostrarQR && <QRPanel />}
         </div>
 
         {/* GRILLA DE PREGUNTAS */}
@@ -567,6 +571,21 @@ function PreguntaCard({ pregunta }) {
         fontWeight:600
       }}>
         {totalRespuestas} respuestas
+      </div>
+    </div>
+  );
+}
+
+// ─── QR Panel (Congreso) ──────────────────────────────────────────────────────
+function QRPanel() {
+  return (
+    <div style={{ background:T.bgCard, borderRadius:14, padding:'14px 16px', border:`1px solid ${T.border}`, boxShadow:T.shadow, borderTop:`3px solid ${T.green}`, display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'space-between', gap:8 }}>
+      <div style={{ fontSize:10, fontWeight:700, color:T.textDim, textTransform:'uppercase', letterSpacing:1, alignSelf:'flex-start' }}>Escaneá para participar</div>
+      <div style={{ background:'#fff', padding:6, borderRadius:8, lineHeight:0 }}>
+        <QRCodeSVG value={CONGRESO_CONFIG.PUBLIC_URL} size={170} level="M" includeMargin={false} />
+      </div>
+      <div style={{ fontSize:11, fontWeight:600, color:T.textDim, textAlign:'center', lineHeight:1.3 }}>
+        Hacé tu auditoría<br />en vivo
       </div>
     </div>
   );

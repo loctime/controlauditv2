@@ -21,6 +21,16 @@ export const routesConfig = [
     public: true,
   },
   {
+    id: "congreso-responder",
+    path: "/congreso/responder",
+    public: true,
+  },
+  {
+    id: "congreso-gracias",
+    path: "/congreso/gracias",
+    public: true,
+  },
+  {
     id: "demo",
     path: "/demo",
     public: true,
