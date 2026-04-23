@@ -191,12 +191,22 @@ export default function CongresoResponder() {
       const denominador = conformes + noConformes;
       const puntaje = denominador > 0 ? Math.round((conformes / denominador) * 100) : 0;
 
+      // Firestore no acepta arrays anidados. Aplanamos a un objeto con
+      // claves "{seccion+1}-{pregunta+1}" que el dashboard sabe leer
+      // (ver altKeys en CongresoLiveDashboard.getRespuesta).
+      const respuestasObj = {};
+      respuestas.forEach((sec, sIdx) => {
+        sec.forEach((valor, pIdx) => {
+          respuestasObj[`${sIdx + 1}-${pIdx + 1}`] = valor;
+        });
+      });
+
       const reporte = {
         formularioId: formulario.id,
         formularioNombre: CONGRESO_CONFIG.FORM_NAME,
         nombreForm: CONGRESO_CONFIG.FORM_NAME,
         secciones: formulario.secciones,
-        respuestas, // 2D array compatible con CongresoLiveDashboard
+        respuestas: respuestasObj,
         respuestasConformes: conformes,
         respuestasNoConformes: noConformes,
         respuestasNecesitaMejora: necesitaMejora,
