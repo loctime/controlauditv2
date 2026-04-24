@@ -195,64 +195,50 @@ export default function CongresoLiveDashboard() {
     return () => clearInterval(id);
   }, []);
 
-  // BUG FIX 1: Query defensiva multi-campo con onSnapshot real (sin async)
+  // BUG FIX 1: Query defensiva — detecta el campo correcto una vez, luego onSnapshot permanente
   useEffect(() => {
     if (!userProfile?.ownerId) return;
     const formulario = CONGRESO_CONFIG.FORM_NAME;
     const col = collection(db, 'apps', 'auditoria', 'owners', userProfile.ownerId, 'reportes');
 
     let mounted = true;
-    let currentUnsub = null;
+    let unsub = null;
 
-    const procesar = (snap) => {
+    const init = async () => {
+      // Orden: 'nombreForm' primero porque es lo que guarda auditoriaService
+      const fields = ['nombreForm', 'formularioNombre', 'formulario.nombre'];
+      let campoActivo = fields[0]; // default si aún no hay docs
+
+      for (const field of fields) {
+        try {
+          const snap = await getDocs(query(col, where(field, '==', formulario)));
+          if (!snap.empty) { campoActivo = field; break; }
+        } catch (_) {}
+      }
+
       if (!mounted) return;
-      const docs = [];
-      let pregs = [];
-      snap.forEach((d) => {
-        const r = { id: d.id, ...d.data() };
-        docs.push(r);
-        if (pregs.length === 0 && r.secciones) pregs = extraerPreguntas(r.secciones);
-      });
-      if (docs.length > 0 && pregs.length > 0) setAnalisis(calcularAnalisis(docs, pregs));
-      else if (mounted) setAnalisis(null);
-    };
 
-    // Intentar campos en orden: el primero que devuelva docs es el que queda
-    const fields = ['formularioNombre', 'nombreForm', 'formulario'];
-
-    const tryField = (idx) => {
-      if (!mounted || idx >= fields.length) return;
-      const q = query(col, where(fields[idx], '==', formulario));
-      const unsub = onSnapshot(
-        q,
+      // Un solo listener que vive mientras el componente esté montado
+      unsub = onSnapshot(
+        query(col, where(campoActivo, '==', formulario)),
         (snap) => {
-          if (!snap.empty) {
-            // Este campo tiene datos → quedarse con este listener
-            procesar(snap);
-          } else {
-            // Sin datos → cancelar y probar el siguiente
-            unsub();
-            if (currentUnsub === unsub) currentUnsub = null;
-            tryField(idx + 1);
-          }
+          if (!mounted) return;
+          const docs = [];
+          let pregs = [];
+          snap.forEach((d) => {
+            const r = { id: d.id, ...d.data() };
+            docs.push(r);
+            if (pregs.length === 0 && r.secciones) pregs = extraerPreguntas(r.secciones);
+          });
+          if (docs.length > 0 && pregs.length > 0) setAnalisis(calcularAnalisis(docs, pregs));
+          else if (mounted) setAnalisis(null);
         },
-        (err) => {
-          // Permiso denegado u otro error → probar siguiente campo
-          console.warn(`[Dashboard] Campo "${fields[idx]}" falló (${err.code}), probando siguiente...`);
-          unsub();
-          if (currentUnsub === unsub) currentUnsub = null;
-          tryField(idx + 1);
-        }
+        (err) => console.error('[Dashboard] Listener error:', err.code, err.message)
       );
-      currentUnsub = unsub;
     };
 
-    tryField(0);
-
-    return () => {
-      mounted = false;
-      if (currentUnsub) currentUnsub();
-    };
+    init();
+    return () => { mounted = false; if (unsub) unsub(); };
   }, [userProfile?.ownerId]);
 
   return <DashboardScreen analisis={analisis} reloj={reloj} />;
