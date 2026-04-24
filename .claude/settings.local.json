@@ -36,7 +36,16 @@
       "Bash(node -c \"src/components/pages/establecimiento/components/EmpresaCard.jsx\")",
       "Bash(grep -h \"formularioService\\\\.\" /c/Users/User/Desktop/controlauditv2/src/components/pages/formulario/*.jsx /c/Users/User/Desktop/controlauditv2/src/components/pages/editar/*.jsx)",
       "Bash(gh pr *)",
-      "Bash(git push *)"
+      "Bash(git push *)",
+      "Bash(npx vite *)",
+      "Bash(curl -s -o /dev/null -w \"%{http_code}\" http://localhost:5180)",
+      "Bash(where node *)",
+      "Bash(where npm *)",
+      "Bash(cmd.exe /c \"where node && where npm\")",
+      "Bash(cmd.exe /c \"where node\")",
+      "Bash(cmd.exe /c \"node --version\")",
+      "PowerShell(node --version)",
+      "PowerShell(npm --version)"
     ]
   }
 }
