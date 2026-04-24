@@ -195,49 +195,64 @@ export default function CongresoLiveDashboard() {
     return () => clearInterval(id);
   }, []);
 
-  // BUG FIX 1: Query defensiva multi-campo
+  // BUG FIX 1: Query defensiva multi-campo con onSnapshot real (sin async)
   useEffect(() => {
     if (!userProfile?.ownerId) return;
     const formulario = CONGRESO_CONFIG.FORM_NAME;
     const col = collection(db, 'apps', 'auditoria', 'owners', userProfile.ownerId, 'reportes');
-    let unsubscribe;
 
-    const setupSubscription = async () => {
-      // Probar cada campo en orden, quedarse con el que devuelva resultados
-      const fields = ['formularioNombre', 'nombreForm', 'formulario'];
-      let foundField = null;
+    let mounted = true;
+    let currentUnsub = null;
 
-      for (const field of fields) {
-        try {
-          const snap = await getDocs(query(col, where(field, '==', formulario)));
-          if (!snap.empty) { foundField = field; break; }
-        } catch (_) {}
-      }
-
-      // Si ningún campo coincide, traer todo y filtrar client-side
-      const q = foundField
-        ? query(col, where(foundField, '==', formulario))
-        : query(col);
-
-      unsubscribe = onSnapshot(q, (snap) => {
-        const docs = [];
-        let pregs = [];
-        snap.forEach((d) => {
-          const r = { id: d.id, ...d.data() };
-          if (!foundField && getNombreFormulario(r) !== formulario) return;
-          docs.push(r);
-          if (pregs.length === 0 && r.secciones) pregs = extraerPreguntas(r.secciones);
-        });
-        if (docs.length > 0 && pregs.length > 0) {
-          setAnalisis(calcularAnalisis(docs, pregs));
-        } else {
-          setAnalisis(null);
-        }
+    const procesar = (snap) => {
+      if (!mounted) return;
+      const docs = [];
+      let pregs = [];
+      snap.forEach((d) => {
+        const r = { id: d.id, ...d.data() };
+        docs.push(r);
+        if (pregs.length === 0 && r.secciones) pregs = extraerPreguntas(r.secciones);
       });
+      if (docs.length > 0 && pregs.length > 0) setAnalisis(calcularAnalisis(docs, pregs));
+      else if (mounted) setAnalisis(null);
     };
 
-    setupSubscription();
-    return () => { if (unsubscribe) unsubscribe(); };
+    // Intentar campos en orden: el primero que devuelva docs es el que queda
+    const fields = ['formularioNombre', 'nombreForm', 'formulario'];
+
+    const tryField = (idx) => {
+      if (!mounted || idx >= fields.length) return;
+      const q = query(col, where(fields[idx], '==', formulario));
+      const unsub = onSnapshot(
+        q,
+        (snap) => {
+          if (!snap.empty) {
+            // Este campo tiene datos → quedarse con este listener
+            procesar(snap);
+          } else {
+            // Sin datos → cancelar y probar el siguiente
+            unsub();
+            if (currentUnsub === unsub) currentUnsub = null;
+            tryField(idx + 1);
+          }
+        },
+        (err) => {
+          // Permiso denegado u otro error → probar siguiente campo
+          console.warn(`[Dashboard] Campo "${fields[idx]}" falló (${err.code}), probando siguiente...`);
+          unsub();
+          if (currentUnsub === unsub) currentUnsub = null;
+          tryField(idx + 1);
+        }
+      );
+      currentUnsub = unsub;
+    };
+
+    tryField(0);
+
+    return () => {
+      mounted = false;
+      if (currentUnsub) currentUnsub();
+    };
   }, [userProfile?.ownerId]);
 
   return <DashboardScreen analisis={analisis} reloj={reloj} />;
