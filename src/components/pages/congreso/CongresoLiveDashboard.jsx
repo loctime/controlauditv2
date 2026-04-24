@@ -57,12 +57,33 @@ const extraerPreguntas = (secciones) => {
   return preguntas;
 };
 
+// Normaliza respuestas a array 2D. Acepta:
+//  - array 2D ya normalizado
+//  - array de objetos { seccion, valores } (formato AuditoriaService)
+//  - objeto plano (lo deja pasar para el fallback altKeys)
+const normalizeRespuestas = (respuestas) => {
+  if (!respuestas) return null;
+  if (Array.isArray(respuestas)) {
+    if (
+      respuestas.length > 0 &&
+      respuestas[0] &&
+      typeof respuestas[0] === 'object' &&
+      Array.isArray(respuestas[0].valores)
+    ) {
+      return respuestas.map((s) => s?.valores || []);
+    }
+    return respuestas;
+  }
+  return respuestas;
+};
+
 // Obtiene la respuesta de un reporte para una pregunta específica.
-// Soporta dos formatos: array 2D (respuestas[seccion][pregunta]) y objeto con claves string.
+// Soporta tres formatos: array 2D, array de {seccion, valores}, y objeto con claves string.
 const getRespuesta = (r, preg) => {
-  if (!r.respuestas) return null;
-  if (Array.isArray(r.respuestas)) {
-    const v = r.respuestas[preg.seccionIndex]?.[preg.preguntaIndex];
+  const respuestas = normalizeRespuestas(r.respuestas);
+  if (!respuestas) return null;
+  if (Array.isArray(respuestas)) {
+    const v = respuestas[preg.seccionIndex]?.[preg.preguntaIndex];
     return typeof v === 'string' ? v.trim() : null;
   }
   // Fallback: objeto con claves string
@@ -73,7 +94,7 @@ const getRespuesta = (r, preg) => {
     `seccion_${preg.seccionIndex}_pregunta_${preg.preguntaIndex}`,
     `${preg.seccionIndex+1}-${preg.preguntaIndex+1}`,
   ];
-  for (const k of altKeys) { if (r.respuestas[k]) return r.respuestas[k].trim(); }
+  for (const k of altKeys) { if (respuestas[k]) return respuestas[k].trim(); }
   return null;
 };
 
@@ -84,11 +105,12 @@ const calcularAnalisis = (reportes, preguntas) => {
 
   reportes.forEach((r) => {
     let conf = 0, noConf = 0, mejora = 0, noAplica = 0, puntajeR = 0;
-    if (r.respuestas) {
+    const respuestasNorm = normalizeRespuestas(r.respuestas);
+    if (respuestasNorm) {
       // Array 2D → aplanar
-      const flat = Array.isArray(r.respuestas)
-        ? r.respuestas.flat().filter(v => typeof v === 'string')
-        : Object.values(r.respuestas).filter(v => typeof v === 'string');
+      const flat = Array.isArray(respuestasNorm)
+        ? respuestasNorm.flat().filter(v => typeof v === 'string')
+        : Object.values(respuestasNorm).filter(v => typeof v === 'string');
       flat.forEach((v) => {
         const s = v.trim();
         if (s === 'Conforme') conf++;
