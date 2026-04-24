@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { collection, collectionGroup, query, where, orderBy, limit, onSnapshot, getDocs } from 'firebase/firestore';
+import { collection, query, where, onSnapshot, getDocs } from 'firebase/firestore';
 import { db } from '../../../firebaseControlFile';
 import { useAuth } from '@/components/context/AuthContext';
 import { QRCodeSVG } from 'qrcode.react';
@@ -248,7 +248,7 @@ export default function CongresoLiveDashboard() {
       // Un solo listener que vive mientras el componente esté montado
       unsub = onSnapshot(
         query(col, where(campoActivo, '==', formulario)),
-        (snap) => {
+        async (snap) => {
           if (!mounted) return;
           const docs = [];
           let pregs = [];
@@ -259,6 +259,31 @@ export default function CongresoLiveDashboard() {
           });
           if (docs.length > 0 && pregs.length > 0) setAnalisis(calcularAnalisis(docs, pregs));
           else if (mounted) setAnalisis(null);
+
+          // Cargar imágenes desde subcollección 'files' de cada reporte
+          if (!mounted || docs.length === 0) return;
+          try {
+            const fileSnaps = await Promise.all(
+              docs.map((r) =>
+                getDocs(query(
+                  collection(db, 'apps', 'auditoria', 'owners', userProfile.ownerId, 'reportes', r.id, 'files'),
+                  where('status', '==', 'active')
+                ))
+              )
+            );
+            if (!mounted) return;
+            const urls = [];
+            fileSnaps.forEach((snap) => {
+              snap.forEach((d) => {
+                const f = d.data();
+                if (!f.mimeType?.startsWith('image/')) return;
+                if (f.shareToken) urls.push(`https://files.controldoc.app/api/shares/${f.shareToken}/image`);
+              });
+            });
+            setImagenesLive(urls);
+          } catch (err) {
+            console.warn('[Dashboard] Files fetch:', err.code);
+          }
         },
         (err) => console.error('[Dashboard] Listener error:', err.code, err.message)
       );
@@ -266,30 +291,6 @@ export default function CongresoLiveDashboard() {
 
     init();
     return () => { mounted = false; if (unsub) unsub(); };
-  }, [userProfile?.ownerId]);
-
-  // Listener de imágenes: subcollección 'files' vía collectionGroup
-  useEffect(() => {
-    if (!userProfile?.ownerId) return;
-    const q = query(
-      collectionGroup(db, 'files'),
-      where('ownerId', '==', userProfile.ownerId),
-      where('status', '==', 'active'),
-      orderBy('uploadedAt', 'desc'),
-      limit(24)
-    );
-    const unsub = onSnapshot(q, (snap) => {
-      const urls = [];
-      snap.forEach((d) => {
-        const f = d.data();
-        if (!f.mimeType?.startsWith('image/')) return;
-        if (f.shareToken) urls.push(`https://files.controldoc.app/api/shares/${f.shareToken}/image`);
-      });
-      setImagenesLive(urls);
-    }, (err) => {
-      console.warn('[Dashboard] Files listener:', err.code);
-    });
-    return () => unsub();
   }, [userProfile?.ownerId]);
 
   return <DashboardScreen analisis={analisis} imagenesLive={imagenesLive} reloj={reloj} />;
