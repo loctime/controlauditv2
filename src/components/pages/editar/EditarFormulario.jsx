@@ -172,6 +172,60 @@ const EditarFormulario = () => {
     }
   };
 
+  const handleEliminarFormulario = async (formulario) => {
+    // Confirmación con SweetAlert2
+    const result = await Swal.fire({
+      title: '¿Estás seguro?',
+      html: `¿Deseas eliminar el formulario "<strong>${formulario.nombre}</strong>"?<br><br>Esta acción no se puede deshacer.`,
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonColor: '#d33',
+      cancelButtonColor: '#3085d6',
+      confirmButtonText: 'Sí, eliminar',
+      cancelButtonText: 'Cancelar',
+      reverseButtons: true
+    });
+
+    if (!result.isConfirmed) {
+      return;
+    }
+
+    try {
+      await formularioService.deleteFormulario(formulario.id, user, userProfile);
+
+      // Invalidar cache offline después de eliminar formulario
+      await invalidarCacheFormularios();
+
+      // Recargar formularios del contexto después de un pequeño delay
+      setTimeout(async () => {
+        try {
+          await getUserFormularios();
+          await recargar();
+        } catch (error) {
+          logger.warn('⚠️ Error recargando formularios:', error);
+        }
+      }, 1000);
+
+      // Mostrar mensaje de éxito
+      await Swal.fire({
+        icon: 'success',
+        title: 'Formulario eliminado',
+        text: `El formulario "${formulario.nombre}" ha sido eliminado correctamente.`,
+        timer: 2000,
+        showConfirmButton: false
+      });
+
+    } catch (error) {
+      logger.error("[EditarFormulario] Error al eliminar formulario:", error);
+      await Swal.fire({
+        icon: 'error',
+        title: 'Error al eliminar',
+        text: 'No se pudo eliminar el formulario. Por favor, inténtalo de nuevo.',
+        confirmButtonColor: '#3085d6'
+      });
+    }
+  };
+
   // ── Render ────────────────────────────────────────────────────────────────
   return (
     <Box sx={{ p: isSmall ? 1 : 2 }}>
@@ -246,6 +300,29 @@ const EditarFormulario = () => {
                       <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap', alignItems: 'center' }}>
                         <Chip label={`${numSecciones} secc.`} size="small" variant="outlined" />
                         <Chip label={`${numPreguntas} preg.`} size="small" color="primary" variant="outlined" />
+                        <Button
+                          variant="outlined"
+                          color="error"
+                          size="small"
+                          startIcon={<DeleteIcon />}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleEliminarFormulario(form);
+                          }}
+                          sx={{ 
+                            minWidth: isMobile ? '100%' : 100,
+                            fontWeight: 600,
+                            borderRadius: 2,
+                            '&:hover': {
+                              transform: 'translateY(-1px)',
+                              boxShadow: '0 4px 12px rgba(211,47,47,0.15)',
+                              transition: 'all 0.2s ease'
+                            },
+                            transition: 'all 0.2s ease'
+                          }}
+                        >
+                          🗑️ Eliminar
+                        </Button>
                       </Box>
                     </Box>
                   </AccordionSummary>

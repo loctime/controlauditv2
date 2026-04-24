@@ -24,9 +24,11 @@ import ExpandMoreIcon from "@mui/icons-material/ExpandMore";
 import EditIcon from "@mui/icons-material/Edit";
 import PublicIcon from '@mui/icons-material/Public';
 import SearchIcon from '@mui/icons-material/Search';
+import DeleteIcon from '@mui/icons-material/Delete';
 import EditarFormularioModal from "./EditarFormularioModal";
 import { formularioService } from '../../../services/formularioService';
 import { useAuth } from '@/components/context/AuthContext';
+import Swal from 'sweetalert2';
 
 /**
  * Lista de formularios en modo acordeón expandible.
@@ -155,6 +157,92 @@ const FormulariosAccordionList = ({ formularios, onEditar, formularioSeleccionad
       setError("Error al actualizar el formulario: " + error.message);
     } finally {
       setEditLoading(false);
+    }
+  };
+
+  const handleEliminarFormulario = async (formulario) => {
+    // Confirmación con SweetAlert2
+    const result = await Swal.fire({
+      title: '¿Estás seguro?',
+      html: `¿Deseas eliminar el formulario "<strong>${formulario.nombre}</strong>"?<br><br>Esta acción no se puede deshacer.`,
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonColor: '#d33',
+      cancelButtonColor: '#3085d6',
+      confirmButtonText: 'Sí, eliminar',
+      cancelButtonText: 'Cancelar',
+      reverseButtons: true
+    });
+
+    if (!result.isConfirmed) {
+      return;
+    }
+
+    try {
+      await formularioService.deleteFormulario(formulario.id, user, userProfile);
+
+      // Invalidar cache offline después de eliminar formulario
+      try {
+        if (window.indexedDB) {
+          const request = indexedDB.open('controlaudit_offline_v1', 2);
+          await new Promise((resolve, reject) => {
+            request.onsuccess = function(event) {
+              const db = event.target.result;
+              if (!db.objectStoreNames.contains('settings')) {
+                resolve();
+                return;
+              }
+              
+              const transaction = db.transaction(['settings'], 'readwrite');
+              const store = transaction.objectStore('settings');
+              
+              store.get('complete_user_cache').onsuccess = function(e) {
+                const cached = e.target.result;
+                if (cached && cached.value) {
+                  cached.value.formulariosTimestamp = 0;
+                  cached.value.timestamp = Date.now();
+                  store.put(cached).onsuccess = () => resolve();
+                } else {
+                  resolve();
+                }
+              };
+            };
+            request.onerror = function(event) {
+              reject(event.target.error);
+            };
+          });
+          logger.debug('✅ Cache de formularios invalidado después de eliminar formulario');
+        }
+      } catch (cacheError) {
+        logger.warn('⚠️ Error invalidando cache de formularios:', cacheError);
+      }
+
+      // Recargar formularios del contexto después de un pequeño delay
+      setTimeout(async () => {
+        try {
+          await getUserFormularios();
+        } catch (error) {
+          logger.warn('⚠️ Error recargando formularios del contexto:', error);
+        }
+      }, 1000);
+
+      // Mostrar mensaje de éxito
+      await Swal.fire({
+        icon: 'success',
+        title: 'Formulario eliminado',
+        text: `El formulario "${formulario.nombre}" ha sido eliminado correctamente.`,
+        timer: 2000,
+        showConfirmButton: false
+      });
+
+    } catch (error) {
+      logger.error("[FormulariosAccordionList] Error al eliminar formulario:", error);
+      await Swal.fire({
+        icon: 'error',
+        title: 'Error al eliminar',
+        text: 'No se pudo eliminar el formulario. Por favor, inténtalo de nuevo.',
+        confirmButtonColor: '#3085d6'
+      });
     }
   };
 
@@ -405,6 +493,30 @@ const FormulariosAccordionList = ({ formularios, onEditar, formularioSeleccionad
                       }}
                     >
                       ⚙️ Configurar
+                    </Button>
+                    
+                    <Button
+                      variant="outlined"
+                      color="error"
+                      size={isSmallMobile ? "small" : "medium"}
+                      startIcon={<DeleteIcon />}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleEliminarFormulario(formulario);
+                      }}
+                      sx={{ 
+                        minWidth: isMobile ? '100%' : 120,
+                        fontWeight: 600,
+                        borderRadius: 2,
+                        '&:hover': {
+                          transform: 'translateY(-1px)',
+                          boxShadow: '0 4px 12px rgba(211,47,47,0.15)',
+                          transition: 'all 0.2s ease'
+                        },
+                        transition: 'all 0.2s ease'
+                      }}
+                    >
+                      🗑️ Eliminar
                     </Button>
                   </Box>
                 </Box>

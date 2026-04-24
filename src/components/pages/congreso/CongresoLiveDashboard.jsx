@@ -13,35 +13,28 @@ import { CONGRESO_CONFIG } from '../../../config/congreso';
 
 ChartJS.register(ArcElement, Tooltip, Legend, CategoryScale, LinearScale, PointElement, LineElement, Filler);
 
-// ─── Tema ──────────────────────────────────────────────────────────────────────
+// ─── Tema Dark / Stand ─────────────────────────────────────────────────────────
 const T = {
-  bg:       '#eef2f7',
-  bgCard:   '#ffffff',
-  border:   '#d1dbe8',
-  blue:     '#1d4ed8',
-  green:    '#15803d',
-  amber:    '#b45309',
-  red:      '#b91c1c',
-  purple:   '#7c3aed',
-  gray:     '#475569',
-  text:     '#0f172a',
-  textDim:  '#475569',
-  shadow:   '0 2px 8px rgba(0,0,0,0.10)',
+  bg:       '#0f172a', // Fondo principal oscuro
+  bgCard:   '#1e293b', // Fondo de tarjetas
+  border:   '#334155',
+  blue:     '#3b82f6', // Azul brillante
+  green:    '#10b981', // Esmeralda
+  amber:    '#f59e0b',
+  red:      '#ef4444',
+  purple:   '#8b5cf6',
+  gray:     '#94a3b8',
+  text:     '#f8fafc', // Texto blanco
+  textDim:  '#cbd5e1',
+  shadow:   '0 10px 25px rgba(0,0,0,0.5)',
   fontSans: "'Space Grotesk', sans-serif",
   fontMono: "'JetBrains Mono', monospace",
 };
 
-// ─── Helpers ───────────────────────────────────────────────────────────────────
-const getNombreFormulario = (r) =>
-  r.formularioNombre ||
-  r.nombreForm ||
-  (typeof r.formulario === 'object' ? r.formulario?.nombre : r.formulario) ||
-  null;
-
-const getNombreEmpresa = (r) =>
-  r.empresaNombre ||
-  (typeof r.empresa === 'object' ? r.empresa?.nombre : r.empresa) ||
-  'Empresa';
+// ─── Helpers de Procesamiento ─────────────────────────────────────────────────
+// (Mantenemos los tuyos originales y agregamos lógica para los nuevos campos)
+const getNombreFormulario = (r) => r.formularioNombre || r.nombreForm || (typeof r.formulario === 'object' ? r.formulario?.nombre : r.formulario) || null;
+const getNombreEmpresa = (r) => r.empresaNombre || (typeof r.empresa === 'object' ? r.empresa?.nombre : r.empresa) || 'Empresa';
 
 const extraerPreguntas = (secciones) => {
   const preguntas = [];
@@ -57,28 +50,14 @@ const extraerPreguntas = (secciones) => {
   return preguntas;
 };
 
-// Normaliza respuestas a array 2D. Acepta:
-//  - array 2D ya normalizado
-//  - array de objetos { seccion, valores } (formato AuditoriaService)
-//  - objeto plano (lo deja pasar para el fallback altKeys)
 const normalizeRespuestas = (respuestas) => {
   if (!respuestas) return null;
-  if (Array.isArray(respuestas)) {
-    if (
-      respuestas.length > 0 &&
-      respuestas[0] &&
-      typeof respuestas[0] === 'object' &&
-      Array.isArray(respuestas[0].valores)
-    ) {
-      return respuestas.map((s) => s?.valores || []);
-    }
-    return respuestas;
+  if (Array.isArray(respuestas) && respuestas.length > 0 && typeof respuestas[0] === 'object' && Array.isArray(respuestas[0].valores)) {
+    return respuestas.map((s) => s?.valores || []);
   }
   return respuestas;
 };
 
-// Obtiene la respuesta de un reporte para una pregunta específica.
-// Soporta tres formatos: array 2D, array de {seccion, valores}, y objeto con claves string.
 const getRespuesta = (r, preg) => {
   const respuestas = normalizeRespuestas(r.respuestas);
   if (!respuestas) return null;
@@ -86,31 +65,24 @@ const getRespuesta = (r, preg) => {
     const v = respuestas[preg.seccionIndex]?.[preg.preguntaIndex];
     return typeof v === 'string' ? v.trim() : null;
   }
-  // Fallback: objeto con claves string
-  const altKeys = [
-    preg.id,
-    `preg-${preg.seccionIndex+1}-${preg.preguntaIndex+1}`,
-    `pregunta_${preg.seccionIndex+1}_${preg.preguntaIndex+1}`,
-    `seccion_${preg.seccionIndex}_pregunta_${preg.preguntaIndex}`,
-    `${preg.seccionIndex+1}-${preg.preguntaIndex+1}`,
-  ];
-  for (const k of altKeys) { if (respuestas[k]) return respuestas[k].trim(); }
   return null;
 };
 
 const calcularAnalisis = (reportes, preguntas) => {
   let totalConformes = 0, totalNoConformes = 0, totalMejora = 0, totalNoAplica = 0;
   let totalPuntaje = 0, conteoPuntaje = 0;
-  const empresaCounts = {};
+  
+  // Nuevas métricas
+  let actitudPositiva = 0, condicionPositiva = 0, totalClasificaciones = 0;
+  let todasLasImagenes = [];
+  let todasLasAcciones = [];
 
   reportes.forEach((r) => {
     let conf = 0, noConf = 0, mejora = 0, noAplica = 0, puntajeR = 0;
     const respuestasNorm = normalizeRespuestas(r.respuestas);
+    
     if (respuestasNorm) {
-      // Array 2D → aplanar
-      const flat = Array.isArray(respuestasNorm)
-        ? respuestasNorm.flat().filter(v => typeof v === 'string')
-        : Object.values(respuestasNorm).filter(v => typeof v === 'string');
+      const flat = Array.isArray(respuestasNorm) ? respuestasNorm.flat().filter(v => typeof v === 'string') : Object.values(respuestasNorm).filter(v => typeof v === 'string');
       flat.forEach((v) => {
         const s = v.trim();
         if (s === 'Conforme') conf++;
@@ -121,25 +93,48 @@ const calcularAnalisis = (reportes, preguntas) => {
       const tot = conf + noConf;
       if (tot > 0) puntajeR = Math.round((conf / tot) * 100);
     }
+    
     totalConformes += r.respuestasConformes ?? conf;
     totalNoConformes += r.respuestasNoConformes ?? noConf;
     totalMejora += mejora;
     totalNoAplica += noAplica;
     if (r.puntaje != null) { totalPuntaje += r.puntaje; conteoPuntaje++; }
     else if (puntajeR > 0) { totalPuntaje += puntajeR; conteoPuntaje++; }
-    const emp = getNombreEmpresa(r);
-    empresaCounts[emp] = (empresaCounts[emp] || 0) + 1;
+
+    // Procesar Clasificaciones (Actitud / Condición)
+    if (r.clasificaciones && Array.isArray(r.clasificaciones)) {
+        r.clasificaciones.flat().forEach(c => {
+            if (c) {
+                if (c.actitud) actitudPositiva++;
+                if (c.condicion) condicionPositiva++;
+                totalClasificaciones++;
+            }
+        });
+    }
+
+    // Procesar Imágenes
+    if (r.imagenes && Array.isArray(r.imagenes)) {
+        r.imagenes.flat().flat().forEach(img => {
+            if (img) todasLasImagenes.push(img);
+        });
+    }
+
+    // Procesar Acciones Requeridas
+    if (r.accionesRequeridas && Array.isArray(r.accionesRequeridas)) {
+        r.accionesRequeridas.flat().forEach(acc => {
+            if (acc && acc.trim() !== '') todasLasAcciones.push(acc);
+        });
+    }
   });
 
   const analisisPorPregunta = preguntas.map((preg) => {
-    const conteo = { Conforme: 0, 'No conforme': 0, 'Necesita mejora': 0, 'No aplica': 0, 'Sin responder': 0 };
+    const conteo = { Conforme: 0, 'No conforme': 0, 'Necesita mejora': 0, 'No aplica': 0 };
     reportes.forEach((r) => {
       const resp = getRespuesta(r, preg);
       if (resp && conteo.hasOwnProperty(resp)) conteo[resp]++;
-      else conteo['Sin responder']++;
     });
     const totalR = Object.values(conteo).reduce((s, v) => s + v, 0);
-    return { ...preg, conteo, totalRespuestas: totalR, porcentajes: Object.fromEntries(Object.entries(conteo).map(([k, v]) => [k, totalR > 0 ? (v/totalR*100) : 0])) };
+    return { ...preg, conteo, totalRespuestas: totalR };
   });
 
   let acum = 0;
@@ -151,7 +146,11 @@ const calcularAnalisis = (reportes, preguntas) => {
     totalConformes, totalNoConformes, totalMejora, totalNoAplica,
     analisisPorPregunta,
     distribucion: { Conforme: totalConformes, 'No conforme': totalNoConformes, 'Necesita mejora': totalMejora, 'No aplica': totalNoAplica },
-    empresaCounts, tendencia,
+    tendencia,
+    actitudPct: totalClasificaciones > 0 ? Math.round((actitudPositiva/totalClasificaciones)*100) : 0,
+    condicionPct: totalClasificaciones > 0 ? Math.round((condicionPositiva/totalClasificaciones)*100) : 0,
+    imagenes: todasLasImagenes.slice(-10), // Últimas 10 imágenes
+    acciones: todasLasAcciones.slice(-5)   // Últimas 5 acciones
   };
 };
 
@@ -160,10 +159,7 @@ export default function CongresoLiveDashboard() {
   const { userProfile } = useAuth();
   const navigate = useNavigate();
   const unsubRef = useRef(null);
-  const [formularioSeleccionado, setFormularioSeleccionado] = useState(null);
-  const [formularioTmp, setFormularioTmp] = useState('');
-  const [formulariosDisponibles, setFormulariosDisponibles] = useState([]);
-  const [loadingForms, setLoadingForms] = useState(true);
+  const [formularioSeleccionado, setFormularioSeleccionado] = useState(CONGRESO_CONFIG.FORM_NAME); // Forzamos el del congreso para el stand
   const [reportes, setReportes] = useState([]);
   const [analisis, setAnalisis] = useState(null);
   const [reloj, setReloj] = useState('');
@@ -174,495 +170,204 @@ export default function CongresoLiveDashboard() {
   }, []);
 
   useEffect(() => {
-    if (!userProfile?.ownerId) return;
-    (async () => {
-      try {
-        const snap = await getDocs(collection(db, 'apps','auditoria','owners',userProfile.ownerId,'reportes'));
-        const nombres = new Set();
-        snap.forEach((doc) => { const n = getNombreFormulario(doc.data()); if (n) nombres.add(n); });
-        setFormulariosDisponibles([...nombres].sort());
-      } finally { setLoadingForms(false); }
-    })();
-  }, [userProfile?.ownerId]);
-
-  useEffect(() => {
-    if (unsubRef.current) { unsubRef.current(); unsubRef.current = null; }
     if (!formularioSeleccionado || !userProfile?.ownerId) return;
     const col = collection(db, 'apps','auditoria','owners',userProfile.ownerId,'reportes');
-    let active = true;
-    const tryQ = (campo) => new Promise((res, rej) => {
-      const q = query(col, where(campo, '==', formularioSeleccionado));
-      const u = onSnapshot(q, (snap) => res({snap,u,campo}), (err) => { u(); rej(err); });
-    });
-    (async () => {
-      let resultado = null;
-      for (const campo of ['formularioNombre','nombreForm','formulario']) {
-        try { resultado = await tryQ(campo); if (resultado.snap.size > 0) break; resultado.u(); resultado = null; } catch(_) {}
-      }
-      if (!active) return;
-      if (!resultado) { resultado = await tryQ('formularioNombre').catch(()=>null); }
-      if (!active || !resultado) return;
-      resultado.u();
-      const q = query(col, where(resultado.campo,'==',formularioSeleccionado));
-      const unsub = onSnapshot(q, (snap) => {
-        if (!active) return;
-        const docs = []; let pregs = [];
-        snap.forEach((d) => { const r={id:d.id,...d.data()}; docs.push(r); if (pregs.length===0 && r.secciones) pregs=extraerPreguntas(r.secciones); });
-        setReportes(docs);
-        if (docs.length > 0 && pregs.length > 0) setAnalisis(calcularAnalisis(docs, pregs));
-        else setAnalisis(null);
+    const q = query(col, where('formulario.nombre', '==', formularioSeleccionado)); // Ajusta el campo según como guardes
+    
+    const unsub = onSnapshot(q, (snap) => {
+      const docs = []; let pregs = [];
+      snap.forEach((d) => { 
+        const r={id:d.id,...d.data()}; 
+        docs.push(r); 
+        if (pregs.length===0 && r.secciones) pregs=extraerPreguntas(r.secciones); 
       });
-      unsubRef.current = unsub;
-    })();
-    return () => { active=false; if (unsubRef.current) { unsubRef.current(); unsubRef.current=null; } };
+      setReportes(docs);
+      if (docs.length > 0 && pregs.length > 0) setAnalisis(calcularAnalisis(docs, pregs));
+      else setAnalisis(null);
+    });
+    unsubRef.current = unsub;
+    return () => unsub();
   }, [formularioSeleccionado, userProfile?.ownerId]);
 
-  if (!formularioSeleccionado) {
-    return <SelectorScreen formularios={formulariosDisponibles} loading={loadingForms} value={formularioTmp} onChange={setFormularioTmp} onStart={() => { if (formularioTmp) setFormularioSeleccionado(formularioTmp); }} onBack={() => navigate('/reporte')} />;
-  }
-  const esCongresoActivo = formularioSeleccionado === CONGRESO_CONFIG.FORM_NAME;
-  return <DashboardScreen formulario={formularioSeleccionado} analisis={analisis} reloj={reloj} mostrarQR={esCongresoActivo} onVolver={() => { setFormularioSeleccionado(null); setFormularioTmp(''); setReportes([]); setAnalisis(null); }} />;
+  return <DashboardScreen formulario={formularioSeleccionado} analisis={analisis} reloj={reloj} />;
 }
 
-// ─── Selector ─────────────────────────────────────────────────────────────────
-function SelectorScreen({ formularios, loading, value, onChange, onStart, onBack }) {
-  return (
-    <>
-      <style>{`@keyframes fadeUp{from{opacity:0;transform:translateY(20px)}to{opacity:1;transform:translateY(0)}}.fu{animation:fadeUp .4s ease both}`}</style>
-      <div style={{ minHeight:'100vh', background:T.bg, display:'flex', alignItems:'center', justifyContent:'center', fontFamily:T.fontSans, padding:32 }}>
-        <div className="fu" style={{ textAlign:'center', maxWidth:460, width:'100%' }}>
-          <div style={{ width:72, height:72, borderRadius:18, background:`linear-gradient(135deg,${T.blue},#6366f1)`, display:'flex', alignItems:'center', justifyContent:'center', margin:'0 auto 20px', boxShadow:`0 8px 32px ${T.blue}55` }}>
-            <span style={{ color:'#fff', fontSize:26, fontWeight:700 }}>CA</span>
-          </div>
-          <h1 style={{ color:T.text, fontSize:26, fontWeight:700, margin:'0 0 6px' }}>ControlAudit</h1>
-          <p style={{ color:T.textDim, fontSize:15, margin:'0 0 36px' }}>Seleccioná el formulario del congreso</p>
-          <div style={{ marginBottom:20 }}>
-            {loading ? <p style={{ color:T.textDim }}>Cargando formularios...</p> : (
-              <select value={value} onChange={(e)=>onChange(e.target.value)} style={{ width:'100%', padding:'13px 16px', borderRadius:10, border:`1.5px solid ${T.border}`, background:T.bgCard, color:value?T.text:T.textDim, fontSize:15, fontFamily:T.fontSans, outline:'none', cursor:'pointer', boxShadow:T.shadow }}>
-                <option value="">— Elegí un formulario —</option>
-                {formularios.map((f)=><option key={f} value={f}>{f}</option>)}
-              </select>
-            )}
-          </div>
-          <div style={{ display:'flex', gap:10, justifyContent:'center' }}>
-            <button onClick={onBack} style={{ padding:'11px 22px', borderRadius:10, border:`1.5px solid ${T.border}`, background:'transparent', color:T.textDim, fontFamily:T.fontSans, fontSize:14, cursor:'pointer', fontWeight:500 }}>← Volver</button>
-            <button onClick={onStart} disabled={!value} style={{ padding:'11px 28px', borderRadius:10, border:'none', background:value?`linear-gradient(135deg,${T.blue},#6366f1)`:T.border, color:value?'#fff':T.textDim, fontFamily:T.fontSans, fontSize:15, cursor:value?'pointer':'default', fontWeight:600, boxShadow:value?`0 4px 16px ${T.blue}55`:'none', transition:'all .2s' }}>Iniciar transmisión →</button>
-          </div>
-        </div>
-      </div>
-    </>
-  );
-}
-
-// ─── Dashboard ────────────────────────────────────────────────────────────────
-function DashboardScreen({ formulario, analisis, reloj, mostrarQR, onVolver }) {
+// ─── Dashboard UI ─────────────────────────────────────────────────────────────
+function DashboardScreen({ formulario, analisis, reloj }) {
   const sin = !analisis || analisis.totalAuditorias === 0;
 
   return (
     <>
       <style>{`
-        @keyframes livePulse{0%,100%{opacity:1;box-shadow:0 0 0 0 rgba(185,28,28,.5)}50%{opacity:.7;box-shadow:0 0 0 7px rgba(185,28,28,0)}}
-        @keyframes fadeSlideIn{from{opacity:0;transform:translateX(30px)}to{opacity:1;transform:translateX(0)}}
-        @keyframes progresoTiempo{from{width:0%}to{width:100%}}
-        *{box-sizing:border-box}
-        ::-webkit-scrollbar{width:5px}
-        ::-webkit-scrollbar-thumb{background:${T.border};border-radius:3px}
+        body { background: ${T.bg}; margin: 0; }
+        @keyframes livePulse{0%,100%{opacity:1;box-shadow:0 0 0 0 rgba(239,68,68,.5)}50%{opacity:.7;box-shadow:0 0 0 10px rgba(239,68,68,0)}}
+        @keyframes scrollUp { 0% { transform: translateY(0); } 100% { transform: translateY(-50%); } }
+        ::-webkit-scrollbar{width:6px} ::-webkit-scrollbar-thumb{background:${T.border};border-radius:3px}
       `}</style>
-      <div style={{ minHeight:'100vh', background:T.bg, color:T.text, fontFamily:T.fontSans, padding:'16px 20px', display:'flex', flexDirection:'column', gap:14 }}>
+      <div style={{ minHeight:'100vh', background:T.bg, color:T.text, fontFamily:T.fontSans, padding:'20px 24px', display:'flex', flexDirection:'column', gap:20 }}>
 
         {/* HEADER */}
-        <Header formulario={formulario} reloj={reloj} onVolver={onVolver} />
-
-        {/* FILA SUPERIOR: 6 KPIs + Donut (+ QR opcional) */}
-        <div style={{ display:'grid', gridTemplateColumns: mostrarQR ? 'repeat(6,1fr) 280px 280px' : 'repeat(6,1fr) 280px', gap:12, alignItems:'stretch' }}>
-          <KpiCard label="Auditorías"      value={sin?'—':analisis.totalAuditorias}  color={T.blue}   />
-          <KpiCard label="Puntaje Prom."   value={sin?'—':`${analisis.puntajePromedio}%`} color="#0e7490" />
-          <KpiCard label="Conformes"       value={sin?'—':analisis.totalConformes}    color={T.green}  />
-          <KpiCard label="No Conformes"    value={sin?'—':analisis.totalNoConformes}  color={T.red}    />
-          <KpiCard label="Nec. Mejora"     value={sin?'—':analisis.totalMejora}       color={T.amber}  />
-          <KpiCard label="No Aplica"       value={sin?'—':analisis.totalNoAplica}     color={T.gray}   />
-          <div style={{ background:T.bgCard, borderRadius:14, padding:'14px 18px', border:`1px solid ${T.border}`, boxShadow:T.shadow, borderTop:`3px solid #6366f1` }}>
-            <div style={{ fontSize:10, fontWeight:700, color:T.textDim, textTransform:'uppercase', letterSpacing:1, marginBottom:10 }}>Distribución</div>
-            {sin ? <Vacio small /> : <DonutChart distribucion={analisis.distribucion} />}
+        <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', padding:'16px 24px', background:T.bgCard, borderRadius:16, border:`1px solid ${T.border}`, boxShadow:T.shadow }}>
+          <div style={{ display:'flex', alignItems:'center', gap:16 }}>
+            <div style={{ width:48, height:48, borderRadius:12, background:`linear-gradient(135deg,${T.blue},${T.purple})`, display:'flex', alignItems:'center', justifyContent:'center', fontWeight:800, fontSize:18, color:'#fff', boxShadow:`0 0 20px ${T.blue}44` }}>CA</div>
+            <div>
+              <div style={{ fontSize:12, color:T.blue, fontWeight:700, letterSpacing:2, textTransform:'uppercase' }}>Live Dashboard</div>
+              <div style={{ fontSize:22, fontWeight:700, color:T.text }}>{formulario}</div>
+            </div>
           </div>
-          {mostrarQR && <QRPanel />}
+          <div style={{ display:'flex', alignItems:'center', gap:24 }}>
+            <div style={{ display:'flex', alignItems:'center', gap:8, background:'rgba(239,68,68,.1)', border:`1px solid ${T.red}55`, borderRadius:20, padding:'6px 16px' }}>
+              <div style={{ width:10, height:10, borderRadius:'50%', background:T.red, animation:'livePulse 1.5s infinite' }} />
+              <span style={{ fontSize:14, fontWeight:700, color:T.red, letterSpacing:2 }}>LIVE</span>
+            </div>
+            <div style={{ fontFamily:T.fontMono, fontSize:26, fontWeight:700, color:T.text, letterSpacing:2 }}>{reloj}</div>
+          </div>
         </div>
 
-        {/* GRILLA DE PREGUNTAS */}
-        <PanelCard title="Respuestas por pregunta">
-          {sin ? <Vacio /> : <GridPreguntas analisisPorPregunta={analisis.analisisPorPregunta} />}
-        </PanelCard>
+        {/* FILA 1: KPIs PRINCIPALES */}
+        <div style={{ display:'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap:16 }}>
+          <KpiCard label="Auditorías Totales" value={sin?'—':analisis.totalAuditorias} color={T.blue} />
+          <KpiCard label="Puntaje Promedio"   value={sin?'—':`${analisis.puntajePromedio}%`} color={T.green} />
+          <KpiCard label="Actitud Positiva"   value={sin?'—':`${analisis.actitudPct}%`} color={T.purple} />
+          <KpiCard label="Condición Segura"   value={sin?'—':`${analisis.condicionPct}%`} color={T.amber} />
+          <div style={{ background:T.bgCard, borderRadius:16, padding:'16px', border:`1px solid ${T.border}`, boxShadow:T.shadow, display:'flex', alignItems:'center', justifyContent:'space-between', gap:10 }}>
+            <div>
+                <div style={{ fontSize:11, fontWeight:700, color:T.textDim, textTransform:'uppercase', letterSpacing:1, marginBottom:8 }}>Escanea para Auditar</div>
+                <div style={{ fontSize:12, color:T.blue, fontWeight:600 }}>¡Participá ahora!</div>
+            </div>
+            <div style={{ background:'#fff', padding:6, borderRadius:8 }}>
+              <QRCodeSVG value={CONGRESO_CONFIG.PUBLIC_URL} size={70} level="M" />
+            </div>
+          </div>
+        </div>
 
-        {/* TENDENCIA */}
-        <PanelCard title="Tendencia de puntaje promedio">
-          {sin ? <Vacio /> : <TendenciaLine tendencia={analisis.tendencia} />}
-        </PanelCard>
+        {/* FILA 2: CONTENIDO DIVIDIDO */}
+        <div style={{ display:'grid', gridTemplateColumns: '2fr 1fr 1fr', gap:16, flex:1 }}>
+          
+          {/* Columna 1: Preguntas (Scroll Automático) */}
+          <PanelCard title="Estado por Pregunta" style={{ flex:1 }}>
+            {sin ? <Vacio /> : <GridPreguntas analisisPorPregunta={analisis.analisisPorPregunta} />}
+          </PanelCard>
+
+          {/* Columna 2: Gráfico General y Acciones Requeridas */}
+          <div style={{ display:'flex', flexDirection:'column', gap:16 }}>
+             <PanelCard title="Distribución Global">
+              {sin ? <Vacio /> : <DonutChart distribucion={analisis.distribucion} />}
+             </PanelCard>
+             <PanelCard title="Acciones Requeridas" style={{ flex:1, overflow:'hidden' }}>
+                {sin || analisis.acciones.length === 0 ? <Vacio label="No hay acciones" /> : (
+                    <div style={{ display:'flex', flexDirection:'column', gap:10 }}>
+                        {analisis.acciones.map((acc, i) => (
+                            <div key={i} style={{ background:'rgba(245,158,11,0.1)', borderLeft:`3px solid ${T.amber}`, padding:'10px 12px', borderRadius:'0 8px 8px 0', fontSize:13, color:T.text }}>
+                                {acc}
+                            </div>
+                        ))}
+                    </div>
+                )}
+             </PanelCard>
+          </div>
+
+          {/* Columna 3: Galería de Imágenes en Vivo */}
+          <PanelCard title="Evidencia Visual (Live)" style={{ overflow:'hidden', padding:0 }}>
+             {sin || !analisis.imagenes || analisis.imagenes.length === 0 ? <div style={{padding:20}}><Vacio label="Esperando fotos..." /></div> : (
+                <div style={{ height:'100%', overflow:'hidden', position:'relative', background:'#000' }}>
+                    <div style={{ display:'flex', flexDirection:'column', gap:2, animation: analisis.imagenes.length > 2 ? 'scrollUp 20s linear infinite' : 'none' }}>
+                        {/* Duplicamos el array para el scroll infinito */}
+                        {[...analisis.imagenes, ...analisis.imagenes].map((img, i) => (
+                            <img key={i} src={img} alt="Evidencia" style={{ width:'100%', height:200, objectFit:'cover', opacity:0.8, transition:'opacity 0.3s' }} />
+                        ))}
+                    </div>
+                    {/* Sombra difuminada para que no se corte feo arriba y abajo */}
+                    <div style={{ position:'absolute', top:0, left:0, right:0, height:40, background:`linear-gradient(to bottom, ${T.bgCard}, transparent)` }}/>
+                    <div style={{ position:'absolute', bottom:0, left:0, right:0, height:40, background:`linear-gradient(to top, ${T.bgCard}, transparent)` }}/>
+                </div>
+             )}
+          </PanelCard>
+        </div>
 
       </div>
     </>
   );
 }
 
-// ─── Header ───────────────────────────────────────────────────────────────────
-function Header({ formulario, reloj, onVolver }) {
-  return (
-    <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', padding:'12px 20px', background:T.bgCard, borderRadius:14, border:`1px solid ${T.border}`, boxShadow:T.shadow, borderLeft:`4px solid ${T.blue}` }}>
-      <div style={{ display:'flex', alignItems:'center', gap:14 }}>
-        <div style={{ width:40, height:40, borderRadius:10, background:`linear-gradient(135deg,${T.blue},#6366f1)`, display:'flex', alignItems:'center', justifyContent:'center', fontWeight:700, fontSize:14, color:'#fff', flexShrink:0 }}>CA</div>
-        <div>
-          <div style={{ fontSize:10, color:T.textDim, fontWeight:700, letterSpacing:1.2, textTransform:'uppercase' }}>ControlAudit — Congreso en Vivo</div>
-          <div style={{ fontSize:17, fontWeight:700, color:T.text, marginTop:1 }}>{formulario}</div>
-        </div>
-      </div>
-      <div style={{ display:'flex', alignItems:'center', gap:18 }}>
-        <div style={{ display:'flex', alignItems:'center', gap:7, background:'rgba(185,28,28,.08)', border:'1.5px solid rgba(185,28,28,.25)', borderRadius:20, padding:'5px 14px' }}>
-          <div style={{ width:9, height:9, borderRadius:'50%', background:T.red, animation:'livePulse 1.5s infinite' }} />
-          <span style={{ fontSize:12, fontWeight:700, color:T.red, letterSpacing:1.5 }}>EN VIVO</span>
-        </div>
-        <div style={{ fontFamily:T.fontMono, fontSize:20, fontWeight:700, color:T.text, letterSpacing:2 }}>{reloj}</div>
-        <button onClick={onVolver} style={{ padding:'6px 14px', borderRadius:8, border:`1.5px solid ${T.border}`, background:'transparent', color:T.textDim, fontFamily:T.fontSans, fontSize:13, cursor:'pointer', fontWeight:500 }}>Cambiar</button>
-      </div>
-    </div>
-  );
-}
-
-// ─── KPI Card ─────────────────────────────────────────────────────────────────
+// ─── Componentes UI Internos ──────────────────────────────────────────────────
 function KpiCard({ label, value, color }) {
   return (
-    <div style={{ background:T.bgCard, borderRadius:14, padding:'14px 18px', border:`1px solid ${T.border}`, borderTop:`3px solid ${color}`, boxShadow:T.shadow }}>
-      <div style={{ fontSize:10, color:T.textDim, fontWeight:700, textTransform:'uppercase', letterSpacing:.8, marginBottom:8 }}>{label}</div>
-      <div style={{ fontFamily:T.fontMono, fontSize:34, fontWeight:700, color, lineHeight:1 }}>{value}</div>
+    <div style={{ background:T.bgCard, borderRadius:16, padding:'20px', border:`1px solid ${T.border}`, borderBottom:`4px solid ${color}`, boxShadow:T.shadow, position:'relative', overflow:'hidden' }}>
+      <div style={{ position:'absolute', top:-20, right:-20, width:80, height:80, background:color, opacity:0.1, borderRadius:'50%', filter:'blur(20px)' }} />
+      <div style={{ fontSize:12, color:T.textDim, fontWeight:700, textTransform:'uppercase', letterSpacing:1, marginBottom:10 }}>{label}</div>
+      <div style={{ fontFamily:T.fontMono, fontSize:42, fontWeight:800, color:'#fff', lineHeight:1 }}>{value}</div>
     </div>
   );
 }
 
-// ─── Panel Card ───────────────────────────────────────────────────────────────
 function PanelCard({ title, children, style }) {
   return (
-    <div style={{ background:T.bgCard, borderRadius:14, padding:'16px 18px', border:`1px solid ${T.border}`, boxShadow:T.shadow, ...style }}>
-      <div style={{ fontSize:10, fontWeight:700, color:T.textDim, textTransform:'uppercase', letterSpacing:1, marginBottom:14, paddingBottom:8, borderBottom:`1px solid ${T.border}` }}>{title}</div>
+    <div style={{ background:T.bgCard, borderRadius:16, padding:'20px', border:`1px solid ${T.border}`, boxShadow:T.shadow, display:'flex', flexDirection:'column', ...style }}>
+      {title && <div style={{ fontSize:12, fontWeight:800, color:T.textDim, textTransform:'uppercase', letterSpacing:1.5, marginBottom:16 }}>{title}</div>}
       {children}
     </div>
   );
 }
 
-// ─── Vacío ─────────────────────────────────────────────────────────────────────
-function Vacio({ small }) {
-  return <div style={{ display:'flex', alignItems:'center', justifyContent:'center', minHeight:small?40:70, color:T.textDim, fontSize:13 }}>Esperando...</div>;
+function Vacio({ label = "Esperando datos..." }) {
+  return <div style={{ display:'flex', alignItems:'center', justifyContent:'center', height:'100%', color:T.gray, fontSize:14, fontFamily:T.fontMono }}>_ {label}</div>;
 }
 
-// ─── Tipos de respuesta ───────────────────────────────────────────────────────
-const TIPOS = [
-  { key:'Conforme',        color:T.green,  label:'Conforme'      },
-  { key:'No conforme',     color:T.red,    label:'No conforme'   },
-  { key:'Necesita mejora', color:T.amber,  label:'Nec. mejora'   },
-  { key:'No aplica',       color:T.gray,   label:'No aplica'     },
-];
-
-// ─── Grid de Preguntas ────────────────────────────────────────────────────────
-function GridPreguntas({ analisisPorPregunta }) {
-  const [paginaActual, setPaginaActual] = useState(0);
-  const preguntasPorPagina = 6;
-  const totalPaginas = Math.ceil(analisisPorPregunta.length / preguntasPorPagina);
-
-  useEffect(() => {
-    const interval = setInterval(() => {
-      setPaginaActual(prev => (prev + 1) % totalPaginas);
-    }, 8000);
-    return () => clearInterval(interval);
-  }, [totalPaginas]);
-
-  const preguntasVisibles = analisisPorPregunta.slice(
-    paginaActual * preguntasPorPagina,
-    (paginaActual + 1) * preguntasPorPagina
-  );
-
-  const irPagina = (direccion) => {
-    if (direccion === 'anterior') {
-      setPaginaActual(prev => prev === 0 ? totalPaginas - 1 : prev - 1);
-    } else {
-      setPaginaActual(prev => (prev + 1) % totalPaginas);
-    }
-  };
-
-  return (
-    <div>
-      {/* Navegación */}
-      <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:16 }}>
-        <button
-          onClick={() => irPagina('anterior')}
-          style={{
-            padding:'6px 12px',
-            borderRadius:6,
-            border:`1px solid ${T.border}`,
-            background:'transparent',
-            color:T.textDim,
-            fontSize:12,
-            cursor:'pointer',
-            fontWeight:500
-          }}
-        >
-          ← Anterior
-        </button>
-        <span style={{ fontSize:13, color:T.textDim, fontWeight:600 }}>
-          Página {paginaActual + 1} de {totalPaginas}
-        </span>
-        <button
-          onClick={() => irPagina('siguiente')}
-          style={{
-            padding:'6px 12px',
-            borderRadius:6,
-            border:`1px solid ${T.border}`,
-            background:'transparent',
-            color:T.textDim,
-            fontSize:12,
-            cursor:'pointer',
-            fontWeight:500
-          }}
-        >
-          Siguiente →
-        </button>
-      </div>
-
-      {/* Grilla de cards */}
-      <div style={{
-        display:'grid',
-        gridTemplateColumns:'repeat(3, 1fr)',
-        gridTemplateRows:'repeat(2, 1fr)',
-        gap:14,
-        minHeight:280
-      }}>
-        {preguntasVisibles.map((pregunta, idx) => (
-          <PreguntaCard key={`${paginaActual}-${idx}`} pregunta={pregunta} />
-        ))}
-      </div>
-    </div>
-  );
-}
-
-// ─── Card de Pregunta Individual ───────────────────────────────────────────────────
-function PreguntaCard({ pregunta }) {
-  const { texto, conteo, totalRespuestas, seccion } = pregunta;
-  
-  // Determinar color predominante para el borde superior
-  const tiposConCount = [
-    { key:'Conforme', color:T.green },
-    { key:'No conforme', color:T.red },
-    { key:'Necesita mejora', color:T.amber },
-    { key:'No aplica', color:T.gray }
-  ];
-  
-  const predominante = tiposConCount.reduce((max, tipo) => {
-    const count = conteo[tipo.key] || 0;
-    const maxCount = conteo[max.key] || 0;
-    return count > maxCount ? tipo : max;
-  }, tiposConCount[0]);
-
-  // Datos para el gráfico de bloques
-  const tiposBloques = [
-    { key:'Conforme', color:T.green, label:'CONFORME' },
-    { key:'No conforme', color:T.red, label:'NO CONF' },
-    { key:'Necesita mejora', color:T.amber, label:'MEJORA' },
-    { key:'No aplica', color:T.gray, label:'N/A' }
-  ];
-
-  return (
-    <div style={{
-      background:T.bgCard,
-      borderRadius:14,
-      padding:12,
-      border:`1px solid ${T.border}`,
-      boxShadow:T.shadow,
-      borderTop:`3px solid ${predominante.color}`,
-      display:'flex',
-      flexDirection:'column',
-      height:'100%'
-    }}>
-      {/* Sección */}
-      <div style={{
-        fontSize:12,
-        color:T.blue,
-        fontWeight:700,
-        textTransform:'uppercase',
-        letterSpacing:.8,
-        marginBottom:8
-      }}>
-        {seccion}
-      </div>
-
-      {/* Texto de la pregunta */}
-      <div style={{
-        fontSize:15,
-        fontWeight:600,
-        color:T.text,
-        lineHeight:1.3,
-        marginBottom:12,
-        display:'-webkit-box',
-        WebkitLineClamp:2,
-        WebkitBoxOrient:'vertical',
-        overflow:'hidden'
-      }}>
-        {texto}
-      </div>
-
-      {/* Gráfico de barras verticales (edificios) */}
-      <div style={{
-        display:'flex',
-        justifyContent:'center',
-        alignItems:'flex-end',
-        marginBottom:8,
-        flex:1,
-        height:90,
-        gap:2,
-        padding:'0 0px'
-      }}>
-        {tiposBloques.map(({ key, color, label }) => {
-          const count = conteo[key] || 0;
-          const maxCount = Math.max(...tiposBloques.map(t => conteo[t.key] || 0), 1);
-          const height = maxCount > 0 ? (count / maxCount * 70) : 0;
-          const isVisible = count > 0;
-          
-          return (
-            <div
-              key={key}
-              style={{
-                display:'flex',
-                flexDirection:'column',
-                alignItems:'center',
-                flex:1,
-                maxWidth:80
-              }}
-            >
-              {/* Barra vertical */}
-              <div
-                style={{
-                  width:'100%',
-                  height:height,
-                  background:isVisible ? color : '#f1f5f9',
-                  borderRadius:'4px 4px 0 0',
-                  border:isVisible ? 'none' : `1px solid ${T.border}`,
-                  marginBottom:4,
-                  minHeight:isVisible ? 4 : 0,
-                  transition:'height 0.3s ease',
-                  position:'relative',
-                  display:'flex',
-                  alignItems:'center',
-                  justifyContent:'center'
-                }}
-              >
-                {/* Count dentro de la barra */}
-                {isVisible && (
-                  <div style={{
-                    fontSize:14,
-                    fontWeight:700,
-                    color:'#fff',
-                    textAlign:'center',
-                    position:'absolute',
-                    top:height > 20 ? '50%' : 'auto',
-                    bottom:height <= 20 ? '5px' : 'auto',
-                    transform:height > 20 ? 'translate(-50%, -50%)' : 'translateX(-50%)',
-                    left:'50%',
-                    textShadow:'0 1px 2px rgba(0,0,0,0.3)'
-                  }}>
-                    {count}
-                  </div>
-                )}
-              </div>
-              {/* Etiqueta */}
-              <div style={{
-                fontSize:12,
-                fontWeight:700,
-                color:isVisible ? color : T.textDim,
-                textAlign:'center',
-                lineHeight:1,
-                textTransform:'uppercase'
-              }}>
-                {label}
-              </div>
-            </div>
-          );
-        })}
-      </div>
-
-      {/* Total de respuestas */}
-      <div style={{
-        fontSize:13,
-        color:T.textDim,
-        textAlign:'center',
-        fontFamily:T.fontMono,
-        fontWeight:600
-      }}>
-        {totalRespuestas} respuestas
-      </div>
-    </div>
-  );
-}
-
-// ─── QR Panel (Congreso) ──────────────────────────────────────────────────────
-function QRPanel() {
-  return (
-    <div style={{ background:T.bgCard, borderRadius:14, padding:'14px 16px', border:`1px solid ${T.border}`, boxShadow:T.shadow, borderTop:`3px solid ${T.green}`, display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'space-between', gap:8 }}>
-      <div style={{ fontSize:10, fontWeight:700, color:T.textDim, textTransform:'uppercase', letterSpacing:1, alignSelf:'flex-start' }}>Escaneá para participar</div>
-      <div style={{ background:'#fff', padding:6, borderRadius:8, lineHeight:0 }}>
-        <QRCodeSVG value={CONGRESO_CONFIG.PUBLIC_URL} size={170} level="M" includeMargin={false} />
-      </div>
-      <div style={{ fontSize:11, fontWeight:600, color:T.textDim, textAlign:'center', lineHeight:1.3 }}>
-        Hacé tu auditoría<br />en vivo
-      </div>
-    </div>
-  );
-}
-
-// ─── Donut ─────────────────────────────────────────────────────────────────────
+// ─── Gráficos ─────────────────────────────────────────────────────────────────
 function DonutChart({ distribucion }) {
-  const labels = ['Conforme','No conforme','Nec. mejora','No aplica'];
-  const dataKeys = ['Conforme','No conforme','Necesita mejora','No aplica'];
-  const data = dataKeys.map((l) => distribucion[l] || 0);
-  const total = data.reduce((a,b) => a+b, 0);
+  const labels = ['Conforme','No conforme','Mejora','N/A'];
+  const data = [distribucion['Conforme']||0, distribucion['No conforme']||0, distribucion['Necesita mejora']||0, distribucion['No aplica']||0];
   const colors = [T.green, T.red, T.amber, T.gray];
 
-  const chartData = { labels, datasets:[{ data, backgroundColor:colors, borderColor:'#fff', borderWidth:2, hoverOffset:4 }] };
-  const options = {
-    responsive:true, maintainAspectRatio:false, cutout:'68%',
-    plugins: { legend:{display:false}, tooltip:{callbacks:{label:(ctx)=>` ${ctx.label}: ${ctx.raw}`}} },
-  };
+  const chartData = { labels, datasets:[{ data, backgroundColor:colors, borderColor:T.bgCard, borderWidth:3, hoverOffset:4 }] };
+  const options = { responsive:true, maintainAspectRatio:false, cutout:'75%', plugins: { legend:{display:false} } };
 
   return (
-    <div style={{ display:'flex', alignItems:'center', gap:12 }}>
-      <div style={{ position:'relative', width:80, height:80, flexShrink:0 }}>
+    <div style={{ height:180, position:'relative' }}>
         <Doughnut data={chartData} options={options} />
-        <div style={{ position:'absolute', top:'50%', left:'50%', transform:'translate(-50%,-50%)', fontFamily:T.fontMono, fontSize:15, fontWeight:700, color:T.text }}>{total}</div>
-      </div>
-      <div style={{ display:'flex', flexDirection:'column', gap:4 }}>
-        {labels.map((l, i) => {
-          const v = data[i];
-          const pct = total > 0 ? ((v/total)*100).toFixed(0) : 0;
-          return (
-            <div key={l} style={{ display:'flex', alignItems:'center', gap:5 }}>
-              <div style={{ width:8, height:8, borderRadius:2, background:colors[i], flexShrink:0 }} />
-              <span style={{ fontSize:11, color:T.textDim, minWidth:80 }}>{l}</span>
-              <span style={{ fontFamily:T.fontMono, fontSize:11, fontWeight:700, color:colors[i] }}>{pct}%</span>
-            </div>
-          );
-        })}
-      </div>
+        <div style={{ position:'absolute', top:'50%', left:'50%', transform:'translate(-50%,-50%)', textAlign:'center' }}>
+            <div style={{ fontSize:10, color:T.textDim, textTransform:'uppercase', letterSpacing:1 }}>Total</div>
+            <div style={{ fontSize:24, fontWeight:800, color:'#fff' }}>{data.reduce((a,b)=>a+b,0)}</div>
+        </div>
     </div>
   );
 }
 
-// ─── Tendencia ────────────────────────────────────────────────────────────────
-function TendenciaLine({ tendencia }) {
-  const chartData = {
-    labels: tendencia.map((_,i) => `#${i+1}`),
-    datasets:[{ label:'Puntaje promedio', data:tendencia, borderColor:T.blue, backgroundColor:`${T.blue}18`, borderWidth:2.5, pointBackgroundColor:T.blue, pointRadius:tendencia.length<=20?4:2, fill:true, tension:.4 }],
-  };
-  const options = {
-    responsive:true, maintainAspectRatio:false,
-    scales: {
-      x: { ticks:{color:T.textDim,font:{size:11},maxTicksLimit:12}, grid:{color:'#eef2f7'}, border:{color:T.border} },
-      y: { min:0, max:100, ticks:{color:T.textDim,font:{size:11},callback:(v)=>`${v}%`}, grid:{color:'#eef2f7'}, border:{color:T.border} },
-    },
-    plugins:{ legend:{display:false}, tooltip:{callbacks:{label:(ctx)=>` ${ctx.raw}%`}} },
-  };
-  return <div style={{ height:110 }}><Line data={chartData} options={options} /></div>;
+function GridPreguntas({ analisisPorPregunta }) {
+  // Mostramos solo las primeras 6 para que entre bien en pantalla, o puedes hacer un carrusel
+  const visibles = analisisPorPregunta.slice(0, 6); 
+
+  return (
+    <div style={{ display:'grid', gridTemplateColumns:'repeat(2, 1fr)', gap:16, height:'100%' }}>
+      {visibles.map((p, i) => {
+         const max = Math.max(p.conteo['Conforme'], p.conteo['No conforme'], p.conteo['Necesita mejora'], 1);
+         return (
+            <div key={i} style={{ background:'rgba(255,255,255,0.03)', border:`1px solid ${T.border}`, borderRadius:12, padding:14, display:'flex', flexDirection:'column' }}>
+                <div style={{ fontSize:11, color:T.blue, fontWeight:700, marginBottom:6 }}>{p.seccion.toUpperCase()}</div>
+                <div style={{ fontSize:14, fontWeight:600, color:T.text, marginBottom:14, flex:1, display:'-webkit-box', WebkitLineClamp:2, WebkitBoxOrient:'vertical', overflow:'hidden' }}>{p.texto}</div>
+                
+                {/* Mini Barras Horizontales */}
+                <div style={{ display:'flex', flexDirection:'column', gap:6 }}>
+                    <Barra label="CONF" val={p.conteo['Conforme']} max={max} color={T.green} />
+                    <Barra label="NO C" val={p.conteo['No conforme']} max={max} color={T.red} />
+                </div>
+            </div>
+         )
+      })}
+    </div>
+  );
+}
+
+function Barra({ label, val, max, color }) {
+    const width = val > 0 ? `${(val/max)*100}%` : '0%';
+    return (
+        <div style={{ display:'flex', alignItems:'center', gap:8, fontSize:10, fontFamily:T.fontMono, color:T.textDim }}>
+            <div style={{ width:30 }}>{label}</div>
+            <div style={{ flex:1, height:6, background:T.border, borderRadius:3, overflow:'hidden' }}>
+                <div style={{ width, height:'100%', background:color, borderRadius:3, transition:'width 0.5s' }} />
+            </div>
+            <div style={{ width:15, textAlign:'right', color:'#fff', fontWeight:700 }}>{val}</div>
+        </div>
+    )
 }
