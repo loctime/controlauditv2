@@ -289,11 +289,6 @@ function DashboardScreen({ analisis, reloj }) {
 
   const preguntaActual = preguntas[pregIdx] || null;
 
-  const top5Alertas = [...preguntas]
-    .filter((p) => p.totalRespuestas > 0)
-    .sort((a, b) => b.pctNoConf - a.pctNoConf)
-    .slice(0, 5);
-
   const tickerMsgs = sin
     ? [{ texto: 'Esperando auditorías en vivo...', color: C.grayD }]
     : generarTickerMsgs(analisis, preguntas, preguntaActual);
@@ -323,14 +318,14 @@ function DashboardScreen({ analisis, reloj }) {
         <KpiRow analisis={analisis} sin={sin} />
 
         {/* CUERPO — 3 columnas */}
-        <div style={{ display: 'grid', gridTemplateColumns: '1.1fr 1fr 380px', gap: 14, flex: 1, minHeight: 0 }}>
+        <div style={{ display: 'grid', gridTemplateColumns: '1.3fr 1fr 380px', gap: 14, flex: 1, minHeight: 0 }}>
           <PreguntaDelMomento
             pregunta={preguntaActual}
             pregIdx={pregIdx}
             totalPregs={preguntas.length}
             sin={sin}
           />
-          <Top5Alertas alertas={top5Alertas} sin={sin} />
+          <QrGrande totalAuditorias={analisis?.totalAuditorias || 0} sin={sin} />
           <ColDerecha analisis={analisis} sin={sin} />
         </div>
 
@@ -401,13 +396,13 @@ function HeaderBar({ reloj }) {
 function KpiRow({ analisis, sin }) {
   const v = (val) => sin ? '—' : String(val);
   return (
-    <div style={{ display: 'grid', gridTemplateColumns: '1.3fr 1fr 1fr 1fr 1fr 1.6fr', gap: 12 }}>
+    <div style={{ display: 'grid', gridTemplateColumns: '1.3fr 1fr 1fr 1fr 1fr 1.4fr', gap: 12 }}>
       <KpiCard label="Participantes" value={v(analisis?.totalAuditorias)} color={C.blueL} />
       <KpiCard label="Score Prom."   value={sin ? '—' : `${analisis.puntajePromedio}%`} color={C.cyan} />
       <KpiCard label="Conformes"     value={v(analisis?.totalConformes)} color={C.greenL} />
       <KpiCard label="No Conf."      value={v(analisis?.totalNoConformes)} color={C.redL} />
       <KpiCard label="Mejora"        value={v(analisis?.totalMejora)} color={C.amberL} />
-      <QrHero />
+      <KpiDonut analisis={analisis} sin={sin} />
     </div>
   );
 }
@@ -432,42 +427,107 @@ function KpiCard({ label, value, color }) {
   );
 }
 
-function QrHero() {
+// KPI compacto con donut (reemplaza QrHero en la fila de KPIs)
+function KpiDonut({ analisis, sin }) {
+  if (sin || !analisis) {
+    return (
+      <div style={{
+        ...cardStyle({ padding: '16px', display: 'flex', flexDirection: 'column', gap: 8 }),
+        borderTop: `3px solid ${C.grayD}`,
+      }}>
+        <div style={{ fontSize: 10, color: C.gray, letterSpacing: 2, textTransform: 'uppercase', fontWeight: 600 }}>
+          Distribución
+        </div>
+        <Vacio />
+      </div>
+    );
+  }
+  const d = analisis.distribucion;
+  const items = [
+    { label: 'Conf.', val: d['Conforme'] || 0,          color: C.green },
+    { label: 'No C.', val: d['No conforme'] || 0,       color: C.red   },
+    { label: 'Mej.',  val: d['Necesita mejora'] || 0,   color: C.amber },
+    { label: 'N/A',   val: d['No aplica'] || 0,         color: C.grayD },
+  ];
+  const total = items.reduce((a, b) => a + b.val, 0);
+  const data = { labels: items.map(i => i.label), datasets: [{ data: items.map(i => i.val), backgroundColor: items.map(i => i.color), borderColor: 'rgba(10,14,26,0.9)', borderWidth: 2 }] };
+  const opts = { responsive: true, maintainAspectRatio: false, cutout: '70%', plugins: { legend: { display: false }, tooltip: { enabled: false } } };
+
   return (
     <div style={{
-      background: 'linear-gradient(135deg, #22c55e, #16a34a)',
+      ...cardStyle({ padding: '14px 16px', display: 'flex', flexDirection: 'column', gap: 8 }),
+      borderTop: `3px solid ${C.cyan}`,
+    }}>
+      <div style={{ fontSize: 10, color: C.gray, letterSpacing: 2, textTransform: 'uppercase', fontWeight: 600 }}>
+        Distribución
+      </div>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 12, flex: 1 }}>
+        {/* Mini donut */}
+        <div style={{ height: 90, width: 90, flexShrink: 0, position: 'relative' }}>
+          <Doughnut data={data} options={opts} />
+          <div style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%,-50%)', textAlign: 'center', pointerEvents: 'none' }}>
+            <div style={{ fontFamily: "'Bebas Neue', cursive", fontSize: 20, color: C.white, lineHeight: 1 }}>{total}</div>
+          </div>
+        </div>
+        {/* Leyenda */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 5, flex: 1 }}>
+          {items.map(({ label, val, color }) => (
+            <div key={label} style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+              <div style={{ width: 8, height: 8, borderRadius: '50%', background: color, flexShrink: 0 }} />
+              <span style={{ fontSize: 11, color: C.gray, flex: 1 }}>{label}</span>
+              <span style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 12, color: C.white, fontWeight: 700 }}>{val}</span>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// QR grande en la columna central
+function QrGrande({ totalAuditorias, sin }) {
+  return (
+    <div style={{
+      background: 'linear-gradient(160deg, #16a34a 0%, #15803d 50%, #166534 100%)',
       borderRadius: 14,
-      padding: '18px 20px',
-      boxShadow: '0 0 40px rgba(34,197,94,0.4)',
-      display: 'flex', alignItems: 'center', gap: 16,
+      boxShadow: '0 0 60px rgba(34,197,94,0.5)',
+      display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+      gap: 20, padding: '28px 20px',
       position: 'relative', overflow: 'hidden',
     }}>
-      {/* Shimmer rotatorio */}
+      {/* Shimmer */}
       <div style={{ position: 'absolute', top: '-50%', left: '-50%', width: '200%', height: '200%', pointerEvents: 'none' }}>
-        <div style={{
-          width: '100%', height: '100%',
-          background: 'conic-gradient(from 0deg, transparent 0deg, rgba(255,255,255,0.12) 90deg, transparent 180deg)',
-          animation: 'shimmerSpin 4s linear infinite',
-        }} />
+        <div style={{ width: '100%', height: '100%', background: 'conic-gradient(from 0deg, transparent 0deg, rgba(255,255,255,0.08) 90deg, transparent 180deg)', animation: 'shimmerSpin 6s linear infinite' }} />
+      </div>
+
+      {/* Texto superior */}
+      <div style={{ textAlign: 'center', position: 'relative', zIndex: 1 }}>
+        <div style={{ fontFamily: "'Bebas Neue', cursive", fontSize: 22, color: 'rgba(255,255,255,0.85)', letterSpacing: 3 }}>
+          ESCANEÁ Y
+        </div>
+        <div style={{ fontFamily: "'Bebas Neue', cursive", fontSize: 52, color: '#fff', lineHeight: 1, letterSpacing: 2, textShadow: '0 0 30px rgba(255,255,255,0.3)' }}>
+          SUMATE<br />AL LIVE
+        </div>
       </div>
 
       {/* QR */}
-      <div style={{ background: '#fff', padding: 8, borderRadius: 10, flexShrink: 0, position: 'relative', zIndex: 1 }}>
-        <QRCodeSVG value={CONGRESO_CONFIG.PUBLIC_URL} size={110} level="M" />
+      <div style={{ background: '#fff', padding: 14, borderRadius: 16, boxShadow: '0 0 40px rgba(0,0,0,0.4)', position: 'relative', zIndex: 1 }}>
+        <QRCodeSVG value={CONGRESO_CONFIG.PUBLIC_URL} size={190} level="M" />
       </div>
 
-      {/* CTA Text */}
-      <div style={{ position: 'relative', zIndex: 1 }}>
-        <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.8)', marginBottom: 2 }}>Escaneá y</div>
-        <div style={{
-          fontFamily: "'Bebas Neue', cursive", fontSize: 32,
-          color: '#fff', lineHeight: 1, letterSpacing: 1,
-        }}>
-          SUMATE<br />AL LIVE
+      {/* Texto inferior */}
+      <div style={{ textAlign: 'center', position: 'relative', zIndex: 1 }}>
+        <div style={{ fontSize: 13, color: 'rgba(255,255,255,0.8)', marginBottom: 6 }}>
+          Tu auditoría aparece en pantalla
         </div>
-        <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.7)', marginTop: 6 }}>
-          Tu auditoría en pantalla
-        </div>
+        {!sin && totalAuditorias > 0 && (
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, justifyContent: 'center' }}>
+            <div style={{ width: 6, height: 6, borderRadius: '50%', background: '#4ade80', animation: 'blink 1.5s infinite' }} />
+            <span style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 13, color: '#4ade80', fontWeight: 700 }}>
+              {totalAuditorias} ya participaron
+            </span>
+          </div>
+        )}
       </div>
     </div>
   );
@@ -561,83 +621,10 @@ function PreguntaDelMomento({ pregunta, pregIdx, totalPregs, sin }) {
   );
 }
 
-// ─── Top 5 Alertas ────────────────────────────────────────────────────────────
-function Top5Alertas({ alertas, sin }) {
-  const badgeColor = (pct) => pct > 50 ? C.red : pct > 30 ? C.amber : C.green;
-  const rankColor  = (i)   => i === 0 ? C.red : i === 1 ? '#f97316' : C.white;
-
-  return (
-    <div style={cardStyle({ padding: '20px', display: 'flex', flexDirection: 'column', gap: 12 })}>
-      <Label>Top 5 Alertas</Label>
-
-      {sin || alertas.length === 0 ? (
-        <Vacio label="Sin datos suficientes" />
-      ) : (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-          {alertas.map((alerta, idx) => (
-            <div key={alerta.id} style={{
-              display: 'flex', alignItems: 'flex-start', gap: 12,
-              padding: '12px 14px',
-              background: 'rgba(255,255,255,0.03)',
-              borderRadius: 10, border: `1px solid ${C.border}`,
-            }}>
-              {/* Número de ranking */}
-              <div style={{
-                fontFamily: "'Bebas Neue', cursive",
-                fontSize: 34, color: rankColor(idx), lineHeight: 1,
-                minWidth: 26, flexShrink: 0,
-                textShadow: idx < 2 ? `0 0 15px ${rankColor(idx)}` : 'none',
-              }}>
-                {idx + 1}
-              </div>
-
-              {/* Texto */}
-              <div style={{ flex: 1, minWidth: 0 }}>
-                <div style={{
-                  fontSize: 13, color: C.white, fontWeight: 600, lineHeight: 1.3,
-                  display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical',
-                  overflow: 'hidden', marginBottom: 4,
-                }}>
-                  {alerta.texto}
-                </div>
-                <div style={{ fontSize: 10, color: C.grayD }}>{alerta.seccion}</div>
-              </div>
-
-              {/* Badge % */}
-              <div style={{
-                background: `${badgeColor(alerta.pctNoConf)}22`,
-                border: `1px solid ${badgeColor(alerta.pctNoConf)}55`,
-                borderRadius: 8, padding: '4px 10px',
-                textAlign: 'center', flexShrink: 0,
-              }}>
-                <div style={{
-                  fontFamily: "'JetBrains Mono', monospace",
-                  fontSize: 16, fontWeight: 700, color: badgeColor(alerta.pctNoConf),
-                }}>
-                  {alerta.pctNoConf}%
-                </div>
-                <div style={{ fontSize: 9, color: C.grayD, letterSpacing: 1 }}>NO CONF</div>
-              </div>
-            </div>
-          ))}
-        </div>
-      )}
-    </div>
-  );
-}
-
 // ─── Columna Derecha ──────────────────────────────────────────────────────────
 function ColDerecha({ analisis, sin }) {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-
-      {/* Donut */}
-      <div style={cardStyle({ padding: '16px' })}>
-        <Label>Distribución Global</Label>
-        <div style={{ marginTop: 10 }}>
-          {sin ? <Vacio /> : <DonutChart distribucion={analisis.distribucion} />}
-        </div>
-      </div>
 
       {/* Galería con scroll infinito */}
       <div style={{ ...cardStyle(), overflow: 'hidden', flex: 1, minHeight: 160 }}>
@@ -681,47 +668,6 @@ function ColDerecha({ analisis, sin }) {
               ))}
             </div>
           )}
-        </div>
-      </div>
-    </div>
-  );
-}
-
-// ─── Donut Chart ──────────────────────────────────────────────────────────────
-function DonutChart({ distribucion }) {
-  const data = [
-    distribucion['Conforme'] || 0,
-    distribucion['No conforme'] || 0,
-    distribucion['Necesita mejora'] || 0,
-    distribucion['No aplica'] || 0,
-  ];
-  const total = data.reduce((a, b) => a + b, 0);
-
-  const chartData = {
-    labels: ['Conforme', 'No conforme', 'Mejora', 'N/A'],
-    datasets: [{
-      data,
-      backgroundColor: [C.green, C.red, C.amber, C.grayD],
-      borderColor: 'rgba(10,14,26,0.9)',
-      borderWidth: 3,
-      hoverOffset: 4,
-    }],
-  };
-  const options = {
-    responsive: true, maintainAspectRatio: false, cutout: '75%',
-    plugins: { legend: { display: false }, tooltip: { enabled: true } },
-  };
-
-  return (
-    <div style={{ height: 160, position: 'relative' }}>
-      <Doughnut data={chartData} options={options} />
-      <div style={{
-        position: 'absolute', top: '50%', left: '50%',
-        transform: 'translate(-50%,-50%)', textAlign: 'center', pointerEvents: 'none',
-      }}>
-        <div style={{ fontSize: 9, color: C.gray, textTransform: 'uppercase', letterSpacing: 1 }}>Total</div>
-        <div style={{ fontFamily: "'Bebas Neue', cursive", fontSize: 30, color: C.white, lineHeight: 1 }}>
-          {total}
         </div>
       </div>
     </div>
