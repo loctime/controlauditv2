@@ -77,8 +77,9 @@ export default defineConfig({
     },
     chunkSizeWarningLimit: 1000
   },
-  // Configuración para SPA (Single Page Application)
-  base: './',
+  // Base absoluta: requerido para rutas anidadas (ej. /congreso/responder).
+  // Con './' los assets se resolvían relativos a la ruta actual y fallaban en paths de más de un segmento.
+  base: '/',
   // Manejo de rutas para producción
   preview: {
     port: 5173,
