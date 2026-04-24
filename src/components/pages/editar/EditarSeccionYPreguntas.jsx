@@ -47,7 +47,7 @@ const EditarSeccionYPreguntas = ({
   puedeEditar = true,
   puedeEliminar = true 
 }) => {
-  const { user } = useAuth();
+  const { user, userProfile } = useAuth();
   const [modalEditarFormularioAbierto, setModalEditarFormularioAbierto] = useState(false);
   const [modalEditarSeccionAbierto, setModalEditarSeccionAbierto] = useState(false);
   const [modalEditarPreguntaAbierto, setModalEditarPreguntaAbierto] = useState(false);
@@ -81,7 +81,8 @@ const EditarSeccionYPreguntas = ({
     seccionesNormalizadas,
     puedeEditar,
     puedeEliminar,
-    user
+    user,
+    userProfile
   });
 
   // ✅ Cachear formulario cuando cambie
