@@ -70,10 +70,20 @@ const normalizeRespuestas = (respuestas) => {
 };
 
 const getRespuesta = (r, preg) => {
-  const respuestas = normalizeRespuestas(r.respuestas);
+  const respuestas = r.respuestas;
   if (!respuestas) return null;
-  if (Array.isArray(respuestas)) {
-    const v = respuestas[preg.seccionIndex]?.[preg.preguntaIndex];
+
+  // Formato Firestore real: objeto plano {seccion_0_pregunta_0: 'Conforme', ...}
+  if (!Array.isArray(respuestas) && typeof respuestas === 'object') {
+    const key = `seccion_${preg.seccionIndex}_pregunta_${preg.preguntaIndex}`;
+    const v = respuestas[key];
+    return typeof v === 'string' ? v.trim() : null;
+  }
+
+  // Formato legacy: arrays anidados
+  const norm = normalizeRespuestas(respuestas);
+  if (Array.isArray(norm)) {
+    const v = norm[preg.seccionIndex]?.[preg.preguntaIndex];
     return typeof v === 'string' ? v.trim() : null;
   }
   return null;
@@ -113,23 +123,39 @@ const calcularAnalisis = (reportes, preguntas) => {
     if (r.puntaje != null) { totalPuntaje += r.puntaje; conteoPuntaje++; }
     else if (puntajeR > 0) { totalPuntaje += puntajeR; conteoPuntaje++; }
 
+    // Clasificaciones: [{seccion: 0, valores: [{actitud, condicion}, ...]}, ...]
     if (r.clasificaciones && Array.isArray(r.clasificaciones)) {
-      r.clasificaciones.flat().forEach((c) => {
-        if (c) {
-          if (c.actitud) actitudPositiva++;
-          if (c.condicion) condicionPositiva++;
-          totalClasificaciones++;
-        }
+      r.clasificaciones.forEach((sec) => {
+        const vals = Array.isArray(sec) ? sec : (sec?.valores || []);
+        vals.forEach((c) => {
+          if (c && typeof c === 'object') {
+            if (c.actitud) actitudPositiva++;
+            if (c.condicion) condicionPositiva++;
+            totalClasificaciones++;
+          }
+        });
       });
     }
 
-    if (r.imagenes && Array.isArray(r.imagenes)) {
-      r.imagenes.flat().flat().forEach((img) => { if (img) todasLasImagenes.push(img); });
+    // Imágenes: objeto plano {seccion_X_pregunta_Y: fileObj} o array legacy
+    if (r.imagenes) {
+      const vals = Array.isArray(r.imagenes)
+        ? r.imagenes.flat().flat()
+        : Object.values(r.imagenes).flat();
+      vals.forEach((img) => {
+        if (!img) return;
+        const url = typeof img === 'string' ? img
+          : img.downloadURL || img.url || img.storagePath || null;
+        if (url) todasLasImagenes.push(url);
+      });
     }
 
+    // Acciones: [{accionTexto, preguntaTexto, ...}] o string legacy
     if (r.accionesRequeridas && Array.isArray(r.accionesRequeridas)) {
-      r.accionesRequeridas.flat().forEach((acc) => {
-        if (acc && acc.trim() !== '') todasLasAcciones.push(acc);
+      r.accionesRequeridas.forEach((acc) => {
+        const texto = typeof acc === 'string' ? acc
+          : acc?.accionTexto || acc?.descripcion || acc?.texto || null;
+        if (texto && texto.trim() !== '') todasLasAcciones.push(texto.trim());
       });
     }
   });
