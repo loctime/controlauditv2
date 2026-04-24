@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { collection, query, where, onSnapshot, getDocs } from 'firebase/firestore';
+import { collection, collectionGroup, query, where, orderBy, limit, onSnapshot, getDocs } from 'firebase/firestore';
 import { db } from '../../../firebaseControlFile';
 import { useAuth } from '@/components/context/AuthContext';
 import { QRCodeSVG } from 'qrcode.react';
@@ -210,6 +210,7 @@ const GLOBAL_CSS = `
 export default function CongresoLiveDashboard() {
   const { userProfile } = useAuth();
   const [analisis, setAnalisis] = useState(null);
+  const [imagenesLive, setImagenesLive] = useState([]);
   const [reloj, setReloj] = useState('');
 
   // Reloj en tiempo real
@@ -267,11 +268,35 @@ export default function CongresoLiveDashboard() {
     return () => { mounted = false; if (unsub) unsub(); };
   }, [userProfile?.ownerId]);
 
-  return <DashboardScreen analisis={analisis} reloj={reloj} />;
+  // Listener de imágenes: subcollección 'files' vía collectionGroup
+  useEffect(() => {
+    if (!userProfile?.ownerId) return;
+    const q = query(
+      collectionGroup(db, 'files'),
+      where('ownerId', '==', userProfile.ownerId),
+      where('status', '==', 'active'),
+      orderBy('uploadedAt', 'desc'),
+      limit(24)
+    );
+    const unsub = onSnapshot(q, (snap) => {
+      const urls = [];
+      snap.forEach((d) => {
+        const f = d.data();
+        if (!f.mimeType?.startsWith('image/')) return;
+        if (f.shareToken) urls.push(`https://files.controldoc.app/api/shares/${f.shareToken}/image`);
+      });
+      setImagenesLive(urls);
+    }, (err) => {
+      console.warn('[Dashboard] Files listener:', err.code);
+    });
+    return () => unsub();
+  }, [userProfile?.ownerId]);
+
+  return <DashboardScreen analisis={analisis} imagenesLive={imagenesLive} reloj={reloj} />;
 }
 
 // ─── Pantalla principal ───────────────────────────────────────────────────────
-function DashboardScreen({ analisis, reloj }) {
+function DashboardScreen({ analisis, imagenesLive, reloj }) {
   const sin = !analisis || analisis.totalAuditorias === 0;
 
   // BUG FIX 2: Paginación rotativa — una pregunta a la vez, rota cada 8 segundos
@@ -326,7 +351,7 @@ function DashboardScreen({ analisis, reloj }) {
             sin={sin}
           />
           <QrGrande totalAuditorias={analisis?.totalAuditorias || 0} sin={sin} />
-          <ColDerecha analisis={analisis} sin={sin} />
+          <ColDerecha imagenes={imagenesLive} />
         </div>
 
         {/* TICKER INFERIOR */}
@@ -584,7 +609,7 @@ function PreguntaDelMomento({ pregunta, pregIdx, totalPregs, sin }) {
         {seccion}
       </div>
 
-      <div style={{ fontSize: 18, fontWeight: 700, color: C.white, lineHeight: 1.4, flex: 1 }}>
+      <div style={{ fontSize: 24, fontWeight: 700, color: C.white, lineHeight: 1.4, flex: 1 }}>
         {texto}
       </div>
 
@@ -621,55 +646,132 @@ function PreguntaDelMomento({ pregunta, pregIdx, totalPregs, sin }) {
   );
 }
 
-// ─── Columna Derecha ──────────────────────────────────────────────────────────
-function ColDerecha({ analisis, sin }) {
+// ─── Columna Derecha — solo carrusel ─────────────────────────────────────────
+function ColDerecha({ imagenes }) {
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-
-      {/* Galería con scroll infinito */}
-      <div style={{ ...cardStyle(), overflow: 'hidden', flex: 1, minHeight: 160 }}>
-        <div style={{ padding: '12px 16px 8px' }}><Label>Evidencia Visual</Label></div>
-        {sin || !analisis?.imagenes?.length ? (
-          <div style={{ padding: 16 }}><Vacio label="Esperando fotos..." /></div>
-        ) : (
-          <div style={{ height: 200, overflow: 'hidden', position: 'relative' }}>
-            <div style={{
-              display: 'flex', flexDirection: 'column', gap: 2,
-              animation: analisis.imagenes.length > 2 ? 'scrollUp 20s linear infinite' : 'none',
-            }}>
-              {[...analisis.imagenes, ...analisis.imagenes].map((img, i) => (
-                <img key={i} src={img} alt="Evidencia"
-                  style={{ width: '100%', height: 150, objectFit: 'cover' }} />
-              ))}
-            </div>
-            <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: 30, background: 'linear-gradient(to bottom, rgba(10,14,26,0.85), transparent)' }} />
-            <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, height: 30, background: 'linear-gradient(to top, rgba(10,14,26,0.85), transparent)' }} />
-          </div>
-        )}
-      </div>
-
-      {/* Acciones requeridas */}
-      <div style={{ ...cardStyle({ padding: '14px 16px' }), borderLeft: `3px solid ${C.amber}` }}>
-        <Label>Acciones Requeridas</Label>
-        <div style={{ marginTop: 10 }}>
-          {sin || !analisis?.acciones?.length ? (
-            <Vacio label="Sin acciones" />
-          ) : (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-              {analisis.acciones.map((acc, i) => (
-                <div key={i} style={{
-                  background: 'rgba(245,158,11,0.08)',
-                  borderLeft: `2px solid ${C.amber}`,
-                  padding: '8px 10px', borderRadius: '0 6px 6px 0',
-                  fontSize: 12, color: C.white, lineHeight: 1.4,
-                }}>
-                  {acc}
-                </div>
-              ))}
+    <div style={{ ...cardStyle(), display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+      <div style={{ padding: '12px 16px 8px', flexShrink: 0 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          <Label>Evidencia Visual</Label>
+          {imagenes.length > 0 && (
+            <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+              <div style={{ width: 5, height: 5, borderRadius: '50%', background: C.green, animation: 'blink 1.5s infinite' }} />
+              <span style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 10, color: C.green }}>
+                {imagenes.length} fotos
+              </span>
             </div>
           )}
         </div>
       </div>
+      <div style={{ flex: 1, minHeight: 0 }}>
+        <Carrusel imagenes={imagenes} />
+      </div>
+    </div>
+  );
+}
+
+// ─── Carrusel ─────────────────────────────────────────────────────────────────
+function Carrusel({ imagenes }) {
+  const [idx, setIdx] = useState(0);
+  const [visible, setVisible] = useState(true);
+
+  // Auto-avance cada 4 segundos
+  useEffect(() => {
+    if (imagenes.length <= 1) return;
+    const id = setInterval(() => {
+      setVisible(false);
+      setTimeout(() => {
+        setIdx((prev) => (prev + 1) % imagenes.length);
+        setVisible(true);
+      }, 350);
+    }, 4000);
+    return () => clearInterval(id);
+  }, [imagenes.length]);
+
+  // Reset al llegar nuevas imágenes
+  useEffect(() => {
+    setIdx(0);
+    setVisible(true);
+  }, [imagenes.length]);
+
+  if (!imagenes.length) {
+    return (
+      <div style={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', flexDirection: 'column', gap: 12 }}>
+        <div style={{ fontSize: 32, opacity: 0.2 }}>📷</div>
+        <Vacio label="Esperando fotos..." />
+      </div>
+    );
+  }
+
+  const url = imagenes[idx];
+  const mostrarDots = imagenes.length <= 10;
+
+  return (
+    <div style={{ height: '100%', position: 'relative', background: '#000' }}>
+      {/* Imagen */}
+      <img
+        key={url}
+        src={url}
+        alt="Evidencia"
+        style={{
+          width: '100%', height: '100%', objectFit: 'cover',
+          opacity: visible ? 1 : 0,
+          transition: 'opacity 0.35s ease',
+          display: 'block',
+        }}
+      />
+
+      {/* Overlay superior */}
+      <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: 50, background: 'linear-gradient(to bottom, rgba(10,14,26,0.6), transparent)', pointerEvents: 'none' }} />
+
+      {/* Contador */}
+      <div style={{
+        position: 'absolute', top: 10, right: 10,
+        background: 'rgba(0,0,0,0.55)', backdropFilter: 'blur(4px)',
+        borderRadius: 20, padding: '3px 10px',
+        fontFamily: "'JetBrains Mono', monospace", fontSize: 11, color: C.white,
+      }}>
+        {idx + 1} / {imagenes.length}
+      </div>
+
+      {/* Dots navegables */}
+      {mostrarDots ? (
+        <div style={{ position: 'absolute', bottom: 12, left: '50%', transform: 'translateX(-50%)', display: 'flex', gap: 5, alignItems: 'center' }}>
+          {imagenes.map((_, i) => (
+            <div
+              key={i}
+              onClick={() => { setVisible(false); setTimeout(() => { setIdx(i); setVisible(true); }, 200); }}
+              style={{
+                width: i === idx ? 20 : 6, height: 6,
+                borderRadius: 3,
+                background: i === idx ? C.green : 'rgba(255,255,255,0.35)',
+                cursor: 'pointer',
+                transition: 'all 0.3s ease',
+                boxShadow: i === idx ? `0 0 8px ${C.green}` : 'none',
+              }}
+            />
+          ))}
+        </div>
+      ) : (
+        // Barra de progreso para muchas imágenes
+        <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, height: 3, background: 'rgba(255,255,255,0.1)' }}>
+          <div style={{ width: `${((idx + 1) / imagenes.length) * 100}%`, height: '100%', background: C.green, transition: 'width 0.4s ease' }} />
+        </div>
+      )}
+
+      {/* Flechas de navegación */}
+      {imagenes.length > 1 && (
+        <>
+          <button
+            onClick={() => { setVisible(false); setTimeout(() => { setIdx((prev) => (prev - 1 + imagenes.length) % imagenes.length); setVisible(true); }, 200); }}
+            style={{ position: 'absolute', left: 8, top: '50%', transform: 'translateY(-50%)', background: 'rgba(0,0,0,0.5)', border: 'none', borderRadius: '50%', width: 30, height: 30, color: '#fff', cursor: 'pointer', fontSize: 14, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+          >‹</button>
+          <button
+            onClick={() => { setVisible(false); setTimeout(() => { setIdx((prev) => (prev + 1) % imagenes.length); setVisible(true); }, 200); }}
+            style={{ position: 'absolute', right: 8, top: '50%', transform: 'translateY(-50%)', background: 'rgba(0,0,0,0.5)', border: 'none', borderRadius: '50%', width: 30, height: 30, color: '#fff', cursor: 'pointer', fontSize: 14, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+          >›</button>
+        </>
+      )}
     </div>
   );
 }
