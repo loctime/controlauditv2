@@ -46,6 +46,7 @@ import SuperdevSelector from '../../common/SuperdevSelector';
 import { getGroupedMenuOrEmpty, MENU_GROUP_LABELS } from '../../../router/menuBuilder';
 import OnboardingBar from '../../onboarding/OnboardingBar';
 import OnboardingWizard from '../../onboarding/OnboardingWizard';
+import OnboardingWelcome from '../../onboarding/OnboardingWelcome';
 const drawerWidth = 240;
 
 function Navbar(props) {
@@ -53,6 +54,7 @@ function Navbar(props) {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [menuAnchors, setMenuAnchors] = useState({});
   const [wizardOpen, setWizardOpen] = useState(false);
+  const [wizardStep, setWizardStep] = useState(0);
   const navigate = useNavigate();
   const { logoutContext, user, role, permisos, userProfile, bloqueado, isLogged, userContext, selectedOwnerId, getEffectiveOwnerId } = useAuth();
   const {
@@ -625,8 +627,17 @@ function Navbar(props) {
           px: { xs: 1, sm: 2, md: 3 }
         }}
       >
-        <OnboardingBar onOpenWizard={() => setWizardOpen(true)} />
-        <OnboardingWizard open={wizardOpen} onClose={() => setWizardOpen(false)} />
+        <OnboardingBar
+          onOpenWizardAtStep={(step) => { setWizardStep(step); setWizardOpen(true); }}
+        />
+        <OnboardingWelcome
+          onStartWizard={() => { setWizardStep(0); setWizardOpen(true); }}
+        />
+        <OnboardingWizard
+          open={wizardOpen}
+          onClose={() => setWizardOpen(false)}
+          initialStep={wizardStep}
+        />
         <Outlet />
       </Box>
     </Box>

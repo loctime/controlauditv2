@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import {
   Dialog,
   DialogContent,
@@ -12,25 +12,52 @@ import {
   TextField,
   CircularProgress,
   Alert,
+  useTheme,
 } from '@mui/material';
+import StorefrontIcon from '@mui/icons-material/Storefront';
+import LocationOnIcon from '@mui/icons-material/LocationOn';
+import PeopleIcon from '@mui/icons-material/People';
+import AssignmentIcon from '@mui/icons-material/Assignment';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import { useAuth } from '@/components/context/AuthContext';
 import { sucursalService } from '@/services/sucursalService';
 import { empleadoService } from '@/services/empleadoService';
 import { formularioService } from '@/services/formularioService';
 
-const STEPS = ['Empresa', 'Sucursal', 'Empleado', 'Formulario'];
+const STEPS = [
+  { label: 'Empresa',    icon: StorefrontIcon, color: '#3b82f6', bg: '#eff6ff' },
+  { label: 'Sucursal',   icon: LocationOnIcon, color: '#10b981', bg: '#ecfdf5' },
+  { label: 'Empleado',   icon: PeopleIcon,     color: '#f59e0b', bg: '#fffbeb' },
+  { label: 'Formulario', icon: AssignmentIcon, color: '#8b5cf6', bg: '#f5f3ff' },
+];
 
 const INITIAL = {
-  empresa: { nombre: '', direccion: '', telefono: '' },
-  sucursal: { nombre: '', direccion: '', telefono: '' },
-  empleado: { nombre: '', apellido: '', cargo: '' },
+  empresa:    { nombre: '', direccion: '', telefono: '' },
+  sucursal:   { nombre: '', direccion: '', telefono: '' },
+  empleado:   { nombre: '', apellido: '', cargo: '' },
   formulario: { nombre: '' },
 };
 
-export default function OnboardingWizard({ open, onClose }) {
+function StepIcon({ step, active, completed }) {
+  const Icon = step.icon;
+  if (completed) return <CheckCircleIcon sx={{ color: step.color, fontSize: 28 }} />;
+  return (
+    <Box
+      sx={{
+        width: 28, height: 28, borderRadius: '50%',
+        bgcolor: active ? step.color : '#e5e7eb',
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+      }}
+    >
+      <Icon sx={{ color: active ? 'white' : '#9ca3af', fontSize: 16 }} />
+    </Box>
+  );
+}
+
+export default function OnboardingWizard({ open, onClose, initialStep = 0 }) {
   const { user, userProfile, crearEmpresa } = useAuth();
-  const [activeStep, setActiveStep] = useState(0);
+  const theme = useTheme();
+  const [activeStep, setActiveStep] = useState(initialStep);
   const [form, setForm] = useState(INITIAL);
   const [createdEmpresaId, setCreatedEmpresaId] = useState(null);
   const [loading, setLoading] = useState(false);
@@ -38,6 +65,10 @@ export default function OnboardingWizard({ open, onClose }) {
   const [skipped, setSkipped] = useState(new Set());
 
   const ownerId = userProfile?.ownerId;
+
+  useEffect(() => {
+    if (open) setActiveStep(initialStep);
+  }, [open, initialStep]);
 
   const handleChange = (section) => (e) => {
     const { name, value } = e.target;
@@ -48,11 +79,8 @@ export default function OnboardingWizard({ open, onClose }) {
   const handleSkip = () => {
     setSkipped((prev) => new Set([...prev, activeStep]));
     setError('');
-    if (activeStep === STEPS.length - 1) {
-      handleClose();
-    } else {
-      setActiveStep((s) => s + 1);
-    }
+    if (activeStep === STEPS.length - 1) handleClose();
+    else setActiveStep((s) => s + 1);
   };
 
   const handleClose = () => {
@@ -95,6 +123,8 @@ export default function OnboardingWizard({ open, onClose }) {
             tipo: 'operativo',
             estado: 'activo',
             fechaIngreso: new Date().toISOString().split('T')[0],
+            empresaId: createdEmpresaId || '',
+            sucursalId: '',
           },
           { uid: user?.uid, role: userProfile?.role }
         );
@@ -106,8 +136,8 @@ export default function OnboardingWizard({ open, onClose }) {
             nombre: form.formulario.nombre.trim(),
             secciones: [
               {
-                titulo: 'Sección 1',
-                preguntas: [{ texto: 'Pregunta de ejemplo', tipo: 'si_no' }],
+                nombre: 'Sección 1',
+                preguntas: ['Pregunta de ejemplo'],
               },
             ],
             esPublico: false,
@@ -119,11 +149,8 @@ export default function OnboardingWizard({ open, onClose }) {
         );
       }
 
-      if (activeStep === STEPS.length - 1) {
-        handleClose();
-      } else {
-        setActiveStep((s) => s + 1);
-      }
+      if (activeStep === STEPS.length - 1) handleClose();
+      else setActiveStep((s) => s + 1);
     } catch (err) {
       setError(err.message || 'Ocurrió un error. Intentá de nuevo.');
     } finally {
@@ -131,61 +158,87 @@ export default function OnboardingWizard({ open, onClose }) {
     }
   };
 
+  const currentStep = STEPS[activeStep];
   const isSkippable = activeStep > 0;
 
   return (
-    <Dialog open={open} onClose={handleClose} maxWidth="sm" fullWidth disableEscapeKeyDown>
-      <Box sx={{ px: 3, pt: 3, pb: 1 }}>
-        <Typography variant="h6" fontWeight={700} gutterBottom>
-          Configuración inicial
+    <Dialog
+      open={open}
+      onClose={handleClose}
+      maxWidth="sm"
+      fullWidth
+      disableEscapeKeyDown
+      PaperProps={{ sx: { borderRadius: 3, overflow: 'hidden' } }}
+    >
+      {/* Header con color del step actual */}
+      <Box
+        sx={{
+          bgcolor: currentStep.color,
+          px: 3,
+          pt: 3,
+          pb: 2,
+          color: 'white',
+        }}
+      >
+        <Typography variant="overline" sx={{ opacity: 0.8, letterSpacing: 2 }}>
+          Paso {activeStep + 1} de {STEPS.length}
         </Typography>
-        <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-          Completá estos pasos para empezar a usar ControlAudit.
+        <Typography variant="h5" fontWeight={800}>
+          {currentStep.label}
         </Typography>
-        <Stepper activeStep={activeStep} alternativeLabel>
-          {STEPS.map((label, index) => (
-            <Step key={label} completed={index < activeStep || skipped.has(index)}>
-              <StepLabel>{label}</StepLabel>
-            </Step>
+
+        {/* Stepper minimalista en el header */}
+        <Box sx={{ display: 'flex', gap: 1, mt: 2 }}>
+          {STEPS.map((s, i) => (
+            <Box
+              key={i}
+              sx={{
+                height: 4,
+                flex: 1,
+                borderRadius: 2,
+                bgcolor: i <= activeStep || skipped.has(i)
+                  ? 'rgba(255,255,255,0.9)'
+                  : 'rgba(255,255,255,0.3)',
+                transition: 'background 0.3s',
+              }}
+            />
           ))}
-        </Stepper>
+        </Box>
       </Box>
 
-      <DialogContent sx={{ pt: 2, pb: 1 }}>
+      <DialogContent sx={{ pt: 3, pb: 1 }}>
         {error && (
-          <Alert severity="error" sx={{ mb: 2 }}>
+          <Alert severity="error" sx={{ mb: 2 }} onClose={() => setError('')}>
             {error}
           </Alert>
         )}
 
-        {activeStep === 0 && (
-          <StepEmpresa data={form.empresa} onChange={handleChange('empresa')} />
-        )}
-        {activeStep === 1 && (
-          <StepSucursal data={form.sucursal} onChange={handleChange('sucursal')} />
-        )}
-        {activeStep === 2 && (
-          <StepEmpleado data={form.empleado} onChange={handleChange('empleado')} />
-        )}
-        {activeStep === 3 && (
-          <StepFormulario data={form.formulario} onChange={handleChange('formulario')} />
-        )}
+        {activeStep === 0 && <StepEmpresa  data={form.empresa}    onChange={handleChange('empresa')}    color={currentStep.color} bg={currentStep.bg} />}
+        {activeStep === 1 && <StepSucursal data={form.sucursal}   onChange={handleChange('sucursal')}   color={currentStep.color} bg={currentStep.bg} />}
+        {activeStep === 2 && <StepEmpleado data={form.empleado}   onChange={handleChange('empleado')}   color={currentStep.color} bg={currentStep.bg} />}
+        {activeStep === 3 && <StepFormulario data={form.formulario} onChange={handleChange('formulario')} color={currentStep.color} bg={currentStep.bg} />}
       </DialogContent>
 
       <DialogActions sx={{ px: 3, pb: 3, gap: 1 }}>
         {isSkippable && (
-          <Button onClick={handleSkip} disabled={loading} color="inherit" sx={{ mr: 'auto' }}>
-            Omitir
+          <Button onClick={handleSkip} disabled={loading} color="inherit" sx={{ mr: 'auto', color: 'text.secondary' }}>
+            Omitir este paso
           </Button>
         )}
-        <Button onClick={handleClose} disabled={loading} variant="outlined">
+        <Button onClick={handleClose} disabled={loading} variant="outlined" color="inherit">
           Cancelar
         </Button>
         <Button
           onClick={handleNext}
           variant="contained"
           disabled={loading}
-          startIcon={loading ? <CircularProgress size={16} /> : null}
+          startIcon={loading ? <CircularProgress size={16} color="inherit" /> : null}
+          sx={{
+            bgcolor: currentStep.color,
+            '&:hover': { bgcolor: currentStep.color, filter: 'brightness(0.9)' },
+            fontWeight: 700,
+            px: 3,
+          }}
         >
           {activeStep === STEPS.length - 1 ? 'Finalizar' : 'Continuar'}
         </Button>
@@ -194,45 +247,60 @@ export default function OnboardingWizard({ open, onClose }) {
   );
 }
 
-function StepEmpresa({ data, onChange }) {
+function FieldNote({ color, bg, text }) {
+  return (
+    <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 1, p: 1.5, borderRadius: 2, bgcolor: bg, border: `1px solid ${color}33`, mb: 2 }}>
+      <CheckCircleIcon sx={{ color, fontSize: 18, mt: 0.1, flexShrink: 0 }} />
+      <Typography variant="body2" color="text.secondary">{text}</Typography>
+    </Box>
+  );
+}
+
+function StepEmpresa({ data, onChange, color, bg }) {
   return (
     <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-      <SuccessNote text="Creá tu primera empresa para organizar tus auditorías." />
-      <TextField label="Nombre de la empresa *" name="nombre" value={data.nombre} onChange={onChange} fullWidth autoFocus />
+      <FieldNote color={color} bg={bg} text="Ingresá el nombre de tu empresa u organización. Es lo primero que verán los auditores." />
+      <TextField label="Nombre de la empresa *" name="nombre" value={data.nombre} onChange={onChange} fullWidth autoFocus
+        sx={{ '& .MuiOutlinedInput-root.Mui-focused fieldset': { borderColor: color } }}
+      />
       <TextField label="Dirección" name="direccion" value={data.direccion} onChange={onChange} fullWidth />
       <TextField label="Teléfono" name="telefono" value={data.telefono} onChange={onChange} fullWidth />
     </Box>
   );
 }
 
-function StepSucursal({ data, onChange }) {
+function StepSucursal({ data, onChange, color, bg }) {
   return (
     <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-      <SuccessNote text="Las sucursales son las ubicaciones o sedes de tu empresa." />
-      <TextField label="Nombre de la sucursal *" name="nombre" value={data.nombre} onChange={onChange} fullWidth autoFocus />
+      <FieldNote color={color} bg={bg} text="Las sucursales son las sedes o ubicaciones donde se realizan auditorías." />
+      <TextField label="Nombre de la sucursal *" name="nombre" value={data.nombre} onChange={onChange} fullWidth autoFocus
+        sx={{ '& .MuiOutlinedInput-root.Mui-focused fieldset': { borderColor: color } }}
+      />
       <TextField label="Dirección" name="direccion" value={data.direccion} onChange={onChange} fullWidth />
       <TextField label="Teléfono" name="telefono" value={data.telefono} onChange={onChange} fullWidth />
     </Box>
   );
 }
 
-function StepEmpleado({ data, onChange }) {
+function StepEmpleado({ data, onChange, color, bg }) {
   return (
     <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-      <SuccessNote text="Agregá el primer empleado. Podés agregar más desde la sección Empleados." />
+      <FieldNote color={color} bg={bg} text="Agregá el primer empleado. Podés asignarle sucursal y área más adelante desde la sección Empleados." />
       <Box sx={{ display: 'flex', gap: 2 }}>
-        <TextField label="Nombre *" name="nombre" value={data.nombre} onChange={onChange} fullWidth autoFocus />
+        <TextField label="Nombre *" name="nombre" value={data.nombre} onChange={onChange} fullWidth autoFocus
+          sx={{ '& .MuiOutlinedInput-root.Mui-focused fieldset': { borderColor: color } }}
+        />
         <TextField label="Apellido *" name="apellido" value={data.apellido} onChange={onChange} fullWidth />
       </Box>
-      <TextField label="Cargo" name="cargo" value={data.cargo} onChange={onChange} fullWidth />
+      <TextField label="Cargo" name="cargo" value={data.cargo} onChange={onChange} fullWidth placeholder="Ej: Supervisor, Operario..." />
     </Box>
   );
 }
 
-function StepFormulario({ data, onChange }) {
+function StepFormulario({ data, onChange, color, bg }) {
   return (
     <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-      <SuccessNote text="Creá tu primer formulario de auditoría. Podés editarlo en detalle después." />
+      <FieldNote color={color} bg={bg} text="Creá el primer formulario de auditoría. Se genera con una sección y una pregunta de ejemplo que podés editar después." />
       <TextField
         label="Nombre del formulario *"
         name="nombre"
@@ -241,19 +309,8 @@ function StepFormulario({ data, onChange }) {
         fullWidth
         autoFocus
         placeholder="Ej: Inspección de seguridad, Checklist diario..."
+        sx={{ '& .MuiOutlinedInput-root.Mui-focused fieldset': { borderColor: color } }}
       />
-      <Typography variant="caption" color="text.secondary">
-        Se creará con una sección y una pregunta de ejemplo. Podés editarlo desde "Formularios".
-      </Typography>
-    </Box>
-  );
-}
-
-function SuccessNote({ text }) {
-  return (
-    <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 1, mb: 1 }}>
-      <CheckCircleIcon sx={{ color: 'success.main', mt: 0.25, fontSize: 18 }} />
-      <Typography variant="body2" color="text.secondary">{text}</Typography>
     </Box>
   );
 }
