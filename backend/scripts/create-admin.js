@@ -12,13 +12,12 @@ import admin from '../firebaseAdmin.js';
 // ===============================
 // CONFIGURACIÓN OWNER
 // ===============================
-const EMAIL = 'nuevo2@gmail.com';
+const EMAIL = 'lolo@gmail.com';
 const PASSWORD = '123123123';
 const DISPLAY_NAME = 'Owner Principal';
 
 const APP_ID = 'auditoria';
 const ROLE = 'admin';
-
 // 🔒 LÍMITES DEL SISTEMA (EDITAR ACÁ)
 const LIMITS = {
   maxOperarios: 10,              // 👈 usuarios que puede crear

@@ -273,6 +273,36 @@ export async function getEmpresa(
 }
 
 /**
+ * Elimina una empresa del owner
+ */
+export async function deleteEmpresa(
+  ownerId: string,
+  empresaId: string
+): Promise<void> {
+  const methodName = 'deleteEmpresa';
+  const path = firestoreRoutesCore.empresa(ownerId, empresaId);
+  const pathString = path.join('/');
+
+  if (!ownerId) throw new Error('ownerId es requerido');
+  if (!empresaId) throw new Error('empresaId es requerido');
+
+  const authUser = auth.currentUser;
+  if (!authUser) throw new Error('Usuario no autenticado');
+  if (ownerId !== authUser.uid) throw new Error('ownerId debe ser igual al usuario autenticado');
+
+  const { deleteDoc } = await import('firebase/firestore');
+  const empresaRef = doc(db, ...path);
+
+  try {
+    await deleteDoc(empresaRef);
+    logger.debug(`[Firestore][${methodName}] ✅ Empresa eliminada: ${pathString}`);
+  } catch (error: any) {
+    logger.error(`[Firestore][${methodName}] ❌ ERROR path: ${pathString} code: ${error.code}`);
+    throw error;
+  }
+}
+
+/**
  * Actualiza una empresa del owner
  */
 export async function updateEmpresa(

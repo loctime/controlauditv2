@@ -3,8 +3,7 @@ import React from "react";
 import Swal from "sweetalert2";
 import { IconButton } from "@mui/material";
 import DeleteIcon from "@mui/icons-material/Delete";
-import { db } from "../../../firebaseControlFile";
-import { doc, deleteDoc } from "firebase/firestore";
+import { deleteEmpresa } from "../../../core/services/ownerEmpresaService";
 const EliminarEmpresa = ({ empresa, onEmpresaEliminada }) => {
   const handleDelete = async () => {
     // Validar que tenemos los datos necesarios
@@ -46,9 +45,8 @@ const EliminarEmpresa = ({ empresa, onEmpresaEliminada }) => {
           throw new Error('ID de empresa inválido');
         }
 
-        // Eliminar la empresa
-        const empresaRef = doc(db, "empresas", empresa.id);
-        await deleteDoc(empresaRef);
+        // Eliminar la empresa usando el path correcto del owner
+        await deleteEmpresa(empresa.ownerId, empresa.id);
         
         // Mostrar éxito
         await Swal.fire({
