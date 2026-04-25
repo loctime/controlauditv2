@@ -15,8 +15,6 @@ import RadioButtonUncheckedIcon from '@mui/icons-material/RadioButtonUnchecked';
 import RocketLaunchIcon from '@mui/icons-material/RocketLaunch';
 import StorefrontIcon from '@mui/icons-material/Storefront';
 import LocationOnIcon from '@mui/icons-material/LocationOn';
-import PeopleIcon from '@mui/icons-material/People';
-import AssignmentIcon from '@mui/icons-material/Assignment';
 import { useOnboardingStatus } from '@/hooks/useOnboardingStatus';
 
 const SESSION_KEY = 'onboarding_bar_dismissed';
@@ -24,8 +22,6 @@ const SESSION_KEY = 'onboarding_bar_dismissed';
 const STEP_META = [
   { icon: StorefrontIcon, color: '#3b82f6', border: '#bfdbfe' },
   { icon: LocationOnIcon, color: '#10b981', border: '#a7f3d0' },
-  { icon: PeopleIcon,     color: '#f59e0b', border: '#fde68a' },
-  { icon: AssignmentIcon, color: '#8b5cf6', border: '#ddd6fe' },
 ];
 
 export default function OnboardingBar({ onOpenWizardAtStep }) {

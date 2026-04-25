@@ -10,8 +10,6 @@ import {
 } from '@mui/material';
 import StorefrontIcon from '@mui/icons-material/Storefront';
 import LocationOnIcon from '@mui/icons-material/LocationOn';
-import PeopleIcon from '@mui/icons-material/People';
-import AssignmentIcon from '@mui/icons-material/Assignment';
 import RocketLaunchIcon from '@mui/icons-material/RocketLaunch';
 import ArrowForwardIcon from '@mui/icons-material/ArrowForward';
 
@@ -21,28 +19,14 @@ const STEPS_INFO = [
     color: '#3b82f6',
     bg: '#eff6ff',
     label: 'Crear tu empresa',
-    desc: 'El nombre y logo de tu organización. Base de todo lo demás.',
+    desc: 'El nombre y datos de tu organización. Es la base de todo lo demás.',
   },
   {
     icon: LocationOnIcon,
     color: '#10b981',
     bg: '#ecfdf5',
     label: 'Agregar una sucursal',
-    desc: 'Cada sede o ubicación donde realizás auditorías.',
-  },
-  {
-    icon: PeopleIcon,
-    color: '#f59e0b',
-    bg: '#fffbeb',
-    label: 'Cargar empleados',
-    desc: 'El equipo que participará en auditorías y capacitaciones.',
-  },
-  {
-    icon: AssignmentIcon,
-    color: '#8b5cf6',
-    bg: '#f5f3ff',
-    label: 'Crear un formulario',
-    desc: 'El checklist que usarás para auditar. Podés editarlo después.',
+    desc: 'La sede o ubicación donde se realizarán las auditorías.',
   },
 ];
 

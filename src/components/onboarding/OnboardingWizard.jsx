@@ -16,26 +16,18 @@ import {
 } from '@mui/material';
 import StorefrontIcon from '@mui/icons-material/Storefront';
 import LocationOnIcon from '@mui/icons-material/LocationOn';
-import PeopleIcon from '@mui/icons-material/People';
-import AssignmentIcon from '@mui/icons-material/Assignment';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import { useAuth } from '@/components/context/AuthContext';
 import { sucursalService } from '@/services/sucursalService';
-import { empleadoService } from '@/services/empleadoService';
-import { formularioService } from '@/services/formularioService';
 
 const STEPS = [
-  { label: 'Empresa',    icon: StorefrontIcon, color: '#3b82f6', bg: '#eff6ff' },
-  { label: 'Sucursal',   icon: LocationOnIcon, color: '#10b981', bg: '#ecfdf5' },
-  { label: 'Empleado',   icon: PeopleIcon,     color: '#f59e0b', bg: '#fffbeb' },
-  { label: 'Formulario', icon: AssignmentIcon, color: '#8b5cf6', bg: '#f5f3ff' },
+  { label: 'Empresa',  icon: StorefrontIcon, color: '#3b82f6', bg: '#eff6ff' },
+  { label: 'Sucursal', icon: LocationOnIcon, color: '#10b981', bg: '#ecfdf5' },
 ];
 
 const INITIAL = {
-  empresa:    { nombre: '', direccion: '', telefono: '' },
-  sucursal:   { nombre: '', direccion: '', telefono: '' },
-  empleado:   { nombre: '', apellido: '', cargo: '' },
-  formulario: { nombre: '' },
+  empresa:  { nombre: '', direccion: '', telefono: '' },
+  sucursal: { nombre: '', direccion: '', telefono: '' },
 };
 
 function StepIcon({ step, active, completed }) {
@@ -110,43 +102,6 @@ export default function OnboardingWizard({ open, onClose, initialStep = 0 }) {
           { uid: user?.uid, role: userProfile?.role }
         );
 
-      } else if (activeStep === 2) {
-        if (!form.empleado.nombre.trim() || !form.empleado.apellido.trim()) {
-          throw new Error('Nombre y apellido son requeridos');
-        }
-        await empleadoService.crearEmpleado(
-          ownerId,
-          {
-            nombre: form.empleado.nombre.trim(),
-            apellido: form.empleado.apellido.trim(),
-            cargo: form.empleado.cargo.trim(),
-            tipo: 'operativo',
-            estado: 'activo',
-            fechaIngreso: new Date().toISOString().split('T')[0],
-            empresaId: createdEmpresaId || '',
-            sucursalId: '',
-          },
-          { uid: user?.uid, role: userProfile?.role }
-        );
-
-      } else if (activeStep === 3) {
-        if (!form.formulario.nombre.trim()) throw new Error('El nombre del formulario es requerido');
-        await formularioService.crearFormulario(
-          {
-            nombre: form.formulario.nombre.trim(),
-            secciones: [
-              {
-                nombre: 'Sección 1',
-                preguntas: ['Pregunta de ejemplo'],
-              },
-            ],
-            esPublico: false,
-            estado: 'activo',
-            version: '1.0',
-          },
-          user,
-          userProfile
-        );
       }
 
       if (activeStep === STEPS.length - 1) handleClose();
@@ -213,10 +168,8 @@ export default function OnboardingWizard({ open, onClose, initialStep = 0 }) {
           </Alert>
         )}
 
-        {activeStep === 0 && <StepEmpresa  data={form.empresa}    onChange={handleChange('empresa')}    color={currentStep.color} bg={currentStep.bg} />}
-        {activeStep === 1 && <StepSucursal data={form.sucursal}   onChange={handleChange('sucursal')}   color={currentStep.color} bg={currentStep.bg} />}
-        {activeStep === 2 && <StepEmpleado data={form.empleado}   onChange={handleChange('empleado')}   color={currentStep.color} bg={currentStep.bg} />}
-        {activeStep === 3 && <StepFormulario data={form.formulario} onChange={handleChange('formulario')} color={currentStep.color} bg={currentStep.bg} />}
+        {activeStep === 0 && <StepEmpresa  data={form.empresa}  onChange={handleChange('empresa')}  color={currentStep.color} bg={currentStep.bg} />}
+        {activeStep === 1 && <StepSucursal data={form.sucursal} onChange={handleChange('sucursal')} color={currentStep.color} bg={currentStep.bg} />}
       </DialogContent>
 
       <DialogActions sx={{ px: 3, pb: 3, gap: 1 }}>
@@ -282,35 +235,3 @@ function StepSucursal({ data, onChange, color, bg }) {
   );
 }
 
-function StepEmpleado({ data, onChange, color, bg }) {
-  return (
-    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-      <FieldNote color={color} bg={bg} text="Agregá el primer empleado. Podés asignarle sucursal y área más adelante desde la sección Empleados." />
-      <Box sx={{ display: 'flex', gap: 2 }}>
-        <TextField label="Nombre *" name="nombre" value={data.nombre} onChange={onChange} fullWidth autoFocus
-          sx={{ '& .MuiOutlinedInput-root.Mui-focused fieldset': { borderColor: color } }}
-        />
-        <TextField label="Apellido *" name="apellido" value={data.apellido} onChange={onChange} fullWidth />
-      </Box>
-      <TextField label="Cargo" name="cargo" value={data.cargo} onChange={onChange} fullWidth placeholder="Ej: Supervisor, Operario..." />
-    </Box>
-  );
-}
-
-function StepFormulario({ data, onChange, color, bg }) {
-  return (
-    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-      <FieldNote color={color} bg={bg} text="Creá el primer formulario de auditoría. Se genera con una sección y una pregunta de ejemplo que podés editar después." />
-      <TextField
-        label="Nombre del formulario *"
-        name="nombre"
-        value={data.nombre}
-        onChange={onChange}
-        fullWidth
-        autoFocus
-        placeholder="Ej: Inspección de seguridad, Checklist diario..."
-        sx={{ '& .MuiOutlinedInput-root.Mui-focused fieldset': { borderColor: color } }}
-      />
-    </Box>
-  );
-}
